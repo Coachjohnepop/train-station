@@ -122,11 +122,9 @@ async function assertVariant(page, expect, label) {
     else pass(`${label} tour is not B`);
   }
   if (expect === "jeremy") {
-    if (/Train Station Style/i.test(body) && /Bring Your Own Workout/i.test(body)) {
-      pass(`${label} B CTAs`);
-    } else fail(`${label} B CTAs`, body.slice(0, 160));
-    if (/Your workout/i.test(body)) pass(`${label} B headline`);
-    else fail(`${label} B headline`, body.slice(0, 120));
+    if (/Would you use the Train Station/i.test(body) || /See how to use it/i.test(body)) {
+      pass(`${label} B walk`);
+    } else fail(`${label} B walk`, body.slice(0, 180));
   }
   if (expect === "floor") {
     if (/This is/i.test(body) && /Start Free/i.test(body)) pass(`${label} C CTAs`);

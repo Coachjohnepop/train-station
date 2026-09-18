@@ -445,7 +445,7 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 **Date:** 2026-09-18 (B is get started, live with A)
 
-**Status:** Homepage live split is **A tour** vs **B get started**. B auto-opens How it Works, then two doors: **Train Station Style** (`/signup?plan=explorer`, Jeremy’s board) or **Bring Your Own Workout** (`/byow/signup`). D 6:30am class stays at `/l/class`.
+**Status:** Homepage live split is **A tour** vs **B get started**. B does **not** open BYOW signup. It asks “would you use this if you could bring your own?”, then a **real Today / log-set / rest** walk with Jeremy’s recorded intro audio (`/audio/jeremy-app-walk-intro.mp3` from his free-intro video). TTS clone from video is **not** in this stack — captions cover the screens. Then Train Station Style.
 
 **Date:** 2026-09-18 (landing A/B on Station pulse)
 

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import LandingSeeInsideTour from "@/components/LandingSeeInsideTour";
+import LandingAppWalkthrough from "@/components/LandingAppWalkthrough";
 import { FREE_QUICK_TOUR_EVENT } from "@/lib/free-quick-tour";
 import HeroSlideMedia from "@/components/HeroSlideMedia";
 import {
@@ -131,11 +132,11 @@ export default function LandingHero({
     return () => window.removeEventListener(FREE_QUICK_TOUR_EVENT, open);
   }, []);
 
-  // B: don't wait — open How it Works so guests learn the system first.
+  // B: don't wait — open the real-app walk (not the ticket caricature).
   useEffect(() => {
     if (variant !== "jeremy" || returnMode) return;
     setTourOpen(true);
-    trackLandingCustom("hero-b-auto-tour");
+    trackLandingCustom("hero-b-auto-walk");
   }, [variant, returnMode]);
 
   const imageIndex = images.length ? imageTick % images.length : 0;
@@ -359,10 +360,11 @@ export default function LandingHero({
         ))}
       </div>
 
-      <LandingSeeInsideTour
-        open={tourOpen}
-        onClose={() => setTourOpen(false)}
-      />
+      {variant === "jeremy" ? (
+        <LandingAppWalkthrough open={tourOpen} onClose={() => setTourOpen(false)} />
+      ) : (
+        <LandingSeeInsideTour open={tourOpen} onClose={() => setTourOpen(false)} />
+      )}
     </section>
   );
 }
@@ -392,8 +394,16 @@ function JeremyHeroStack({
       <div className="w-full max-w-sm">
         <EasyPathChoices
           kicker=""
-          hint="How it Works opens first · then pick a style"
+          hint="We'll ask about your own workout, then show the real Today screen"
         >
+          <button
+            type="button"
+            data-analytics-action="hero-b-see-the-app"
+            onClick={onTour}
+            className={primaryCta}
+          >
+            See how to use it
+          </button>
           <Link
             href={START_FREE_HREF}
             data-analytics-action="hero-b-train-station-style"
@@ -401,29 +411,10 @@ function JeremyHeroStack({
               markLandingConverted();
               fireLandingJoinHook(e.currentTarget);
             }}
-            className={primaryCta}
+            className={secondaryCta}
           >
             Train Station Style
           </Link>
-          <Link
-            href="/byow/signup"
-            data-analytics-action="hero-b-byow"
-            onClick={(e) => {
-              markLandingConverted();
-              fireLandingJoinHook(e.currentTarget);
-            }}
-            className={secondaryCta}
-          >
-            Bring Your Own Workout
-          </Link>
-          <button
-            type="button"
-            data-analytics-action="hero-free-tour"
-            onClick={onTour}
-            className="landing-hero-explore-cta inline-flex h-11 w-full items-center justify-center rounded-full px-8 text-[15px] font-bold tracking-tight text-white/90"
-          >
-            How it Works
-          </button>
           <Link
             href={JOIN_TICKETS_HREF}
             data-analytics-action={returnMode ? "hero-start-membership-return" : "hero-start-membership"}
@@ -438,12 +429,12 @@ function JeremyHeroStack({
         </EasyPathChoices>
       </div>
       <h1 className="landing-hero-headline mt-8 mb-3 text-[clamp(2.4rem,11vw,3.4rem)] font-semibold leading-[0.9] tracking-[-0.04em] text-white sm:mt-10 sm:text-6xl">
-        Your workout
+        See how it
         <br />
-        <span className="landing-hero-accent">or ours.</span>
+        <span className="landing-hero-accent">works.</span>
       </h1>
       <p className="landing-hero-subhead max-w-[20.5rem] text-[15px] font-semibold leading-snug text-white sm:max-w-sm sm:text-xl">
-        Same Today, sets, rest. Train Station Style is Jeremy&apos;s board. BYOW is yours.
+        Real Today, real set, real rest. Bring-your-own isn&apos;t open yet — we&apos;ll ask if you&apos;d use it.
       </p>
       <div className="mt-5 w-full max-w-sm">
         <LandingAbClip

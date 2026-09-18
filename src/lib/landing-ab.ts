@@ -34,7 +34,7 @@ export const LANDING_AB_META: Record<
   { letter: string; name: string; status: LandingAbArmStatus }
 > = {
   tour: { letter: "A", name: "Tour (homepage)", status: "live" },
-  jeremy: { letter: "B", name: "Get started · TS Style or BYOW", status: "live" },
+  jeremy: { letter: "B", name: "Get started · real app walk", status: "live" },
   floor: { letter: "C", name: "Floor", status: "preview" },
   class: { letter: "D", name: "6:30am Zoom class", status: "preview" },
 };

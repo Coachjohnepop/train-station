@@ -1,6 +1,6 @@
 # Bring Your Own Workout — platform preview (do not build yet)
 
-**Status:** Door is live on landing **B** (Train Station Style vs BYOW). $2.99 SKU / Jeremy week still preview — not billed yet.  
+**Status:** Signup door **not** public. Landing **B** asks BYOW interest only, then a real-app walk. $2.99 SKU still preview.  
 **Date captured:** 2026-09-12  
 **Who:** John (builder) + Jeremy (coach), after showing the app to people who already have their own workouts.
 
