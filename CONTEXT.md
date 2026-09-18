@@ -443,6 +443,10 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
+**Date:** 2026-09-18 (bicep + purple alert badge)
+
+**Status:** Measurements glyph is **💪** again — a `0` check-in count no longer replaces the arm. Due / count > 0 is a small **purple iPhone-style badge** on the bicep (dot if due with zero check-ins). Admin **Alerts** uses the same purple corner badge (not gold).
+
 **Date:** 2026-09-18 (allaboard.fit, 6:30am A/B, admin header, scores, daily activity)
 
 **Status (this session):**

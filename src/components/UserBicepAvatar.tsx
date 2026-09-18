@@ -1,6 +1,6 @@
 /**
- * Universal user modicon — flexed bicep in a circle, or a number for Measurements.
- * Gold tone is the member Measurements mark; accent is coach/account identity.
+ * Universal user modicon — flexed bicep in a circle.
+ * Optional iPhone-style purple badge (count or a dot) for alerts / check-ins.
  */
 
 type Props = {
@@ -12,7 +12,7 @@ type Props = {
   tone?: "accent" | "gold";
   /** Gold ring — measurements due / never logged. */
   flagged?: boolean;
-  /** Check-in count. When set, the circle shows this number instead of 💪. */
+  /** Check-in / alert count. Overlay badge only — never replaces 💪. 0 is hidden. */
   count?: number | null;
 };
 
@@ -23,6 +23,15 @@ const TONE_CLASS = {
     "border-[color-mix(in_srgb,var(--ramp-gold)_55%,var(--border))] bg-[color-mix(in_srgb,var(--ramp-gold)_18%,var(--surface-2))] text-[var(--ramp-gold-light)] shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--ramp-gold)_28%,transparent)]",
 } as const;
 
+export function bicepBadgeValue(
+  count: number | null | undefined,
+  flagged = false,
+): number | "dot" | null {
+  if (typeof count === "number" && count > 0) return count;
+  if (flagged) return "dot";
+  return null;
+}
+
 export default function UserBicepAvatar({
   size = 36,
   className = "",
@@ -31,16 +40,15 @@ export default function UserBicepAvatar({
   flagged = false,
   count = null,
 }: Props) {
-  const showCount = typeof count === "number";
-  const label = showCount ? (count > 99 ? "99+" : String(count)) : "💪";
-  const fontSize = showCount
-    ? Math.round(size * (label.length > 1 ? 0.38 : 0.48))
-    : Math.round(size * 0.52);
+  const badge = bicepBadgeValue(count, flagged);
+  const fontSize = Math.round(size * 0.52);
+  const badgeLabel =
+    badge === "dot" ? null : badge != null ? (badge > 99 ? "99+" : String(badge)) : null;
 
   return (
     <span className={`relative inline-flex shrink-0 ${className}`.trim()}>
       <span
-        className={`inline-flex items-center justify-center rounded-full border font-bold tabular-nums ${TONE_CLASS[tone]} ${
+        className={`inline-flex items-center justify-center rounded-full border font-bold ${TONE_CLASS[tone]} ${
           flagged ? "ring-2 ring-[var(--ramp-gold)]" : ""
         }`}
         style={{ width: size, height: size }}
@@ -49,9 +57,26 @@ export default function UserBicepAvatar({
         aria-label={title}
       >
         <span className="select-none leading-none" style={{ fontSize }} aria-hidden>
-          {label}
+          💪
         </span>
       </span>
+      {badge ? (
+        <span
+          className={
+            badge === "dot"
+              ? "absolute -right-0.5 -top-0.5 z-10 h-2.5 w-2.5 rounded-full bg-[#7c3aed] ring-2 ring-[var(--bg)]"
+              : "absolute -right-1 -top-1 z-10 flex h-[16px] min-w-[16px] items-center justify-center rounded-full bg-[#7c3aed] px-0.5 text-[9px] font-bold leading-none text-white shadow-sm ring-2 ring-[var(--bg)]"
+          }
+          aria-hidden={badge === "dot"}
+          aria-label={
+            badge === "dot"
+              ? "Needs attention"
+              : `${badgeLabel} ${title.toLowerCase()}`
+          }
+        >
+          {badgeLabel}
+        </span>
+      ) : null}
     </span>
   );
 }

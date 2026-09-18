@@ -573,10 +573,10 @@ export default function AdminShell({
             <div className="flex shrink-0 items-center gap-1.5">
               <Link
                 href="/admin/alerts"
-                className="relative inline-flex items-center gap-1 rounded-lg border border-[var(--border)] px-3 py-2 text-xs font-semibold"
+                className="relative inline-flex items-center rounded-lg border border-[var(--border)] px-3 py-2 text-xs font-semibold"
               >
                 Alerts
-                <CoachInboxNavBadge placement="inline" />
+                <CoachInboxNavBadge placement="corner" />
               </Link>
               {onGoToToday ? (
                 <>
