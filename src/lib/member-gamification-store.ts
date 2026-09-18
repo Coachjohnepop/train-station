@@ -230,6 +230,56 @@ export async function removeGamificationForUsers(userIds: string[]): Promise<num
   return removed;
 }
 
+/**
+ * Zero the board: wipe the Postgres ledger + season ranks, and empty the
+ * Blob/JSON backup so lazy import cannot restore old points.
+ */
+export async function resetAllGamificationScores(): Promise<{
+  eventsDeleted: number;
+  seasonRowsDeleted: number;
+  usersWithEvents: number;
+  blobCleared: boolean;
+}> {
+  blobImportAttempted.clear();
+  memoryStore = {};
+
+  const { blobSaved } = await persistJsonStore({
+    blobPath: BLOB_PATH,
+    localPath: DEV_FILE,
+    data: {},
+    setMemory: (v) => {
+      memoryStore = v as GamificationStore;
+    },
+  });
+
+  let eventsDeleted = 0;
+  let seasonRowsDeleted = 0;
+  let usersWithEvents = 0;
+
+  if (isDatabaseConfigured()) {
+    const distinct = await prisma.gamificationEvent.findMany({
+      distinct: ["userId"],
+      select: { userId: true },
+    });
+    usersWithEvents = distinct.length;
+    const seasons = await prisma.gamificationSeasonScore.deleteMany({});
+    seasonRowsDeleted = seasons.count;
+    const events = await prisma.gamificationEvent.deleteMany({});
+    eventsDeleted = events.count;
+  }
+
+  if (process.env.VERCEL) {
+    requireBlobPersisted(blobSaved, "Gamification score reset");
+  }
+
+  return {
+    eventsDeleted,
+    seasonRowsDeleted,
+    usersWithEvents,
+    blobCleared: blobSaved,
+  };
+}
+
 function userHasEvent(userId: string, eventId: string): boolean {
   const verified = normalizeUser(memoryStore?.[userId], userId);
   return verified.events.some((e) => e.id === eventId);

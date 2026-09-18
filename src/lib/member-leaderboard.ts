@@ -12,6 +12,7 @@ import {
   type LeaderboardRow,
   type LeaderboardScope,
 } from "@/lib/gamification-types";
+import { isDemoMode } from "@/lib/demo-enrollments";
 import {
   awardGamificationPoints,
   getUserGamification,
@@ -75,8 +76,9 @@ async function discoverParticipantIds(): Promise<Map<string, string | null>> {
   return names;
 }
 
-/** Seed demo racers from workout history when the board is empty. */
+/** Seed demo racers from workout history when the board is empty. Prod never seeds. */
 async function ensureDemoLeaderboardSeed(): Promise<void> {
+  if (!isDemoMode()) return;
   const ledgers = await listAllGamification();
   if (ledgers.some((l) => l.totalPoints > 0)) return;
 

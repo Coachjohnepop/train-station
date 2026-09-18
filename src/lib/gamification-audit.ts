@@ -12,6 +12,7 @@ export type GamificationAuditAction =
   | "promo.expire"
   | "season.recompute"
   | "points.award"
+  | "points.reset"
   | "prize.award";
 
 export type AuditContext = {

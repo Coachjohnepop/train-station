@@ -131,6 +131,32 @@ export default function AdminGamificationClient() {
     }
   }
 
+  async function resetScores() {
+    if (
+      !window.confirm(
+        "Reset every member’s score to zero? This wipes the points ledger. New workouts will earn from now on.",
+      )
+    ) {
+      return;
+    }
+    setBusy(true);
+    setMessage(null);
+    try {
+      const res = await fetch("/api/admin/gamification/reset-scores", { method: "POST" });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.detail || "Reset failed");
+      setMessage(
+        `Scores reset to zero · ${data.usersWithEvents ?? 0} people · ${data.eventsDeleted ?? 0} events cleared` +
+          (data.blobCleared === false ? " · blob backup still had old points — retry" : "") +
+          ".",
+      );
+    } catch (e) {
+      setMessage(e instanceof Error ? e.message : "Reset failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function recompute() {
     setBusy(true);
     setMessage(null);
@@ -327,14 +353,24 @@ export default function AdminGamificationClient() {
             Recompute ranks for Free / Coach / Business / 1st Class, expire stale promos, and offer
             free weeks to top {levers.topPercentile}% (min activity rules apply).
           </p>
-          <button
-            type="button"
-            className="btn-primary"
-            disabled={busy || !database}
-            onClick={() => void recompute()}
-          >
-            Recompute + offer free weeks
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              className="btn-primary"
+              disabled={busy || !database}
+              onClick={() => void recompute()}
+            >
+              Recompute + offer free weeks
+            </button>
+            <button
+              type="button"
+              className="btn-ghost border border-rose-400/40 text-rose-200"
+              disabled={busy || !database}
+              onClick={() => void resetScores()}
+            >
+              Reset all scores to zero
+            </button>
+          </div>
           {!database ? (
             <p className="text-xs text-[var(--danger)]">
               Apply migration <code>20260722180000_gamification_v2</code> on prod Postgres first.

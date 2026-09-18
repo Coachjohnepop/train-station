@@ -443,6 +443,10 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
+**Date:** 2026-09-18 (gamification scores reset)
+
+**Status:** Wiped the points ledger so everyone is at **0**. Postgres `GamificationEvent` + `GamificationSeasonScore` cleared; Blob `demo/member-gamification.json` emptied so import cannot restore old points. Demo leaderboard seed is local-only (won’t refill prod). Coach desk: Admin → Gamification → Actions → **Reset all scores to zero**. New workouts earn from now.
+
 **Date:** 2026-09-18 (Daily activity desk)
 
 **Status:** There was no per-person “what did they do yesterday” page — Station pulse (`/admin/analytics`) is site-wide. Added **Admin → Daily activity** at **`/admin/activity`** (date picker, defaults to yesterday PT). Coaches and platform staff. Workouts, set checks, Zoom, messages, bookings, measurements, payments, signups, plus guests and quiet members.
