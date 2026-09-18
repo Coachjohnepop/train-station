@@ -443,6 +443,10 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
+**Date:** 2026-09-18 (purged loop users Jeremy could see)
+
+**Status:** Deleted 10 landing-to-paid **Loop \*** `@example.com` members. Hid demo seats Alex / Chad / Katie (`hidden=true`) so they drop off Members and day lists. Real members untouched.
+
 **Date:** 2026-09-18 (B is get started, live with A)
 
 **Status:** Homepage live split is **A tour** vs **B get started**. B asks BYOW interest, then a **real Today / log-set / rest** walk with free **Eddy (US)** TTS clips (`/audio/walk-*.mp3`). No BYOW signup yet. Then Train Station Style.
