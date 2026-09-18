@@ -27,6 +27,18 @@ export const LANDING_AB_ENABLED = true;
 /** Arms that cold traffic on `/` can be assigned. Always include `tour`. */
 export const LANDING_AB_LIVE: readonly LandingAbVariant[] = ["tour", "class"];
 
+export type LandingAbArmStatus = "live" | "retired" | "preview";
+
+export const LANDING_AB_META: Record<
+  LandingAbVariant,
+  { letter: string; name: string; status: LandingAbArmStatus }
+> = {
+  tour: { letter: "A", name: "Tour (homepage)", status: "live" },
+  jeremy: { letter: "B", name: "Meet Jeremy", status: "retired" },
+  floor: { letter: "C", name: "Floor", status: "preview" },
+  class: { letter: "D", name: "6:30am Zoom class", status: "live" },
+};
+
 /** Previous live B — re-roll these cookies into the new live split. */
 export const LANDING_AB_RETIRED_LIVE: readonly LandingAbVariant[] = ["jeremy"];
 

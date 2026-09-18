@@ -285,6 +285,7 @@ export type AnalyticsOverview = {
   };
   /** Coach/admin playbook: better / effective / fun + ranked tests. */
   playbook?: AnalyticsPlaybook;
+  landingAb?: import("@/lib/landing-ab-report").LandingAbReport;
 };
 
 function emptySections(): AnalyticsOverview["sections"] {
@@ -449,6 +450,9 @@ export async function getAnalyticsOverview(days = 7): Promise<AnalyticsOverview>
       take: 15,
     });
 
+    const { getLandingAbReport } = await import("@/lib/landing-ab-report");
+    const landingAb = await getLandingAbReport(since).catch(() => undefined);
+
     const hourAgo = new Date(Date.now() - 60 * 60 * 1000);
     const [hourViews, hourClicks, hourFacebook, liveRows, windowEvents] = await Promise.all([
       prisma.analyticsEvent.count({
@@ -556,6 +560,7 @@ export async function getAnalyticsOverview(days = 7): Promise<AnalyticsOverview>
         paidCount: payments._count,
         sessions,
       }),
+      landingAb,
     };
   }
 

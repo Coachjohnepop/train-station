@@ -26,6 +26,13 @@ export default async function AdminLandingPage() {
       </p>
       <div className="mt-4 rounded-xl border border-violet-500/30 bg-violet-500/5 px-4 py-3 text-xs text-[var(--muted)]">
         <p className="font-semibold text-violet-100">Where things live</p>
+        <p className="mt-2">
+          Guest A/B counts (A tour vs D 6:30am class) live on{" "}
+          <a href="/admin/analytics" className="text-accent hover:underline">
+            Admin → Station pulse
+          </a>
+          .
+        </p>
         <ol className="mt-2 list-decimal space-y-1 pl-5">
           <li>
             <strong className="text-violet-50">How it Works</strong> — guest tour screens, voice-over

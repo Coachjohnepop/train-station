@@ -443,6 +443,10 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
+**Date:** 2026-09-18 (landing A/B on Station pulse)
+
+**Status:** A/B counts live on **Admin → Station pulse** (`/admin/analytics`). All-time sessions: **A tour 51**, **B Meet Jeremy 56** (retired), **C floor 10**, **D 6:30am class ~0**. Live split is still A vs D; D just has almost no traffic yet. Landing page links there.
+
 **Date:** 2026-09-18 (prod sweep + ERD/flowchart pack)
 
 **Status:** Prod site-loop-sweep **95 pages / 0 dead / 9 public APIs / 24 process gates** (money-desk included). Stripe LIVE + Venmo + tips. Packs: `docs/full-erd-2026-09-18.pdf`, `docs/system-flowchart-2026-09-18.pdf`, `docs/system-flowchart-2026-09-18-byow.pdf` (+ Desktop copies). Landing A/B and landing→paid loops not re-run this pack.

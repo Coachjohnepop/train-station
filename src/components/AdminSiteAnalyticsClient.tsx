@@ -39,6 +39,19 @@ type Overview = {
     }>;
   };
   playbook?: AnalyticsPlaybook;
+  landingAb?: {
+    live: string[];
+    liveTotalSessions: number;
+    arms: Array<{
+      variant: string;
+      letter: string;
+      name: string;
+      status: "live" | "retired" | "preview";
+      sessions: number;
+      clicks: number;
+      signupHits: number;
+    }>;
+  };
 };
 
 const PERIODS = [
@@ -207,7 +220,7 @@ export default function AdminSiteAnalyticsClient() {
           <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Station pulse</h1>
           <p className="mt-1 max-w-2xl text-sm leading-relaxed text-[var(--muted)]">
             Where the site can be better, more effective, and more fun — from live hits, not vibes.
-            Per person:{" "}
+            Landing A/B is on this page. Per person:{" "}
             <Link href="/admin/activity" className="text-accent hover:underline">
               Usage
             </Link>
@@ -231,6 +244,40 @@ export default function AdminSiteAnalyticsClient() {
           ))}
         </div>
       </div>
+
+      {data?.landingAb ? (
+        <section className="rounded-xl border border-violet-500/35 bg-violet-950/25 p-4">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 className="text-sm font-semibold text-violet-100">Landing A / B</h2>
+            <p className="text-[10px] text-[var(--muted)]">
+              Live split {data.landingAb.live.join(" vs ")} · {data.landingAb.liveTotalSessions}{" "}
+              sessions this period
+            </p>
+          </div>
+          <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+            {data.landingAb.arms.map((arm) => (
+              <div
+                key={arm.variant}
+                className={`rounded-xl border p-3 ${
+                  arm.status === "live"
+                    ? "border-violet-400/40 bg-violet-500/10"
+                    : "border-[var(--border)] bg-[var(--surface)]/60"
+                }`}
+              >
+                <p className="text-[10px] font-bold uppercase tracking-wide text-[var(--muted)]">
+                  {arm.letter} · {arm.status}
+                </p>
+                <p className="mt-0.5 text-sm font-semibold">{arm.name}</p>
+                <p className="mt-2 text-2xl font-semibold tabular-nums">{arm.sessions}</p>
+                <p className="text-[10px] text-[var(--muted)]">
+                  sessions · {arm.clicks} clicks
+                  {arm.signupHits ? ` · ${arm.signupHits} signup hits` : ""}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       {data?.live ? (
         <section className="rounded-xl border border-sky-500/35 bg-sky-950/30 p-4">
