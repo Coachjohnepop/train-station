@@ -26,11 +26,11 @@ describe("resolveLiveLandingAb", () => {
   it("keeps a live sticky arm", () => {
     assert.equal(resolveLiveLandingAb("tour"), "tour");
     assert.equal(resolveLiveLandingAb("class"), "class");
+    assert.equal(resolveLiveLandingAb("jeremy"), "jeremy");
   });
 
-  it("re-rolls retired Meet Jeremy cookies into the new live split", () => {
-    const next = resolveLiveLandingAb("jeremy");
-    assert.ok(next === "tour" || next === "class", next);
+  it("does not re-roll B — Get started is live again", () => {
+    assert.equal(resolveLiveLandingAb("jeremy"), "jeremy");
   });
 
   it("keeps a preview C cookie sticky (does not re-roll A/B)", () => {

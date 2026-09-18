@@ -443,6 +443,10 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
+**Date:** 2026-09-18 (B is get started, live with A)
+
+**Status:** Homepage live split is **A tour** vs **B get started**. B auto-opens How it Works, primary **Try it now** → Free explorer (no ticket pick). Meet Jeremy clip is below. D 6:30am class stays at `/l/class`. Don't wait on more B data.
+
 **Date:** 2026-09-18 (landing A/B on Station pulse)
 
 **Status:** A/B counts live on **Admin → Station pulse** (`/admin/analytics`). All-time sessions: **A tour 51**, **B Meet Jeremy 56** (retired), **C floor 10**, **D 6:30am class ~0**. Live split is still A vs D; D just has almost no traffic yet. Landing page links there.

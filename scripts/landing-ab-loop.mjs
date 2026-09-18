@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Landing A/B loop on prod (or BASE_URL). Live = tour vs class.
+ * Landing A/B loop on prod (or BASE_URL). Live = tour vs jeremy (get started).
  *
  *   BASE_URL=https://www.thetrainstation.co node scripts/landing-ab-loop.mjs
  *   ROUNDS=2 VIEWPORTS=mobile,desktop FRESH=12 node scripts/landing-ab-loop.mjs
@@ -89,11 +89,11 @@ async function httpSplit() {
   );
   if (counts.floor > 0) fail("live split excludes C", `floor=${counts.floor}`);
   else pass("live split excludes C");
-  if (counts.jeremy > 0) fail("live split excludes retired B", `jeremy=${counts.jeremy}`);
-  else pass("live split excludes retired B");
-  if (counts.tour > 0 && counts.class > 0) {
-    pass("live split hits A and D", `tour=${counts.tour} class=${counts.class}`);
-  } else fail("live split hits A and D", JSON.stringify(counts));
+  if (counts.class > 0) fail("live split excludes preview D", `class=${counts.class}`);
+  else pass("live split excludes preview D");
+  if (counts.tour > 0 && counts.jeremy > 0) {
+    pass("live split hits A and B", `tour=${counts.tour} jeremy=${counts.jeremy}`);
+  } else fail("live split hits A and B", JSON.stringify(counts));
 }
 
 async function withBrowser(name, viewportKey, fn) {
@@ -122,10 +122,10 @@ async function assertVariant(page, expect, label) {
     else pass(`${label} tour is not B`);
   }
   if (expect === "jeremy") {
-    if (/Meet your/i.test(body) && /Start Free/i.test(body)) pass(`${label} B CTAs`);
+    if (/Try it now/i.test(body) && /How it Works/i.test(body)) pass(`${label} B CTAs`);
     else fail(`${label} B CTAs`, body.slice(0, 160));
-    if (/Tap to meet Jeremy/i.test(body)) pass(`${label} B play`);
-    else fail(`${label} B play`);
+    if (/See how it/i.test(body)) pass(`${label} B headline`);
+    else fail(`${label} B headline`, body.slice(0, 120));
   }
   if (expect === "floor") {
     if (/This is/i.test(body) && /Start Free/i.test(body)) pass(`${label} C CTAs`);

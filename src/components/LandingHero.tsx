@@ -131,6 +131,13 @@ export default function LandingHero({
     return () => window.removeEventListener(FREE_QUICK_TOUR_EVENT, open);
   }, []);
 
+  // B: don't wait — open How it Works so guests learn the system first.
+  useEffect(() => {
+    if (variant !== "jeremy" || returnMode) return;
+    setTourOpen(true);
+    trackLandingCustom("hero-b-auto-tour");
+  }, [variant, returnMode]);
+
   const imageIndex = images.length ? imageTick % images.length : 0;
 
   function goTo(nextIndex: number) {
@@ -382,25 +389,30 @@ function JeremyHeroStack({
 }) {
   return (
     <>
-      <LandingAbClip
-        src={meetSrc}
-        poster={FREE_TICKET_GAG_POSTER}
-        title="Tap to meet Jeremy"
-        analyticsAction="hero-meet-jeremy-play"
-      />
-      <div className="mt-5 w-full max-w-sm">
-        <EasyPathChoices kicker="" hint="Every seat meets the coach · 15 minutes">
+      <div className="w-full max-w-sm">
+        <EasyPathChoices
+          kicker=""
+          hint="How it Works opens first · then hop in Free"
+        >
           <Link
             href={START_FREE_HREF}
-            data-analytics-action="hero-start-free-ab"
+            data-analytics-action="hero-b-try-it-now"
             onClick={(e) => {
               markLandingConverted();
               fireLandingJoinHook(e.currentTarget);
             }}
             className={primaryCta}
           >
-            Start Free
+            Try it now
           </Link>
+          <button
+            type="button"
+            data-analytics-action="hero-free-tour"
+            onClick={onTour}
+            className={secondaryCta}
+          >
+            How it Works
+          </button>
           <Link
             href={JOIN_TICKETS_HREF}
             data-analytics-action={returnMode ? "hero-start-membership-return" : "hero-start-membership"}
@@ -408,18 +420,10 @@ function JeremyHeroStack({
               markLandingConverted();
               fireLandingJoinHook(e.currentTarget);
             }}
-            className={secondaryCta}
+            className="landing-hero-explore-cta inline-flex h-11 w-full items-center justify-center rounded-full px-8 text-[15px] font-bold tracking-tight text-white/90"
           >
             Start membership
           </Link>
-          <button
-            type="button"
-            data-analytics-action="hero-free-tour"
-            onClick={onTour}
-            className="landing-hero-explore-cta inline-flex h-11 w-full items-center justify-center rounded-full px-8 text-[15px] font-bold tracking-tight text-white/90"
-          >
-            How it Works
-          </button>
           <button
             type="button"
             data-analytics-action="hero-explore-content"
@@ -433,13 +437,21 @@ function JeremyHeroStack({
         </EasyPathChoices>
       </div>
       <h1 className="landing-hero-headline mt-8 mb-3 text-[clamp(2.4rem,11vw,3.4rem)] font-semibold leading-[0.9] tracking-[-0.04em] text-white sm:mt-10 sm:text-6xl">
-        Meet your
+        See how it
         <br />
-        <span className="landing-hero-accent">coach.</span>
+        <span className="landing-hero-accent">works.</span>
       </h1>
       <p className="landing-hero-subhead max-w-[20rem] text-[15px] font-semibold leading-snug text-white sm:max-w-sm sm:text-xl">
-        Working out is personal. Free is how you get to know Jeremy.
+        Today, sets, rest — on your phone. Then start Free. No ticket pick first.
       </p>
+      <div className="mt-5 w-full max-w-sm">
+        <LandingAbClip
+          src={meetSrc}
+          poster={FREE_TICKET_GAG_POSTER}
+          title="Or tap to meet Jeremy"
+          analyticsAction="hero-meet-jeremy-play"
+        />
+      </div>
     </>
   );
 }

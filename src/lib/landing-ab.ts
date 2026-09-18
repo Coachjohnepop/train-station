@@ -5,8 +5,8 @@
  * If a challenger fails, set LANDING_AB_ENABLED to false (or LIVE to ["tour"] only).
  * Preview URLs /l/jeremy, /l/floor, /l/class still work without rotating traffic.
  *
- * Live split (this pass): A (tour) vs D (6:30am Zoom class).
- * Meet Jeremy and floor stay preview.
+ * Live split (this pass): A (tour / tickets) vs B (get started — How it Works + Try it now).
+ * 6:30am class and floor stay preview at /l/class and /l/floor.
  */
 
 export const LANDING_AB_COOKIE = "ts_landing";
@@ -25,7 +25,7 @@ export const LANDING_AB_CONTROL: LandingAbVariant = "tour";
 export const LANDING_AB_ENABLED = true;
 
 /** Arms that cold traffic on `/` can be assigned. Always include `tour`. */
-export const LANDING_AB_LIVE: readonly LandingAbVariant[] = ["tour", "class"];
+export const LANDING_AB_LIVE: readonly LandingAbVariant[] = ["tour", "jeremy"];
 
 export type LandingAbArmStatus = "live" | "retired" | "preview";
 
@@ -34,13 +34,13 @@ export const LANDING_AB_META: Record<
   { letter: string; name: string; status: LandingAbArmStatus }
 > = {
   tour: { letter: "A", name: "Tour (homepage)", status: "live" },
-  jeremy: { letter: "B", name: "Meet Jeremy", status: "retired" },
+  jeremy: { letter: "B", name: "Get started", status: "live" },
   floor: { letter: "C", name: "Floor", status: "preview" },
-  class: { letter: "D", name: "6:30am Zoom class", status: "live" },
+  class: { letter: "D", name: "6:30am Zoom class", status: "preview" },
 };
 
-/** Previous live B — re-roll these cookies into the new live split. */
-export const LANDING_AB_RETIRED_LIVE: readonly LandingAbVariant[] = ["jeremy"];
+/** Old live D — keep /l/class sticky; do not assign it on `/`. */
+export const LANDING_AB_RETIRED_LIVE: readonly LandingAbVariant[] = [];
 
 export const LANDING_AB_COOKIE_MAX_AGE = 60 * 60 * 24 * 400;
 
