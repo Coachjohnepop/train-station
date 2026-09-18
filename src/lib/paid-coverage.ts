@@ -5,6 +5,7 @@ import { isDatabaseConfigured } from "@/lib/database-config";
 import { getMemberProfile, updateMemberProfile } from "@/lib/member-profiles-store";
 import { prisma } from "@/lib/prisma";
 import { isPaidMembershipPlan, normalizeSignupPlan } from "@/lib/signup-plans";
+import { isStandingStaffGrantEmail } from "@/lib/staff-grant-standing";
 
 /** Monthly tickets get a short grace so a mid-cycle re-onboard still counts. */
 const PAID_WINDOW_MS = 35 * 24 * 60 * 60 * 1000;
@@ -42,6 +43,14 @@ export async function resolvePaidCoverage(input: {
   }
   if (input.sessionEmail && !sameEmail(input.sessionEmail, profile.email)) {
     return { ok: false, plan: profile.plan, periodEnd: null, reason: "email_mismatch" };
+  }
+  if (isStandingStaffGrantEmail(input.sessionEmail || profile.email)) {
+    return {
+      ok: true,
+      plan: isPaidMembershipPlan(profile.plan) ? profile.plan : requested || profile.plan,
+      periodEnd: profile.staffGrantExpiresAt,
+      reason: "standing_staff_grant",
+    };
   }
   if (profile.paymentStatus !== "paid") {
     const restored = await restorePaidCoverageFromEmailHistory({

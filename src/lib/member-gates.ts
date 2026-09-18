@@ -86,10 +86,10 @@ export function memberNeedsPayment(
   }
   const plan = profile?.plan ?? "explorer";
   if (!isPaidSignupPlan(plan)) return false;
-  if ((profile?.paymentStatus ?? "pending") !== "paid") return true;
-
-  // Stephanie (and any standing grant) stay paid even past the 1st-of-month stamp.
+  // Developer + Stephanie: never send to checkout, even if a Stripe webhook
+  // flipped paymentStatus after we canceled their test subscription.
   if (isStandingStaffGrantEmail(profile?.email)) return false;
+  if ((profile?.paymentStatus ?? "pending") !== "paid") return true;
 
   // Manual staff grants expire monthly (1st) until reapproved.
   if (

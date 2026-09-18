@@ -42,7 +42,7 @@ Update **WHERE WE LEFT OFF** at the end of a session. Don’t put secrets/passwo
 | Step | What happens |
 |------|----------------|
 | 1. Member pays | Card checkout (subscription **or** one-time — only two fee shapes) |
-| 2. Money lands | **100%** (minus Stripe fees) → **Jeremy’s master Stripe balance** → business bank on payout schedule |
+| 2. Money lands | **100%** (minus Stripe fees) → **Jeremy’s master Stripe balance**. **Payouts are MANUAL as of 2026-09-18** (`acct_1TmKSWQWnajU9uyk`, identity `jeremy@thetrainstation.co` / The Train Station). Staff look, then payout. USD **automatic Financial Account `transfer_all`** was cleared the same day. |
 | 3. Company keeps | Most revenue on platform (“company feed”) |
 | 4. **Dev & partnership fees** | **Not** at swipe. Later: Admin → **Dev & partnership** + **Connect Express** |
 | 5. John’s share | **100% of fee pool** until partners change. **Software today:** 5% of all MRR until $5k goal, then 30% of all MRR (cliff). **Draft partnership (not coded, not signed):** tax brackets — first $5k always 5%, $5k–$15k always 30%, above $15k always 50/50. Contract: `docs/partnership-drafts-2026-07-31/10-Partnership-Agreement-DRAFT.pdf`. |
@@ -442,6 +442,30 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 ---
 
 ## WHERE WE LEFT OFF
+
+**Date:** 2026-09-18 (developer not billed)
+
+**Status:** John is **not a paying member**. Standing staff grant (same path as Stephanie) on `john@lemonvoice.com` (Lemon John · Business) and `coachjohnepop@yahoo.com` (Coach Ed / yahoo soak that Stripe was charging $25). Code skips checkout for those emails + `john@thetrainstation.co`. Cancel Live sub `sub_1U5GBdQWnajU9uykdF5p5GCL` after this deploy so the webhook skip is live. No refund of the Sep 17 $25 unless John asks.
+
+**Date:** 2026-09-18 (manual Stripe payouts + ops-expense design)
+
+**Status:** Multiple signups were not visible as Stripe cash because **daily automatic payouts** + Treasury **transfer_all** to Financial Account `fa_65V54Y9…` emptied **available** (last autos: $23.77 Sep 17, $23.97 Sep 14). Live master is now **manual**.
+
+| Item | Value |
+|------|--------|
+| Live acct | `acct_1TmKSWQWnajU9uyk` (one W — extra-W string in older notes is a typo) |
+| Identity | `jeremy@thetrainstation.co` · The Train Station |
+| Before | `interval=daily`, USD `transfer_all` → FA |
+| After | `interval=manual`, auto FA rules **none** |
+| Balance at change | available **-$0.20**, pending **$23.97** |
+| $275 transfers on Live | **none** in last 20 Transfers |
+| John’s Connect Express | **not listed** — ops Confirm blocked until Ready |
+
+**Human:** Stripe Dashboard → Balances → Recurring transfers = **Off** (screenshot). Watch **two settlement days** for any `automatic=true` payout. Pending $23.97 should stay in Stripe instead of sweeping tonight.
+
+**Ops retainer going forward:** Grok **$30** + Vercel **$20** + Supabase **$35** = **$85/mo** (supersedes 2026-07-21 **$275** when in-app Confirm exists). Refund buffer **$50**. Destination = John’s existing Connect Express. Design: `docs/design-manual-payouts-ops-expense-2026-09-18.md`. Scripts: `scripts/stripe-payout-settings-report.mjs`, `scripts/stripe-set-manual-payouts.mjs`. App UI (Ops tab / Confirm / in-app bank) is **not** built yet — $275 button still the only reimbursement path.
+
+Rollback: `POST /v1/balance_settings` `payments[payouts][schedule][interval]=daily`.
 
 **Date:** 2026-09-18 (set-log finger)
 

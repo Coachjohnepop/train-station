@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { updateMemberProfile } from "@/lib/member-profiles-store";
+import { getMemberProfile, updateMemberProfile } from "@/lib/member-profiles-store";
+import { isStandingStaffGrantEmail } from "@/lib/staff-grant-standing";
 import { isCoachTipCheckoutMetadata } from "@/lib/coach-tips";
 import { markMemberPaid } from "@/lib/mark-member-paid";
 import { getStripe } from "@/lib/stripe";
@@ -25,6 +26,13 @@ import {
 } from "@/lib/analytics-facts";
 
 export const dynamic = "force-dynamic";
+
+/** Standing grants (developer / Stephanie) stay paid if Stripe cancels a leftover sub. */
+async function skipStripeUnpaidForStandingGrant(userId: string | null | undefined): Promise<boolean> {
+  if (!userId) return false;
+  const profile = await getMemberProfile(userId);
+  return isStandingStaffGrantEmail(profile?.email);
+}
 
 export async function POST(request: Request) {
   const stripe = getStripe();
@@ -216,7 +224,7 @@ export async function POST(request: Request) {
 
       const sub = await retrieveSubscriptionAnyAccount(subscriptionRef);
       const userId = sub.metadata?.userId;
-      if (userId) {
+      if (userId && !(await skipStripeUnpaidForStandingGrant(userId))) {
         await updateMemberProfile(userId, {
           paymentStatus: "failed",
           stripeSubscriptionId: sub.id,
@@ -253,17 +261,19 @@ export async function POST(request: Request) {
           auditSource: "stripe.webhook.subscription.updated",
         });
       } else if (sub.status === "past_due" || sub.status === "unpaid") {
-        await updateMemberProfile(userId, {
-          paymentStatus: "failed",
-          stripeSubscriptionId: sub.id,
-        });
+        if (!(await skipStripeUnpaidForStandingGrant(userId))) {
+          await updateMemberProfile(userId, {
+            paymentStatus: "failed",
+            stripeSubscriptionId: sub.id,
+          });
+        }
       }
       break;
     }
     case "customer.subscription.deleted": {
       const sub = event.data.object as import("stripe").Stripe.Subscription;
       const userId = sub.metadata?.userId;
-      if (userId) {
+      if (userId && !(await skipStripeUnpaidForStandingGrant(userId))) {
         await updateMemberProfile(userId, {
           paymentStatus: "failed",
           stripeSubscriptionId: sub.id,
