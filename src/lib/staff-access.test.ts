@@ -11,6 +11,11 @@ describe("staffAdminRedirect", () => {
     assert.equal(staffAdminRedirect("/admin/analytics", "PLATFORM_ADMIN"), null);
   });
 
+  it("lets coaches and platform admins open Daily activity", () => {
+    assert.equal(staffAdminRedirect("/admin/activity", "INSTRUCTOR"), null);
+    assert.equal(staffAdminRedirect("/admin/activity", "PLATFORM_ADMIN"), null);
+  });
+
   it("still blocks coaches from billing", () => {
     assert.equal(staffAdminRedirect("/admin/billing", "INSTRUCTOR"), "/admin/day");
   });

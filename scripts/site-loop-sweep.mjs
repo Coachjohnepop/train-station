@@ -299,6 +299,7 @@ async function main() {
     { path: "/api/admin/billing/overview", method: "GET" },
     { path: "/api/admin/pricing", method: "GET" },
     { path: "/api/admin/members", method: "GET" },
+    { path: "/api/admin/activity", method: "GET" },
     { path: "/api/admin/queue", method: "GET" },
     { path: "/api/workouts", method: "GET" },
     { path: "/api/exercises", method: "GET" },

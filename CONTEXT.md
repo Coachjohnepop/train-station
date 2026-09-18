@@ -443,6 +443,10 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
+**Date:** 2026-09-18 (Daily activity desk)
+
+**Status:** There was no per-person “what did they do yesterday” page — Station pulse (`/admin/analytics`) is site-wide. Added **Admin → Daily activity** at **`/admin/activity`** (date picker, defaults to yesterday PT). Coaches and platform staff. Workouts, set checks, Zoom, messages, bookings, measurements, payments, signups, plus guests and quiet members.
+
 **Date:** 2026-09-15 (sign-off)
 
 **Prod HEAD:** `581e7c5` on thetrainstation.co.

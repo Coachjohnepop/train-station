@@ -149,6 +149,7 @@ const ADMIN_PAGES = [
   "/admin/billing",
   "/admin/accounting",
   "/admin/analytics",
+  "/admin/activity",
   "/admin/discounts",
   "/admin/pricing",
   "/admin/programs",
@@ -313,6 +314,7 @@ async function main() {
     "/api/admin/billing/overview",
     "/api/admin/accounting/overview",
     "/api/admin/analytics/overview?days=7",
+    "/api/admin/activity?date=2026-09-17",
     "/api/admin/pricing",
   ]) {
     const r = await coach.req(p);

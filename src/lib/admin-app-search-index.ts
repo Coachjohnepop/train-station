@@ -91,6 +91,23 @@ export const ADMIN_APP_SEARCH_INDEX: AdminSearchItem[] = [
     keywords: ["calendly", "intake", "calls", "appointments", "schedule calls", "webhook"],
   },
   {
+    id: "coach-daily-activity",
+    title: "Daily activity",
+    description: "What each member and coach did yesterday (or any day)",
+    href: "/admin/activity",
+    workspace: "both",
+    group: "People",
+    keywords: [
+      "yesterday",
+      "who trained",
+      "usage",
+      "what they did",
+      "per user",
+      "member activity",
+      "daily",
+    ],
+  },
+  {
     id: "coach-messages",
     title: "Messages",
     description: "1:1 coach–member chat",

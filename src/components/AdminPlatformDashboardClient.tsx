@@ -56,6 +56,12 @@ const CARDS = [
     cta: "Open analytics →",
   },
   {
+    href: "/admin/activity",
+    title: "Daily activity",
+    description: "What each member and coach did yesterday — workouts, Zoom, messages.",
+    cta: "Open daily activity →",
+  },
+  {
     href: "/admin/seo",
     title: "SEO",
     description: "Titles, descriptions, OG share image, robots.txt, sitemap.xml.",

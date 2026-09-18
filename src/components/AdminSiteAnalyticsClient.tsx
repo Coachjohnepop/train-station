@@ -207,6 +207,11 @@ export default function AdminSiteAnalyticsClient() {
           <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Station pulse</h1>
           <p className="mt-1 max-w-2xl text-sm leading-relaxed text-[var(--muted)]">
             Where the site can be better, more effective, and more fun — from live hits, not vibes.
+            Per person:{" "}
+            <Link href="/admin/activity" className="text-accent hover:underline">
+              Daily activity
+            </Link>
+            .
           </p>
         </div>
         <div className="flex w-full gap-1 rounded-xl border border-[var(--border)] p-1 sm:w-auto">

@@ -38,6 +38,11 @@ const peopleItems: AdminNavItem[] = [
     match: (p) => p.startsWith("/admin/members"),
     membersBadge: true,
   },
+  {
+    href: "/admin/activity",
+    label: "Daily activity",
+    match: (p) => p.startsWith("/admin/activity"),
+  },
   ...(SHOW_LEADS
     ? [
         {
@@ -265,6 +270,11 @@ export const PLATFORM_NAV_GROUPS: AdminNavGroup[] = [
           p.startsWith("/admin/analytics") || p.startsWith("/admin/insights"),
       },
       {
+        href: "/admin/activity",
+        label: "Daily activity",
+        match: (p) => p.startsWith("/admin/activity"),
+      },
+      {
         href: "/admin/seo",
         label: "Search",
         match: (p) => p.startsWith("/admin/seo"),
@@ -323,7 +333,9 @@ export function isPlatformAdminPath(pathname: string): boolean {
 /** Coaches and platform staff — Station pulse / insights. */
 export function isSharedStaffPath(pathname: string): boolean {
   return (
-    pathname.startsWith("/admin/analytics") || pathname.startsWith("/admin/insights")
+    pathname.startsWith("/admin/analytics") ||
+    pathname.startsWith("/admin/insights") ||
+    pathname.startsWith("/admin/activity")
   );
 }
 
