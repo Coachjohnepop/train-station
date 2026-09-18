@@ -228,7 +228,7 @@ async function browserCtas(viewportKey) {
 
     await page.locator('[data-analytics-action="walk-next-rest"]').first().click();
     await page.waitForTimeout(400);
-    const style = page.locator('[data-analytics-action="hero-b-train-station-style"]');
+    const style = page.locator('[data-analytics-action="walk-train-station-style"]');
     if ((await style.count()) === 0) {
       fail(`${viewportKey} B Train Station Style missing`);
       return;

@@ -262,7 +262,7 @@ export default function LandingAppWalkthrough({
                 <>
                   <button
                     type="button"
-                    data-analytics-action="hero-b-train-station-style"
+                    data-analytics-action="walk-train-station-style"
                     onClick={(e) => {
                       markLandingConverted();
                       fireLandingJoinHook(e.currentTarget);
