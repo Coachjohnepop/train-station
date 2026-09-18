@@ -1,10 +1,11 @@
 /** Staff grants that never drop on the 1st — auto-renew instead of expire. */
 
 export const STANDING_STAFF_GRANT_EMAILS = [
-  "sprealty9@gmail.com",
-  // Developer / builder — never billed. Training member + yahoo soak that Stripe was charging.
-  "john@lemonvoice.com",
-  "coachjohnepop@yahoo.com",
+  // House / testers / developers — Business Class, never billed.
+  "sprealty9@gmail.com", // Stephanie — developer + tester
+  "fletcherboys@att.net", // Ali — we train at her house
+  "john@lemonvoice.com", // Lemon John — developer + tester
+  "coachjohnepop@yahoo.com", // John's yahoo soak
   "john@thetrainstation.co",
 ] as const;
 

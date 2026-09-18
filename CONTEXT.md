@@ -447,9 +447,13 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 **Status:** Admin → **Stripe money** Overview now shows **where cash sits** (payments available / pending / **Financial Account**) and **where it should go**: Platform Fees (Grok $30 / Vercel $20 / Supabase $35), Reinvest, Jeremy Pay, John Pay. Payout schedule badge (manual). FA dollars are a **ledger of payments→FA transfers** until `STRIPE_FA_RESTRICTED_KEY` can read live FA. Bank tab labels FA vs bank so auto “payouts” are not mistaken for deposits. Leftover default = 100% Reinvest (hold). Settings persist in `MoneyDeskSettings`.
 
+**Date:** 2026-09-18 (house / tester Business Class grants)
+
+**Status:** Standing **Business Class** staff grants (never billed, auto-renew, skip checkout): **Stephanie** `sprealty9@gmail.com` (dev/tester), **Ali** `fletcherboys@att.net` (train at her house), **Lemon John** `john@lemonvoice.com` (dev/tester). John’s yahoo soak `coachjohnepop@yahoo.com` also Business. Admin `john@thetrainstation.co` is not a member. Todd stays a paying Coach Class sub unless you say otherwise. Ali’s old Eco customer `cus_V2y4EIFGNN94nA` is not on Jeremy Live — we could not cancel an Eco sub from this key.
+
 **Date:** 2026-09-18 (developer not billed)
 
-**Status:** John is **not a paying member**. Standing staff grant (same path as Stephanie) on `john@lemonvoice.com` (Lemon John · Business) and `coachjohnepop@yahoo.com` (Coach Ed / yahoo soak that Stripe was charging $25). Code skips checkout for those emails + `john@thetrainstation.co`. Cancel Live sub `sub_1U5GBdQWnajU9uykdF5p5GCL` after this deploy so the webhook skip is live. No refund of the Sep 17 $25 unless John asks.
+**Status:** John is **not a paying member**. Standing staff grant (same path as Stephanie) on `john@lemonvoice.com` (Lemon John · Business) and `coachjohnepop@yahoo.com` (Coach Ed / yahoo soak that Stripe was charging $25). Code skips checkout for those emails + `john@thetrainstation.co`. Live sub `sub_1U5GBdQWnajU9uykdF5p5GCL` canceled. No refund of the Sep 17 $25 unless John asks.
 
 **Date:** 2026-09-18 (manual Stripe payouts + ops-expense design)
 
