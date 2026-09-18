@@ -392,24 +392,35 @@ function JeremyHeroStack({
       <div className="w-full max-w-sm">
         <EasyPathChoices
           kicker=""
-          hint="How it Works opens first · then hop in Free"
+          hint="How it Works opens first · then pick a style"
         >
           <Link
             href={START_FREE_HREF}
-            data-analytics-action="hero-b-try-it-now"
+            data-analytics-action="hero-b-train-station-style"
             onClick={(e) => {
               markLandingConverted();
               fireLandingJoinHook(e.currentTarget);
             }}
             className={primaryCta}
           >
-            Try it now
+            Train Station Style
+          </Link>
+          <Link
+            href="/byow/signup"
+            data-analytics-action="hero-b-byow"
+            onClick={(e) => {
+              markLandingConverted();
+              fireLandingJoinHook(e.currentTarget);
+            }}
+            className={secondaryCta}
+          >
+            Bring Your Own Workout
           </Link>
           <button
             type="button"
             data-analytics-action="hero-free-tour"
             onClick={onTour}
-            className={secondaryCta}
+            className="landing-hero-explore-cta inline-flex h-11 w-full items-center justify-center rounded-full px-8 text-[15px] font-bold tracking-tight text-white/90"
           >
             How it Works
           </button>
@@ -424,25 +435,15 @@ function JeremyHeroStack({
           >
             Start membership
           </Link>
-          <button
-            type="button"
-            data-analytics-action="hero-explore-content"
-            aria-expanded={exploreOpen}
-            aria-controls="explore-content"
-            onClick={(e) => onExplore?.(e.currentTarget)}
-            className="landing-hero-explore-cta inline-flex h-11 w-full items-center justify-center gap-2 rounded-full px-8 text-[15px] font-bold tracking-tight"
-          >
-            Explore Content
-          </button>
         </EasyPathChoices>
       </div>
       <h1 className="landing-hero-headline mt-8 mb-3 text-[clamp(2.4rem,11vw,3.4rem)] font-semibold leading-[0.9] tracking-[-0.04em] text-white sm:mt-10 sm:text-6xl">
-        See how it
+        Your workout
         <br />
-        <span className="landing-hero-accent">works.</span>
+        <span className="landing-hero-accent">or ours.</span>
       </h1>
-      <p className="landing-hero-subhead max-w-[20rem] text-[15px] font-semibold leading-snug text-white sm:max-w-sm sm:text-xl">
-        Today, sets, rest — on your phone. Then start Free. No ticket pick first.
+      <p className="landing-hero-subhead max-w-[20.5rem] text-[15px] font-semibold leading-snug text-white sm:max-w-sm sm:text-xl">
+        Same Today, sets, rest. Train Station Style is Jeremy&apos;s board. BYOW is yours.
       </p>
       <div className="mt-5 w-full max-w-sm">
         <LandingAbClip

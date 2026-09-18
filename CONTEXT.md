@@ -445,7 +445,7 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 **Date:** 2026-09-18 (B is get started, live with A)
 
-**Status:** Homepage live split is **A tour** vs **B get started**. B auto-opens How it Works, primary **Try it now** → Free explorer (no ticket pick). Meet Jeremy clip is below. D 6:30am class stays at `/l/class`. Don't wait on more B data.
+**Status:** Homepage live split is **A tour** vs **B get started**. B auto-opens How it Works, then two doors: **Train Station Style** (`/signup?plan=explorer`, Jeremy’s board) or **Bring Your Own Workout** (`/byow/signup`). D 6:30am class stays at `/l/class`.
 
 **Date:** 2026-09-18 (landing A/B on Station pulse)
 
