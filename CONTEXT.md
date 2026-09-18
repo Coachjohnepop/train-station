@@ -443,6 +443,10 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
+**Date:** 2026-09-18 (bucket rails)
+
+**Status:** 25% split rails: **Platform Fees + John Pay → John's Stripe, hold** until John Mercury exists. **Reinvest → Train Station Mercury** (not open yet — hold in Stripe FA). **Jeremy Pay → currently mapped Stripe payout** on Jeremy's master. No auto bank sweep.
+
 **Date:** 2026-09-18 (even 25% four-way split)
 
 **Status:** Visible Stripe cash (FA + pending + available) splits **25% each**: Platform Fees · John Pay · Reinvest · Jeremy Pay. Percents are editable and must total 100. Vendor lines (Grok/Vercel/Supabase) stay as the monthly list, not the split.

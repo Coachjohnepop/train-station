@@ -23,12 +23,50 @@ export type MoneyDeskSplitInput = MoneyDeskSettingsInput & {
   pendingCents: number;
 };
 
+export type MoneyDeskBucketId = "platform_fees" | "reinvest" | "jeremy_pay" | "john_pay";
+
+/** Where each 25% slice is supposed to land. Hold = do not bank-payout yet. */
+export type MoneyRail = {
+  id: "john_stripe" | "ts_mercury" | "jeremy_stripe_mapped";
+  label: string;
+  hold: boolean;
+  holdUntil: string;
+};
+
+export const BUCKET_RAILS: Record<MoneyDeskBucketId, MoneyRail> = {
+  platform_fees: {
+    id: "john_stripe",
+    label: "John's Stripe",
+    hold: true,
+    holdUntil: "John's Mercury is open — hold in Stripe until then",
+  },
+  john_pay: {
+    id: "john_stripe",
+    label: "John's Stripe",
+    hold: true,
+    holdUntil: "John's Mercury is open — hold in Stripe until then",
+  },
+  reinvest: {
+    id: "ts_mercury",
+    label: "Train Station Mercury",
+    hold: true,
+    holdUntil: "TS Mercury account exists — hold in Stripe FA until then",
+  },
+  jeremy_pay: {
+    id: "jeremy_stripe_mapped",
+    label: "Jeremy's mapped Stripe payout",
+    hold: false,
+    holdUntil: "",
+  },
+};
+
 export type MoneyDeskBucket = {
-  id: "platform_fees" | "reinvest" | "jeremy_pay" | "john_pay";
+  id: MoneyDeskBucketId;
   label: string;
   amountCents: number;
   percent: number;
   detail: string;
+  rail: MoneyRail;
 };
 
 export type MoneyDeskSplit = {
@@ -117,6 +155,7 @@ export function splitVisibleCash(input: MoneyDeskSplitInput): MoneyDeskSplit {
       label: "Platform Fees",
       amountCents: parts.platformFeesCents,
       percent: percents.platformFeesPercent,
+      rail: BUCKET_RAILS.platform_fees,
       detail: `${percents.platformFeesPercent}% · Grok $${(grok / 100).toFixed(0)} / Vercel $${(vercel / 100).toFixed(0)} / Supabase $${(supabase / 100).toFixed(0)} listed`,
     },
     {
@@ -124,21 +163,24 @@ export function splitVisibleCash(input: MoneyDeskSplitInput): MoneyDeskSplit {
       label: "John Pay",
       amountCents: parts.johnPayCents,
       percent: percents.johnPayPercent,
-      detail: `${percents.johnPayPercent}% · Connect when you Confirm`,
+      rail: BUCKET_RAILS.john_pay,
+      detail: `${percents.johnPayPercent}% · John's Stripe, hold (Mercury later)`,
     },
     {
       id: "reinvest",
       label: "Reinvest",
       amountCents: parts.reinvestCents,
       percent: percents.reinvestPercent,
-      detail: `${percents.reinvestPercent}% · hold in FA / Stripe`,
+      rail: BUCKET_RAILS.reinvest,
+      detail: `${percents.reinvestPercent}% · Train Station Mercury (hold in Stripe until that account exists)`,
     },
     {
       id: "jeremy_pay",
       label: "Jeremy Pay",
       amountCents: parts.jeremyPayCents,
       percent: percents.jeremyPayPercent,
-      detail: `${percents.jeremyPayPercent}% · business bank when you Confirm`,
+      rail: BUCKET_RAILS.jeremy_pay,
+      detail: `${percents.jeremyPayPercent}% · Jeremy's currently mapped Stripe payout`,
     },
   ];
 

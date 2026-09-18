@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
   allocateByPercents,
+  BUCKET_RAILS,
   EVEN_SPLIT_PERCENTS,
   platformFeesTotalCents,
   splitVisibleCash,
@@ -52,5 +53,27 @@ describe("money-desk-split", () => {
     const odd = allocateByPercents(101, EVEN_SPLIT_PERCENTS);
     assert.equal(odd.platformFeesCents + odd.johnPayCents + odd.reinvestCents + odd.jeremyPayCents, 101);
     assert.equal(odd.jeremyPayCents, 101 - odd.platformFeesCents - odd.johnPayCents - odd.reinvestCents);
+  });
+
+  it("routes Platform + John to John's Stripe (hold), Reinvest to TS Mercury (hold), Jeremy to mapped Stripe", () => {
+    assert.equal(BUCKET_RAILS.platform_fees.id, "john_stripe");
+    assert.equal(BUCKET_RAILS.john_pay.id, "john_stripe");
+    assert.equal(BUCKET_RAILS.platform_fees.hold, true);
+    assert.equal(BUCKET_RAILS.john_pay.hold, true);
+    assert.equal(BUCKET_RAILS.reinvest.id, "ts_mercury");
+    assert.equal(BUCKET_RAILS.reinvest.hold, true);
+    assert.equal(BUCKET_RAILS.jeremy_pay.id, "jeremy_stripe_mapped");
+    assert.equal(BUCKET_RAILS.jeremy_pay.hold, false);
+    const s = splitVisibleCash({
+      ...lines,
+      faCents: 10000,
+      availableCents: 0,
+      pendingCents: 0,
+    });
+    const byId = Object.fromEntries(s.buckets.map((b) => [b.id, b]));
+    assert.equal(byId.platform_fees.rail.id, "john_stripe");
+    assert.equal(byId.john_pay.rail.id, "john_stripe");
+    assert.equal(byId.reinvest.rail.id, "ts_mercury");
+    assert.equal(byId.jeremy_pay.rail.id, "jeremy_stripe_mapped");
   });
 });

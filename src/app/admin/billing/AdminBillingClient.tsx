@@ -141,6 +141,12 @@ type MoneyMap = {
       amountCents: number;
       percent?: number;
       detail: string;
+      rail?: {
+        id: string;
+        label: string;
+        hold: boolean;
+        holdUntil: string;
+      };
     }>;
   };
   johnPay: {
@@ -483,12 +489,16 @@ function MoneyMapBoard({
               </p>
               <p className="mt-1 text-xl font-semibold tabular-nums">{usd(b.amountCents)}</p>
               <p className="mt-1 text-xs opacity-80">{b.detail}</p>
+              {b.rail ? (
+                <p className="mt-2 text-[11px] opacity-90">
+                  {b.rail.hold ? statusPill("Hold in Stripe", "warn") : statusPill("Mapped Stripe", "ok")}{" "}
+                  {b.rail.label}
+                  {b.rail.holdUntil ? ` · ${b.rail.holdUntil}` : ""}
+                </p>
+              ) : null}
               {b.id === "john_pay" ? (
                 <p className="mt-2 text-[11px] opacity-90">
-                  Pool {map.johnPay.poolLabel} · floor {map.johnPay.floorLabel}
-                  {map.johnPay.floorMet ? " met" : " not met"}
-                  {" · "}
-                  {map.johnPay.connectReady ? "Connect ready" : "Connect not linked"}
+                  Connect {map.johnPay.connectReady ? "ready" : "not linked"}
                   {map.johnPay.periodPaid ? " · paid this period" : ""}
                 </p>
               ) : null}
@@ -966,8 +976,8 @@ export default function AdminBillingClient() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Stripe money</h1>
           <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">
-            Where cash sits (payments balance + Financial Account) and where it should go:
-            Platform Fees, Reinvest, Jeremy Pay, John Pay. Look first — payouts are manual.
+            Where cash sits, then 25% each to Platform Fees + John Pay (John&apos;s Stripe, hold),
+            Reinvest (TS Mercury, hold), Jeremy Pay (mapped Stripe).
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -996,19 +1006,27 @@ export default function AdminBillingClient() {
       <div className="card grid gap-3 p-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
         <div>
           <p className="text-[10px] font-bold uppercase tracking-wide text-accent">Platform Fees</p>
-          <p className="mt-1 text-[var(--muted)]">Grok + Vercel + Supabase. Reserved before anyone is paid.</p>
-        </div>
-        <div>
-          <p className="text-[10px] font-bold uppercase tracking-wide text-accent">Reinvest</p>
-          <p className="mt-1 text-[var(--muted)]">Hold in the Financial Account / Stripe until you move it.</p>
-        </div>
-        <div>
-          <p className="text-[10px] font-bold uppercase tracking-wide text-accent">Jeremy Pay</p>
-          <p className="mt-1 text-[var(--muted)]">Business bank. Manual — Confirm later, not auto-sweep.</p>
+          <p className="mt-1 text-[var(--muted)]">
+            John&apos;s Stripe. Hold there until John&apos;s Mercury exists.
+          </p>
         </div>
         <div>
           <p className="text-[10px] font-bold uppercase tracking-wide text-accent">John Pay</p>
-          <p className="mt-1 text-[var(--muted)]">Partner share via Connect. Not at swipe. Floor still $400.</p>
+          <p className="mt-1 text-[var(--muted)]">
+            Same: John&apos;s Stripe, hold. No bank payout until his Mercury is ready.
+          </p>
+        </div>
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-wide text-accent">Reinvest</p>
+          <p className="mt-1 text-[var(--muted)]">
+            Train Station Mercury (not open yet). Hold in Stripe FA until that account exists.
+          </p>
+        </div>
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-wide text-accent">Jeremy Pay</p>
+          <p className="mt-1 text-[var(--muted)]">
+            Jeremy&apos;s currently mapped Stripe payout destination.
+          </p>
         </div>
       </div>
 
