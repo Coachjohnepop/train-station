@@ -4,6 +4,7 @@ import {
   allocateByPercents,
   BUCKET_RAILS,
   EVEN_SPLIT_PERCENTS,
+  outflowThresholdCents,
   platformFeesTotalCents,
   splitVisibleCash,
 } from "./money-desk-split";
@@ -75,5 +76,28 @@ describe("money-desk-split", () => {
     assert.equal(byId.john_pay.rail.id, "john_stripe");
     assert.equal(byId.reinvest.rail.id, "ts_mercury");
     assert.equal(byId.jeremy_pay.rail.id, "jeremy_stripe_mapped");
+  });
+
+  it("outflow threshold is monthly bills × 4 at 25%", () => {
+    assert.equal(outflowThresholdCents(8500, 25), 34000);
+    const below = splitVisibleCash({
+      ...lines,
+      faCents: 8052,
+      availableCents: 0,
+      pendingCents: 2397,
+    });
+    assert.equal(below.monthlyBillsCents, 8500);
+    assert.equal(below.outflowThresholdCents, 34000);
+    assert.equal(below.outflowReady, false);
+    assert.ok(below.shortfallCents > 0);
+    const at = splitVisibleCash({
+      ...lines,
+      faCents: 34000,
+      availableCents: 0,
+      pendingCents: 0,
+    });
+    assert.equal(at.outflowReady, true);
+    assert.equal(at.shortfallCents, 0);
+    assert.equal(at.platformFeesCents, 8500);
   });
 });

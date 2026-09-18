@@ -443,6 +443,10 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
+**Date:** 2026-09-18 (savings threshold = bills × 4)
+
+**Status:** No money leaves Stripe until visible cash ≥ **monthly platform bills × 4**. Default Grok $30 + Vercel $20 + Supabase $35 = **$85 → $340**. At 25% each, the Platform Fees slice then covers one month of bills. Shortfall shows on Admin → Stripe money.
+
 **Date:** 2026-09-18 (bucket rails)
 
 **Status:** 25% split rails: **Platform Fees + John Pay → John's Stripe, hold** until John Mercury exists. **Reinvest → Train Station Mercury** (not open yet — hold in Stripe FA). **Jeremy Pay → currently mapped Stripe payout** on Jeremy's master. No auto bank sweep.

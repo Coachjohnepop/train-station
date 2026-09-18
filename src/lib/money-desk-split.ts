@@ -83,8 +83,29 @@ export type MoneyDeskSplit = {
   johnPayPercent: number;
   reinvestPercent: number;
   jeremyPayPercent: number;
+  /** Monthly vendor bills (Grok+Vercel+Supabase). */
+  monthlyBillsCents: number;
+  /**
+   * Savings floor before any bucket pays out.
+   * monthlyBills / (platformFeesPercent/100) — at 25% that's bills × 4.
+   */
+  outflowThresholdCents: number;
+  shortfallCents: number;
+  /** True when visible cash covers the threshold so each 25% slice can pay one month of bills. */
+  outflowReady: boolean;
   buckets: MoneyDeskBucket[];
 };
+
+export function outflowThresholdCents(
+  monthlyBillsCents: number,
+  platformFeesPercent: number,
+): number {
+  const bills = clampCents(monthlyBillsCents);
+  const pct = clampPercent(platformFeesPercent);
+  if (bills <= 0) return 0;
+  if (pct <= 0) return bills * 4;
+  return Math.ceil((bills * 100) / pct);
+}
 
 export const EVEN_SPLIT_PERCENTS: MoneyDeskPercents = {
   platformFeesPercent: 25,
@@ -148,6 +169,10 @@ export function splitVisibleCash(input: MoneyDeskSplitInput): MoneyDeskSplit {
   };
 
   const parts = allocateByPercents(visibleCents, percents);
+  const monthlyBillsCents = grok + vercel + supabase;
+  const thresholdCents = outflowThresholdCents(monthlyBillsCents, percents.platformFeesPercent);
+  const shortfallCents = Math.max(0, thresholdCents - visibleCents);
+  const outflowReady = visibleCents >= thresholdCents;
 
   const buckets: MoneyDeskBucket[] = [
     {
@@ -198,6 +223,10 @@ export function splitVisibleCash(input: MoneyDeskSplitInput): MoneyDeskSplit {
     johnPayPercent: percents.johnPayPercent,
     reinvestPercent: percents.reinvestPercent,
     jeremyPayPercent: percents.jeremyPayPercent,
+    monthlyBillsCents,
+    outflowThresholdCents: thresholdCents,
+    shortfallCents,
+    outflowReady,
     buckets,
   };
 }

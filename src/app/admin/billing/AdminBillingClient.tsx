@@ -135,6 +135,10 @@ type MoneyMap = {
     reinvestCents: number;
     jeremyPayCents: number;
     leftoverCents: number;
+    monthlyBillsCents?: number;
+    outflowThresholdCents?: number;
+    shortfallCents?: number;
+    outflowReady?: boolean;
     buckets: Array<{
       id: string;
       label: string;
@@ -477,6 +481,46 @@ function MoneyMapBoard({
       </div>
 
       <div>
+        {typeof map.split.outflowThresholdCents === "number" ? (
+          <div
+            className={`mb-4 rounded-xl border p-4 ${
+              map.split.outflowReady
+                ? "border-emerald-500/40 bg-emerald-500/10"
+                : "border-amber-500/40 bg-amber-500/10"
+            }`}
+          >
+            <p className="text-[10px] font-bold uppercase tracking-wide">
+              {map.split.outflowReady ? "Savings threshold met" : "Hold all outflows · savings threshold"}
+            </p>
+            <p className="mt-1 text-xl font-semibold tabular-nums">
+              {usd(map.split.visibleCents)} / {usd(map.split.outflowThresholdCents)}
+            </p>
+            <p className="mt-1 text-xs opacity-90">
+              Monthly platform bills {usd(map.split.monthlyBillsCents ?? 0)} ×{" "}
+              {map.settings.platformFeesPercent
+                ? Math.round(100 / map.settings.platformFeesPercent)
+                : 4}{" "}
+              (because that slice is {map.settings.platformFeesPercent}%). No money leaves Stripe
+              until this pot covers one month of bills in the Platform Fees bucket.
+              {map.split.outflowReady
+                ? " Ready to pay platform fees from John's Stripe hold."
+                : ` Still short ${usd(map.split.shortfallCents ?? 0)}.`}
+            </p>
+            <div className="mt-3 h-2 overflow-hidden rounded-full bg-black/20">
+              <div
+                className={`h-full ${map.split.outflowReady ? "bg-emerald-400" : "bg-amber-300"}`}
+                style={{
+                  width: `${Math.min(
+                    100,
+                    Math.round(
+                      (map.split.visibleCents / Math.max(1, map.split.outflowThresholdCents)) * 100,
+                    ),
+                  )}%`,
+                }}
+              />
+            </div>
+          </div>
+        ) : null}
         <p className="mb-2 text-[10px] font-bold uppercase tracking-wide text-[var(--muted)]">
           Where it should go · {usd(map.split.visibleCents)} visible
         </p>
@@ -491,7 +535,11 @@ function MoneyMapBoard({
               <p className="mt-1 text-xs opacity-80">{b.detail}</p>
               {b.rail ? (
                 <p className="mt-2 text-[11px] opacity-90">
-                  {b.rail.hold ? statusPill("Hold in Stripe", "warn") : statusPill("Mapped Stripe", "ok")}{" "}
+                  {map.split.outflowReady === false
+                    ? statusPill("Below savings floor", "warn")
+                    : b.rail.hold
+                      ? statusPill("Hold in Stripe", "warn")
+                      : statusPill("Mapped Stripe", "ok")}{" "}
                   {b.rail.label}
                   {b.rail.holdUntil ? ` · ${b.rail.holdUntil}` : ""}
                 </p>
