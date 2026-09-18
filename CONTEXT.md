@@ -443,6 +443,12 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
+**Date:** 2026-09-18 (allaboard.fit + 6:30am A/B)
+
+**Status:**
+- **www.allaboard.fit** / **allaboard.fit** 301/308 to **https://www.thetrainstation.co** (same path). Middleware + `vercel.json`. Add both hosts on the Vercel project and point DNS (A/CNAME or Vercel nameservers).
+- **Landing A/B next pass:** `/` is 50/50 **A tour** vs **D class** (`/l/class`). D offers **Tue/Wed/Fri 6:30am Pacific Zoom** → Coach Class signup `/signup?plan=member`. Meet Jeremy (`/l/jeremy`) and floor (`/l/floor`) are preview. Old `ts_landing=jeremy` cookies re-roll into the new split. Kill switch still `LANDING_AB_ENABLED`.
+
 **Date:** 2026-09-18 (gamification scores reset)
 
 **Status:** Wiped the points ledger so everyone is at **0**. Postgres `GamificationEvent` + `GamificationSeasonScore` cleared; Blob `demo/member-gamification.json` emptied so import cannot restore old points. Demo leaderboard seed is local-only (won’t refill prod). Coach desk: Admin → Gamification → Actions → **Reset all scores to zero**. New workouts earn from now.

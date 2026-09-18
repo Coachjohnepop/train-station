@@ -1,17 +1,18 @@
 /**
- * Landing A/B/C — guests on `/` only.
+ * Landing A/B — guests on `/` only.
  *
  * `tour` IS the current production landing. It stays in the stock forever.
- * If B/C fail, set LANDING_AB_ENABLED to false (or LIVE to ["tour"] only).
- * Preview URLs /l/jeremy and /l/floor still work so we can look without rotating traffic.
+ * If a challenger fails, set LANDING_AB_ENABLED to false (or LIVE to ["tour"] only).
+ * Preview URLs /l/jeremy, /l/floor, /l/class still work without rotating traffic.
  *
- * Live split: A (tour) vs B (meet Jeremy). C (floor) is preview until A vs B has enough sessions.
+ * Live split (this pass): A (tour) vs D (6:30am Zoom class).
+ * Meet Jeremy and floor stay preview.
  */
 
 export const LANDING_AB_COOKIE = "ts_landing";
 export const LANDING_AB_HEADER = "x-landing-variant";
 
-export const LANDING_AB_VARIANTS = ["tour", "jeremy", "floor"] as const;
+export const LANDING_AB_VARIANTS = ["tour", "jeremy", "floor", "class"] as const;
 export type LandingAbVariant = (typeof LANDING_AB_VARIANTS)[number];
 
 /** Current public homepage. Never delete this arm. */
@@ -19,12 +20,15 @@ export const LANDING_AB_CONTROL: LandingAbVariant = "tour";
 
 /**
  * Flip to false to send every guest on `/` back to the current landing.
- * B and C stay in the stock at /l/jeremy and /l/floor.
+ * Other arms stay in the stock at /l/jeremy, /l/floor, /l/class.
  */
 export const LANDING_AB_ENABLED = true;
 
 /** Arms that cold traffic on `/` can be assigned. Always include `tour`. */
-export const LANDING_AB_LIVE: readonly LandingAbVariant[] = ["tour", "jeremy"];
+export const LANDING_AB_LIVE: readonly LandingAbVariant[] = ["tour", "class"];
+
+/** Previous live B — re-roll these cookies into the new live split. */
+export const LANDING_AB_RETIRED_LIVE: readonly LandingAbVariant[] = ["jeremy"];
 
 export const LANDING_AB_COOKIE_MAX_AGE = 60 * 60 * 24 * 400;
 
@@ -33,6 +37,7 @@ export function parseLandingAbVariant(raw: string | null | undefined): LandingAb
   if (v === "a" || v === "control" || v === "tour") return "tour";
   if (v === "b" || v === "meet" || v === "jeremy") return "jeremy";
   if (v === "c" || v === "floor") return "floor";
+  if (v === "d" || v === "class" || v === "zoom" || v === "aboard" || v === "630") return "class";
   return null;
 }
 
@@ -49,6 +54,9 @@ export function assignLiveLandingAb(): LandingAbVariant {
  */
 export function resolveLiveLandingAb(existing: LandingAbVariant | null): LandingAbVariant {
   if (!LANDING_AB_ENABLED) return LANDING_AB_CONTROL;
+  if (existing && (LANDING_AB_RETIRED_LIVE as readonly string[]).includes(existing)) {
+    return assignLiveLandingAb();
+  }
   if (existing) return existing;
   return assignLiveLandingAb();
 }

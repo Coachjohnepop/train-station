@@ -10,6 +10,9 @@ describe("parseLandingAbVariant", () => {
     assert.equal(parseLandingAbVariant("b"), "jeremy");
     assert.equal(parseLandingAbVariant("floor"), "floor");
     assert.equal(parseLandingAbVariant("C"), "floor");
+    assert.equal(parseLandingAbVariant("class"), "class");
+    assert.equal(parseLandingAbVariant("D"), "class");
+    assert.equal(parseLandingAbVariant("zoom"), "class");
   });
 
   it("rejects junk", () => {
@@ -22,7 +25,12 @@ describe("parseLandingAbVariant", () => {
 describe("resolveLiveLandingAb", () => {
   it("keeps a live sticky arm", () => {
     assert.equal(resolveLiveLandingAb("tour"), "tour");
-    assert.equal(resolveLiveLandingAb("jeremy"), "jeremy");
+    assert.equal(resolveLiveLandingAb("class"), "class");
+  });
+
+  it("re-rolls retired Meet Jeremy cookies into the new live split", () => {
+    const next = resolveLiveLandingAb("jeremy");
+    assert.ok(next === "tour" || next === "class", next);
   });
 
   it("keeps a preview C cookie sticky (does not re-roll A/B)", () => {

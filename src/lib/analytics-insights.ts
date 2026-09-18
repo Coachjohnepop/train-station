@@ -109,6 +109,7 @@ export function buildFunnel(input: InsightInput): FunnelSnapshot {
       input.namedActions,
       "hero-start-membership",
       "hero-start-membership-return",
+      "hero-join-class",
       "menu-join-week",
       "nav-join-week",
       "nav-memberships",

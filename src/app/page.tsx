@@ -85,6 +85,9 @@ export default async function HomePage() {
               <Link href={landingAbPath("floor")} className="text-[10px] font-bold uppercase tracking-wide text-white/70 hover:text-white">
                 C
               </Link>
+              <Link href={landingAbPath("class")} className="text-[10px] font-bold uppercase tracking-wide text-white/70 hover:text-white">
+                D
+              </Link>
               <LogoutButton className="inline-flex h-auto items-center justify-center rounded-full border border-white/30 bg-transparent px-4 py-1.5 text-xs font-bold text-white/90 hover:bg-white/10 hover:text-white" />
               <Link
                 href="/admin"

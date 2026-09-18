@@ -23,6 +23,7 @@ import {
 import EasyPathChoices from "@/components/EasyPathChoices";
 import LandingAbClip from "@/components/LandingAbClip";
 import type { LandingAbVariant } from "@/lib/landing-ab";
+import { LIVE_CLASS_OFFER } from "@/lib/live-class-offer";
 import {
   FREE_TICKET_FULL_SRC,
   FREE_TICKET_GAG_POSTER,
@@ -249,6 +250,13 @@ export default function LandingHero({
             ) : variant === "floor" ? (
               <FloorHeroStack
                 floorSrc={welcomeVideoUrl?.trim() || JEREMY_WELCOME_VIDEO_SRC}
+                returnMode={returnMode}
+                exploreOpen={exploreOpen}
+                onExplore={onExplore}
+                onTour={() => setTourOpen(true)}
+              />
+            ) : variant === "class" ? (
+              <ClassHeroStack
                 returnMode={returnMode}
                 exploreOpen={exploreOpen}
                 onExplore={onExplore}
@@ -507,6 +515,81 @@ function FloorHeroStack({
       </h1>
       <p className="landing-hero-subhead max-w-[20rem] text-[15px] font-semibold leading-snug text-white sm:max-w-sm sm:text-xl">
         One exercise. His demo. On your phone — not a brochure.
+      </p>
+    </>
+  );
+}
+
+function ClassHeroStack({
+  returnMode,
+  exploreOpen,
+  onExplore,
+  onTour,
+}: {
+  returnMode: boolean;
+  exploreOpen: boolean;
+  onExplore?: (origin: HTMLElement) => void;
+  onTour: () => void;
+}) {
+  return (
+    <>
+      <p className="mb-3 text-[11px] font-extrabold uppercase tracking-[0.28em] text-[#d4af37] sm:text-xs">
+        Live Zoom · {LIVE_CLASS_OFFER.daysLabel} · {LIVE_CLASS_OFFER.timeLabel}{" "}
+        {LIVE_CLASS_OFFER.timeZoneLabel}
+      </p>
+      <div className="mb-5 flex flex-wrap items-center justify-center gap-1.5">
+        {LIVE_CLASS_OFFER.days.map((day) => (
+          <span
+            key={day}
+            className="rounded-full border border-[#d4af37]/50 bg-black/40 px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-[#f3e6b8]"
+          >
+            {day}
+          </span>
+        ))}
+        <span className="rounded-full bg-[#d4af37] px-3 py-1 text-[11px] font-extrabold uppercase tracking-wide text-black">
+          {LIVE_CLASS_OFFER.timeLabel}
+        </span>
+      </div>
+      <div className="w-full max-w-sm">
+        <EasyPathChoices kicker="" hint="Coach Class · Jeremy hosts on Zoom">
+          <Link
+            href={LIVE_CLASS_OFFER.signupHref}
+            data-analytics-action="hero-join-class"
+            onClick={(e) => {
+              markLandingConverted();
+              fireLandingJoinHook(e.currentTarget);
+            }}
+            className={primaryCta}
+          >
+            Join the 6:30am class
+          </Link>
+          <button
+            type="button"
+            data-analytics-action={returnMode ? "hero-free-tour-return" : "hero-free-tour"}
+            onClick={onTour}
+            className={secondaryCta}
+          >
+            How it Works
+          </button>
+          <button
+            type="button"
+            data-analytics-action="hero-explore-content"
+            aria-expanded={exploreOpen}
+            aria-controls="explore-content"
+            onClick={(e) => onExplore?.(e.currentTarget)}
+            className="landing-hero-explore-cta inline-flex h-11 w-full items-center justify-center gap-2 rounded-full px-8 text-[15px] font-bold tracking-tight"
+          >
+            Explore Content
+          </button>
+        </EasyPathChoices>
+      </div>
+      <h1 className="landing-hero-headline mt-8 mb-3 text-[clamp(2.4rem,11vw,3.4rem)] font-semibold leading-[0.9] tracking-[-0.04em] text-white sm:mt-10 sm:text-6xl">
+        All aboard
+        <br />
+        <span className="landing-hero-accent">6:30am.</span>
+      </h1>
+      <p className="landing-hero-subhead max-w-[20rem] text-[15px] font-semibold leading-snug text-white sm:max-w-sm sm:text-xl">
+        Tuesday, Wednesday, Friday. Live with Coach Jeremy on Zoom.
       </p>
     </>
   );

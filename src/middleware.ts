@@ -18,6 +18,7 @@ import {
   resolveLiveLandingAb,
   type LandingAbVariant,
 } from "@/lib/landing-ab";
+import { canonicalSiteUrl, isVanityRedirectHost } from "@/lib/vanity-hosts";
 
 const NEEDS_ONBOARD_COOKIE = "ts_needs_onboard";
 const SIGNUP_PLAN_COOKIE = "ts_signup_plan";
@@ -164,6 +165,10 @@ function nextWithPath(request: NextRequest, pathname: string) {
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  if (isVanityRedirectHost(request.headers.get("host"))) {
+    const dest = canonicalSiteUrl(pathname, request.nextUrl.search);
+    return NextResponse.redirect(dest, 308);
+  }
   if (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/images") ||

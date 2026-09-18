@@ -1,4 +1,30 @@
 {
+  "redirects": [
+    {
+      "source": "/",
+      "has": [{ "type": "host", "value": "allaboard.fit" }],
+      "destination": "https://www.thetrainstation.co/",
+      "permanent": true
+    },
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "allaboard.fit" }],
+      "destination": "https://www.thetrainstation.co/:path*",
+      "permanent": true
+    },
+    {
+      "source": "/",
+      "has": [{ "type": "host", "value": "www.allaboard.fit" }],
+      "destination": "https://www.thetrainstation.co/",
+      "permanent": true
+    },
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "www.allaboard.fit" }],
+      "destination": "https://www.thetrainstation.co/:path*",
+      "permanent": true
+    }
+  ],
   "crons": [
     {
       "path": "/api/cron/mart-rollup",
