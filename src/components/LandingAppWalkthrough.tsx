@@ -63,6 +63,15 @@ export default function LandingAppWalkthrough({
   }, []);
 
   useEffect(() => {
+    if (!open) return;
+    for (const src of Object.values(WALK_VOICE_SRC)) {
+      const pre = new Audio();
+      pre.preload = "auto";
+      pre.src = src;
+    }
+  }, [open]);
+
+  useEffect(() => {
     if (!open) {
       stopWalkVoice();
       setPhase("ask");

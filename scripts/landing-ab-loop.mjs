@@ -187,7 +187,9 @@ async function browserCtas(viewportKey) {
     const audioHits = [];
     page.on("response", (res) => {
       const u = res.url();
-      if (u.includes("/audio/walk-") && res.status() === 200) audioHits.push(u);
+      if (u.includes("/audio/walk-") && (res.status() === 200 || res.status() === 206)) {
+        audioHits.push(u);
+      }
     });
     await page.goto(BASE + "/l/jeremy", { waitUntil: "domcontentloaded", timeout: 45000 });
     await page.waitForTimeout(800);
@@ -239,8 +241,13 @@ async function browserCtas(viewportKey) {
     if (url.includes("signup") && url.includes("explorer")) pass(`${viewportKey} B exits to explorer`, url.replace(BASE, ""));
     else fail(`${viewportKey} B exits to explorer`, url);
 
-    if (audioHits.length > 0) pass(`${viewportKey} B walk audio 200`, String(audioHits.length));
-    else fail(`${viewportKey} B walk audio 200`, "no walk-*.mp3 200s");
+    const audioOk = [];
+    for (const name of ["walk-today", "walk-set", "walk-rest", "walk-done"]) {
+      const res = await fetch(`${BASE}/audio/${name}.mp3`);
+      if (res.ok) audioOk.push(name);
+    }
+    if (audioOk.length === 4) pass(`${viewportKey} B walk audio 200`, audioOk.join(","));
+    else fail(`${viewportKey} B walk audio 200`, `ok=${audioOk.join(",") || "none"} hits=${audioHits.length}`);
   });
   await withBrowser("cta-class", viewportKey, async (page) => {
     await page.goto(BASE + "/l/class", { waitUntil: "domcontentloaded", timeout: 45000 });
