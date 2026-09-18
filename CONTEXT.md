@@ -451,7 +451,14 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 **Status (this session):**
 
-- **www.allaboard.fit** + **allaboard.fit** redirect to **https://www.thetrainstation.co** (same path + query). Code: middleware 308 + `vercel.json` host redirects. **DNS still needed:** add both hosts on the Vercel `train-station` project, then at the registrar either Vercel nameservers or `A 10.0.1.2` (apex) + `CNAME cname.vercel-dns.com` (www). Domain add was blocked while prod deploys were Error.
+- **allaboard.fit** (Namecheap, still parking): both hosts are on the Vercel `train-station` project. Code 308s **`/` → `/l/class`** (6:30am Zoom door) and other paths to the same path on **www.thetrainstation.co**. **DNS left at Namecheap** (`dns1/dns2.registrar-servers.com`, www → parkingpage.namecheap.com). At Namecheap → Domain List → Manage → Advanced DNS, replace parking:
+
+  | Type | Host | Value | TTL |
+  |---|---|---|---|
+  | A | `@` | `10.0.1.2` | Automatic |
+  | CNAME | `www` | `cname.vercel-dns.com.` | Automatic |
+
+  Delete the parking CNAME on `www`. SSL issues after DNS: Vercel → train-station → Domains.
 - **Landing A/B next pass:** `/` 50/50 **A tour** vs **D class** (`/l/class`). D = **Tue · Wed · Fri · 6:30am Pacific** live Zoom → Coach Class `/signup?plan=member`. Meet Jeremy `/l/jeremy` and floor `/l/floor` are preview. Old `ts_landing=jeremy` cookies re-roll. Kill switch: `LANDING_AB_ENABLED`.
 - **Admin top bar overlap:** fixed DARK toggle sat on **Discount codes**. Discount dropped from the sticky bar (still in left nav). Theme toggle is icon-only in the header. `data-admin-chrome` hides the global fixed toggle.
 - **Daily activity:** `/admin/activity?date=YYYY-MM-DD` (People → Daily activity). Yesterday 2026-09-17 PT: Todd Upper Body 6:39a, Aiden Back/Bicep 10:24a, Dan Fasted cardio 3:01p, Garry Lower Body ×3 ~6:27p. No live class / Zoom. Jeremy homepage once.

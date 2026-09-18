@@ -12,8 +12,14 @@ export function isVanityRedirectHost(hostHeader: string | null | undefined): boo
   return VANITY_REDIRECT_HOSTS.has(requestHost(hostHeader));
 }
 
-/** Absolute https URL on the canonical host, same path + query. */
+/**
+ * Absolute https URL on the canonical host.
+ * Vanity `/` is the 6:30am Zoom door (`/l/class`). Other paths pass through.
+ */
 export function canonicalSiteUrl(pathname: string, search = ""): string {
   const path = pathname.startsWith("/") ? pathname : `/${pathname}`;
+  if (path === "/" || path === "") {
+    return `https://${CANONICAL_HOST}/l/class${search}`;
+  }
   return `https://${CANONICAL_HOST}${path}${search}`;
 }

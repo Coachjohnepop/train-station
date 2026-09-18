@@ -19,7 +19,11 @@ describe("vanity redirect hosts", () => {
   });
 
   it("builds the canonical URL", () => {
-    assert.equal(canonicalSiteUrl("/"), "https://www.thetrainstation.co/");
+    assert.equal(canonicalSiteUrl("/"), "https://www.thetrainstation.co/l/class");
+    assert.equal(
+      canonicalSiteUrl("/", "?utm=ig"),
+      "https://www.thetrainstation.co/l/class?utm=ig",
+    );
     assert.equal(
       canonicalSiteUrl("/join", "?plan=member"),
       "https://www.thetrainstation.co/join?plan=member",

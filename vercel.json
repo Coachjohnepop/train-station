@@ -3,7 +3,7 @@
     {
       "source": "/",
       "has": [{ "type": "host", "value": "allaboard.fit" }],
-      "destination": "https://www.thetrainstation.co/",
+      "destination": "https://www.thetrainstation.co/l/class",
       "permanent": true
     },
     {
@@ -15,7 +15,7 @@
     {
       "source": "/",
       "has": [{ "type": "host", "value": "www.allaboard.fit" }],
-      "destination": "https://www.thetrainstation.co/",
+      "destination": "https://www.thetrainstation.co/l/class",
       "permanent": true
     },
     {
