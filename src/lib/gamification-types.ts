@@ -11,6 +11,7 @@ export const DEFAULT_GAMIFICATION_POINTS = {
   warmup_before_live: 10,
   intake_scheduled: 10,
   workout_logged: 10,
+  set_logged: 10,
   intake_complete: 10,
   onboarding_complete: 10,
 } as const;
@@ -19,6 +20,7 @@ type GamificationPointsMapLike = {
   warmup_before_live: number;
   intake_scheduled: number;
   workout_logged: number;
+  set_logged: number;
   intake_complete: number;
   onboarding_complete: number;
 };
@@ -28,6 +30,7 @@ const LEGACY_GAMIFICATION_POINTS: GamificationPointsMapLike = {
   warmup_before_live: 50,
   intake_scheduled: 100,
   workout_logged: 25,
+  set_logged: 10,
   intake_complete: 75,
   onboarding_complete: 25,
 };
@@ -134,6 +137,7 @@ export const GAMIFICATION_EVENT_LABELS: Record<GamificationEventType, string> = 
   warmup_before_live: "Warm-ups before live",
   intake_scheduled: "Booked intro call",
   workout_logged: "Workout logged",
+  set_logged: "Logged a set",
   intake_complete: "Intake complete",
   onboarding_complete: "Finished setup",
 };

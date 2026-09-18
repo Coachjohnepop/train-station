@@ -402,6 +402,10 @@ export default function MemberLeaderboard() {
                 {pointValues.workout_logged * 8} pts
               </li>
               <li>
+                Log a set (rest timer) — Free {pointValues.set_logged} / Coach+{" "}
+                {pointValues.set_logged * 8} pts (once per workout per day)
+              </li>
+              <li>
                 Coach intake complete — Free {pointValues.intake_complete} / Coach+{" "}
                 {pointValues.intake_complete * 8} pts
               </li>

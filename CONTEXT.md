@@ -443,6 +443,10 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
+**Date:** 2026-09-18 (set-log finger)
+
+**Status:** Member Today shows a **pointing finger** on the next open set: “Log this set — rest timer starts · stay on task.” Hides while the rest popup is up. First set of each workout/day awards **set_logged** (Free 10 / Coach+ ×8, daily cap still applies).
+
 **Date:** 2026-09-18 (usage day / week / month)
 
 **Status:** Admin → **Usage** (`/admin/activity`) now has **Day · Week · Month**. Week is Mon–Sun PT. Month is the calendar month. Rollup cards: trained, workouts, sets, Zoom, messages, signups, paid. Per-person cards still list what they did; week/month show active days.

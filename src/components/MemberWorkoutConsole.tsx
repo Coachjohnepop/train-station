@@ -72,6 +72,7 @@ import {
   shouldAutoFinishExercise,
 } from "@/lib/member-exercise-finish";
 import MemberWarmupGroupCard from "@/components/MemberWarmupGroupCard";
+import SetLogFingerHint from "@/components/SetLogFingerHint";
 import {
   DEFAULT_WARMUP_REST_SECONDS,
   isWarmupGroupComplete,
@@ -1794,6 +1795,42 @@ export default function MemberWorkoutConsole({
     [queueLiveSave, fireEngage],
   );
 
+  const awardSetLogged = useCallback(() => {
+    if (coachFloorMode || reviewMode) return;
+    const sessionDate = liveSessionDate || logSessionDate || "";
+    void fetch("/api/member/gamification/set-logged", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        workoutId: workout.workoutId,
+        sessionDate,
+        programSlug: programSlug ?? null,
+      }),
+    })
+      .then(async (res) => {
+        if (!res.ok) return;
+        const data = (await res.json()) as {
+          awarded?: boolean;
+          totalPoints?: number;
+          pointsEarned?: number;
+        };
+        if (data.awarded && data.pointsEarned) {
+          dispatchMemberScoreCelebrate({
+            totalPoints: data.totalPoints ?? 0,
+            pointsEarned: data.pointsEarned,
+          });
+        }
+      })
+      .catch(() => {});
+  }, [
+    coachFloorMode,
+    reviewMode,
+    liveSessionDate,
+    logSessionDate,
+    workout.workoutId,
+    programSlug,
+  ]);
+
   const toggleSet = useCallback(
     (blockId: string, setNum: number, originEl?: HTMLElement) => {
       if (freeLockedExerciseIds.has(blockId)) return;
@@ -1823,6 +1860,7 @@ export default function MemberWorkoutConsole({
       });
 
       if (!wasDone) {
+        awardSetLogged();
         fireEngage();
         // User gesture: unlock iOS audio so rest-end can play when countdown hits 0.
         unlockRestAudio(restSoundRef.current);
@@ -1874,6 +1912,7 @@ export default function MemberWorkoutConsole({
       coachFloorMode,
       workout.exercises,
       fireEngage,
+      awardSetLogged,
     ],
   );
 
@@ -1921,6 +1960,7 @@ export default function MemberWorkoutConsole({
       });
 
       if (!wasDone) {
+        awardSetLogged();
         fireEngage();
         unlockRestAudio(restSoundRef.current);
         if (!restMutedRef.current) playSetCheckPop();
@@ -1950,6 +1990,7 @@ export default function MemberWorkoutConsole({
       queueLiveSave,
       warmupGroup.mode,
       workout.exercises,
+      awardSetLogged,
     ],
   );
 
@@ -2564,6 +2605,7 @@ export default function MemberWorkoutConsole({
 
   return (
     <div
+      id="member-workout-console"
       className={`member-workout-console mx-auto w-full max-w-md md:max-w-2xl lg:max-w-2xl xl:max-w-2xl ${
         embedded ? "px-0 py-2 md:px-2" : showLoggedSuccess ? "px-4 py-2 md:px-6" : "px-4 py-6 md:px-6"
       }`}
@@ -2830,6 +2872,14 @@ export default function MemberWorkoutConsole({
           const allSetsDone = isTimed
             ? doneForBlock.has(1)
             : doneForBlock.size >= block.setCount;
+          const nextSetNum = isTimed
+            ? allSetsDone
+              ? null
+              : 1
+            : (Array.from({ length: block.setCount }, (_, i) => i + 1).find(
+                (n) => !doneForBlock.has(n),
+              ) ?? null);
+          const isNextLogTarget = !coachFloorMode && isActive && nextSetNum != null;
 
           return (
             <section
@@ -3039,6 +3089,8 @@ export default function MemberWorkoutConsole({
                           </label>
                           <button
                             type="button"
+                            data-set-log-btn=""
+                            data-set-log-next={isNextLogTarget ? "1" : undefined}
                             aria-pressed={allSetsDone}
                             aria-label={allSetsDone ? "Timed set done" : "Start timed set"}
                             className={`member-set-btn text-xs py-0.5 ${allSetsDone ? "member-set-btn--done" : ""}`}
@@ -3107,6 +3159,10 @@ export default function MemberWorkoutConsole({
                               <button
                                 key={setNum}
                                 type="button"
+                                data-set-log-btn=""
+                                data-set-log-next={
+                                  isNextLogTarget && nextSetNum === setNum ? "1" : undefined
+                                }
                                 aria-pressed={done}
                                 aria-label={`Set ${setNum}${done ? ", completed" : ""}`}
                                 className={`member-set-btn text-xs py-0.5 ${done ? "member-set-btn--done" : ""}`}
@@ -3279,6 +3335,9 @@ export default function MemberWorkoutConsole({
             setVideoModalOverride(null);
           }}
         />
+      ) : null}
+      {!coachFloorMode && !reviewMode && !showLoggedSuccess ? (
+        <SetLogFingerHint hidden={restTimer != null} />
       ) : null}
     </div>
   );

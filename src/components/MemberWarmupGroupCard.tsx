@@ -185,6 +185,8 @@ export default function MemberWarmupGroupCard({
             <button
               key={movement.key}
               type="button"
+              data-set-log-btn=""
+              data-set-log-next={!done && active ? "1" : undefined}
               aria-pressed={done}
               aria-label={`${movement.label}${done ? ", completed" : ""}`}
               className={`rounded-xl border px-3 py-2 text-sm font-semibold transition ${

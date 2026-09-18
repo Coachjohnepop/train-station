@@ -252,6 +252,24 @@ export function buildMemberScoreProgress(
     href: "/member/today",
   });
 
+  const setEvents = events.filter((e) => e.type === "set_logged");
+  const setEarned = setEvents.reduce((sum, e) => sum + e.points, 0);
+  const nextSetPts = tierPts(pointsConfig.set_logged);
+  milestones.push({
+    id: "set:next",
+    type: "set_logged",
+    label: GAMIFICATION_EVENT_LABELS.set_logged,
+    points: nextSetPts,
+    status: "incomplete",
+    earnedPoints: setEarned,
+    completedAt: setEvents.length
+      ? [...setEvents].sort((a, b) => b.at.localeCompare(a.at))[0].at
+      : null,
+    repeatable: true,
+    earnHint: `Tap each set on Today so the rest timer starts — +${nextSetPts} pts once per workout per day.`,
+    href: "/member/today",
+  });
+
   const availablePoints = milestones
     .filter((m) => m.status === "incomplete" && !m.repeatable)
     .reduce((sum, m) => sum + m.points, 0);

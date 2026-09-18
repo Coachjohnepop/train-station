@@ -3930,3 +3930,18 @@ input:-webkit-autofill {
   position: relative;
   z-index: 5;
 }
+
+@keyframes set-log-finger-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(7px);
+  }
+}
+
+.set-log-finger {
+  display: block;
+  animation: set-log-finger-bob 1.05s ease-in-out infinite;
+}
