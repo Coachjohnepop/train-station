@@ -8,5 +8,6 @@ describe("landing app walk", () => {
     assert.ok(APP_WALK_COPY.today.line.toLowerCase().includes("today"));
     assert.ok(!Object.values(APP_WALK_COPY).some((c) => /ticket|1st class/i.test(c.line)));
     assert.equal(WALK_VOICE_SRC.today, "/audio/walk-today.mp3");
+    assert.ok(!/135/.test(APP_WALK_COPY.set.line));
   });
 });

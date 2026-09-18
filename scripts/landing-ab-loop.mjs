@@ -182,22 +182,65 @@ async function browserStickiness(viewportKey) {
 }
 
 async function browserCtas(viewportKey) {
-  console.log(`\n=== CTA hrefs (${viewportKey}) ===`);
+  console.log(`\n=== B walk + D CTA (${viewportKey}) ===`);
   await withBrowser("cta", viewportKey, async (page) => {
+    const audioHits = [];
+    page.on("response", (res) => {
+      const u = res.url();
+      if (u.includes("/audio/walk-") && res.status() === 200) audioHits.push(u);
+    });
     await page.goto(BASE + "/l/jeremy", { waitUntil: "domcontentloaded", timeout: 45000 });
-    await page.waitForTimeout(600);
-    const free = page.locator('a[data-analytics-action="hero-start-free-ab"]');
-    const mem = page.locator('a[data-analytics-action="hero-start-membership"]');
-    if ((await free.count()) > 0) {
-      const href = await free.first().getAttribute("href");
-      if (href && href.includes("explorer")) pass(`${viewportKey} B Start Free href`, href);
-      else fail(`${viewportKey} B Start Free href`, String(href));
-    } else fail(`${viewportKey} B Start Free missing`);
-    if ((await mem.count()) > 0) {
-      const href = await mem.first().getAttribute("href");
-      if (href && href.includes("/join")) pass(`${viewportKey} B Start membership href`, href);
-      else fail(`${viewportKey} B Start membership href`, String(href));
-    } else fail(`${viewportKey} B Start membership missing`);
+    await page.waitForTimeout(800);
+    const ask = page.getByText("Would you use the Train Station");
+    if ((await ask.count()) > 0) pass(`${viewportKey} B ask visible`);
+    else fail(`${viewportKey} B ask visible`, (await page.locator("body").innerText()).slice(0, 160));
+
+    const yes = page.locator('[data-analytics-action="hero-b-byow-interest-yes"]');
+    if ((await yes.count()) === 0) {
+      fail(`${viewportKey} B yes missing`);
+      return;
+    }
+    await yes.first().click();
+    await page.waitForTimeout(500);
+    const today = page.getByText("Air Squats");
+    if ((await today.count()) > 0) pass(`${viewportKey} B today list`);
+    else fail(`${viewportKey} B today list`);
+
+    const openEx = page.locator('[data-analytics-action="walk-next-today"]');
+    if ((await openEx.count()) === 0) {
+      fail(`${viewportKey} B open exercise missing`);
+      return;
+    }
+    await openEx.first().click();
+    await page.waitForTimeout(400);
+    const log = page.locator('[data-analytics-action="walk-log-set"]');
+    if ((await log.count()) === 0) {
+      fail(`${viewportKey} B log set missing`);
+      return;
+    }
+    if (/135/i.test(await page.locator("body").innerText())) {
+      fail(`${viewportKey} B air squats must not show 135 lb`);
+    } else pass(`${viewportKey} B air squats bodyweight`);
+    await log.first().click();
+    await page.waitForTimeout(400);
+    if ((await page.getByText("Rest").count()) > 0) pass(`${viewportKey} B rest`);
+    else fail(`${viewportKey} B rest`);
+
+    await page.locator('[data-analytics-action="walk-next-rest"]').first().click();
+    await page.waitForTimeout(400);
+    const style = page.locator('[data-analytics-action="hero-b-train-station-style"]');
+    if ((await style.count()) === 0) {
+      fail(`${viewportKey} B Train Station Style missing`);
+      return;
+    }
+    await style.first().click();
+    await page.waitForTimeout(800);
+    const url = page.url();
+    if (url.includes("signup") && url.includes("explorer")) pass(`${viewportKey} B exits to explorer`, url.replace(BASE, ""));
+    else fail(`${viewportKey} B exits to explorer`, url);
+
+    if (audioHits.length > 0) pass(`${viewportKey} B walk audio 200`, String(audioHits.length));
+    else fail(`${viewportKey} B walk audio 200`, "no walk-*.mp3 200s");
   });
   await withBrowser("cta-class", viewportKey, async (page) => {
     await page.goto(BASE + "/l/class", { waitUntil: "domcontentloaded", timeout: 45000 });

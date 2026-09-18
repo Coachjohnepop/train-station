@@ -29,7 +29,8 @@ function playWalkVoice(src: string): void {
     walkVoice.setAttribute(MIX_AUDIO_ATTR, "true");
     walkVoice.setAttribute("playsinline", "true");
   }
-  if (walkVoice.getAttribute("src") !== src) {
+  const current = walkVoice.getAttribute("src") || "";
+  if (current !== src && !current.endsWith(src)) {
     walkVoice.src = src;
   }
   walkVoice.currentTime = 0;
@@ -145,7 +146,7 @@ export default function LandingAppWalkthrough({
               Would you use the Train Station if you could bring your own workout?
             </p>
             <p className="text-center text-sm text-white/70">
-              Paste isn&apos;t open yet. Tell us, then we&apos;ll show the real Today screen — not a cartoon.
+              Paste isn&apos;t open yet. Tell us, then we&apos;ll show Today the way it looks in the app.
             </p>
             <button
               type="button"
@@ -171,7 +172,7 @@ export default function LandingAppWalkthrough({
             </p>
             {phase !== "done" ? (
               <p className="mt-1 text-center text-[10px] font-bold uppercase tracking-[0.18em] text-white/50">
-                Voice-over · Eddy
+                Voice on
               </p>
             ) : null}
 
@@ -204,11 +205,7 @@ export default function LandingAppWalkthrough({
               {phase === "set" ? (
                 <div className="space-y-3 px-4 py-5">
                   <p className="text-lg font-bold text-white">Air Squats</p>
-                  <p className="text-sm text-white/60">Set 1 of 3 · 3 × 10</p>
-                  <div className="flex items-end gap-2">
-                    <span className="text-3xl font-semibold tabular-nums text-white">135</span>
-                    <span className="pb-1 text-sm text-white/50">lb</span>
-                  </div>
+                  <p className="text-sm text-white/60">Set 1 of 3 · 10 reps · bodyweight</p>
                   <button
                     type="button"
                     data-analytics-action="walk-log-set"
