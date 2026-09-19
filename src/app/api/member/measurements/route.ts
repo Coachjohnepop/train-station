@@ -1,17 +1,18 @@
 import { NextResponse } from "next/server";
-import { requireMemberAccess } from "@/lib/api-auth";
+import { requireSession } from "@/lib/api-auth";
 import { isDatabaseConfigured } from "@/lib/database-config";
 import {
   createUserMeasurement,
   getMeasurementSheetIdentity,
   listUserMeasurements,
+  parsePoundsFromText,
   saveMeasurementSheetIdentity,
 } from "@/lib/measurements-store";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
-  const auth = await requireMemberAccess();
+  const auth = await requireSession();
   if (!auth.ok) return auth.response;
 
   const limit = Math.min(
@@ -50,7 +51,7 @@ export async function GET(request: Request) {
 
 /** Persist before-photo crop only (does not create a check-in). */
 export async function PATCH(request: Request) {
-  const auth = await requireMemberAccess();
+  const auth = await requireSession();
   if (!auth.ok) return auth.response;
 
   try {
@@ -82,7 +83,7 @@ export async function PATCH(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const auth = await requireMemberAccess();
+  const auth = await requireSession();
   if (!auth.ok) return auth.response;
 
   try {
@@ -151,6 +152,22 @@ export async function POST(request: Request) {
         source: "member",
         recordedByUserId: auth.session.id,
       });
+    } else {
+      const fromCheckIn = parsePoundsFromText(
+        body.weightLbs == null ? null : String(body.weightLbs),
+      );
+      const fromStart = parsePoundsFromText(
+        body.startWeightLbs == null ? null : String(body.startWeightLbs),
+      );
+      const lbs = fromCheckIn || fromStart;
+      if (lbs) {
+        measurement = await createUserMeasurement({
+          userId: auth.session.id,
+          body: { ...body, weightLbs: lbs, notes: note || "Weight check-in" },
+          source: "member",
+          recordedByUserId: auth.session.id,
+        });
+      }
     }
     const identity = await getMeasurementSheetIdentity(auth.session.id);
     return NextResponse.json({

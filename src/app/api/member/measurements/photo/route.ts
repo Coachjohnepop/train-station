@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireMemberAccess } from "@/lib/api-auth";
+import { requireSession } from "@/lib/api-auth";
 import {
   isAllowedMeasurementPhotoUrl,
   MEASUREMENT_PHOTO_MAX_BYTES,
@@ -21,7 +21,7 @@ export const runtime = "nodejs";
  * Mobile: client compresses first. Server accepts JPEG/PNG/WebP/HEIC.
  */
 export async function POST(request: Request) {
-  const auth = await requireMemberAccess();
+  const auth = await requireSession();
   if (!auth.ok) return auth.response;
 
   try {

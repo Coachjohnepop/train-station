@@ -360,22 +360,33 @@ export async function createUserMeasurement(input: {
 
   // Latest check-in weight lives on weightLbs. Do not overwrite startWeightLbs.
   if (values.weightLbs != null) {
-    try {
-      const existing = await prisma.memberProfile.findUnique({
-        where: { userId: input.userId },
-        select: { startWeightLbs: true },
-      });
-      await prisma.memberProfile.updateMany({
+    const lbs = String(values.weightLbs);
+    const user = await prisma.user.findUnique({
+      where: { id: input.userId },
+      select: { email: true },
+    });
+    const existing = await prisma.memberProfile.findUnique({
+      where: { userId: input.userId },
+      select: { startWeightLbs: true, email: true, plan: true },
+    });
+    if (existing) {
+      await prisma.memberProfile.update({
         where: { userId: input.userId },
         data: {
-          weightLbs: String(values.weightLbs),
-          ...(existing && !existing.startWeightLbs?.trim()
-            ? { startWeightLbs: String(values.weightLbs) }
-            : {}),
+          weightLbs: lbs,
+          ...(existing.startWeightLbs?.trim() ? {} : { startWeightLbs: lbs }),
         },
       });
-    } catch {
-      /* profile may not exist yet */
+    } else if (user?.email) {
+      await prisma.memberProfile.create({
+        data: {
+          userId: input.userId,
+          email: user.email,
+          plan: "explorer",
+          weightLbs: lbs,
+          startWeightLbs: lbs,
+        },
+      });
     }
   }
 

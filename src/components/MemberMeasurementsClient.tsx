@@ -570,6 +570,8 @@ export default function MemberMeasurementsClient({
             gender: body.gender,
             startWeightLbs: body.startWeightLbs,
             goalWeightLbs: body.goalWeightLbs,
+            weightLbs: form.weightLbs?.trim() || startWeightLbs.trim() || null,
+            notes: notes.trim() || "Weight check-in",
           }),
         });
         const idData = await idRes.json().catch(() => ({}));

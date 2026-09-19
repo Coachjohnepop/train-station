@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireMemberAccess } from "@/lib/api-auth";
+import { requireSession } from "@/lib/api-auth";
 import { deleteUserMeasurement } from "@/lib/measurements-store";
 
 export const dynamic = "force-dynamic";
@@ -8,7 +8,7 @@ export async function DELETE(
   _request: Request,
   context: { params: Promise<{ id: string }> },
 ) {
-  const auth = await requireMemberAccess();
+  const auth = await requireSession();
   if (!auth.ok) return auth.response;
 
   const { id } = await context.params;
