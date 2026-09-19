@@ -64,12 +64,48 @@ await run(
   END $$;`,
 );
 
+await run(
+  "deny anon+authenticated",
+  `DO $$
+  DECLARE r record;
+  BEGIN
+    FOR r IN
+      SELECT n.nspname, c.relname
+      FROM pg_class c
+      JOIN pg_namespace n ON n.oid = c.relnamespace
+      WHERE n.nspname = 'public' AND c.relkind IN ('r','p')
+    LOOP
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_policies
+        WHERE schemaname = r.nspname AND tablename = r.relname AND policyname = 'deny_anon'
+      ) THEN
+        EXECUTE format(
+          'CREATE POLICY deny_anon ON %I.%I FOR ALL TO anon USING (false) WITH CHECK (false)',
+          r.nspname, r.relname
+        );
+      END IF;
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_policies
+        WHERE schemaname = r.nspname AND tablename = r.relname AND policyname = 'deny_authenticated'
+      ) THEN
+        EXECUTE format(
+          'CREATE POLICY deny_authenticated ON %I.%I FOR ALL TO authenticated USING (false) WITH CHECK (false)',
+          r.nspname, r.relname
+        );
+      END IF;
+    END LOOP;
+  END $$;`,
+);
+
 const check = await client.query(`
   SELECT
     (SELECT count(*)::int FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
       WHERE n.nspname = 'public' AND c.relkind = 'r') AS tables,
     (SELECT count(*)::int FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
       WHERE n.nspname = 'public' AND c.relkind = 'r' AND c.relrowsecurity) AS rls_on,
+    (SELECT count(*)::int FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+      WHERE n.nspname = 'public' AND c.relkind = 'r' AND c.relforcerowsecurity) AS rls_force,
+    (SELECT count(*)::int FROM pg_policies WHERE schemaname = 'public') AS policies,
     (SELECT count(*)::int FROM information_schema.role_table_grants
       WHERE table_schema = 'public' AND grantee IN ('anon','authenticated')) AS leftover_grants,
     (SELECT count(*)::int FROM "User") AS users

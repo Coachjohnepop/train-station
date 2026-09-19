@@ -443,6 +443,10 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
+**Date:** 2026-09-19 (growth indexes + RLS deny policies)
+
+**Status:** `ProgramEnrollment` unique `(userId, programId)` + indexes; GIN on `CoachTodaySession.userIds`. Lockdown now adds explicit **deny anon/authenticated** RLS policies. **Do not FORCE RLS** until request `app.user_id` exists — sketch: `docs/db-security-rls.md`. Prisma still table-owner bypass.
+
 **Date:** 2026-09-18 (purged loop users Jeremy could see)
 
 **Status:** Deleted 10 landing-to-paid **Loop \*** `@example.com` members. Hid demo seats Alex / Chad / Katie (`hidden=true`) so they drop off Members and day lists. Real members untouched.
