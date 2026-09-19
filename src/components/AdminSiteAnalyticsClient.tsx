@@ -39,6 +39,12 @@ type Overview = {
     }>;
   };
   playbook?: AnalyticsPlaybook;
+  weekdayUsage?: Array<{
+    dow: number;
+    label: string;
+    sessions: number;
+    events: number;
+  }>;
   landingAb?: {
     live: string[];
     liveTotalSessions: number;
@@ -67,6 +73,34 @@ function formatMoney(cents: number): string {
     currency: "USD",
     maximumFractionDigits: 0,
   }).format(cents / 100);
+}
+
+function WeekdayBars({
+  rows,
+}: {
+  rows: Array<{ label: string; sessions: number; events: number }>;
+}) {
+  const max = Math.max(1, ...rows.map((r) => r.sessions));
+  return (
+    <div className="mt-4 flex h-44 items-end gap-2">
+      {rows.map((row) => {
+        const pct = Math.round((row.sessions / max) * 100);
+        return (
+          <div key={row.label} className="flex min-w-0 flex-1 flex-col items-center justify-end gap-1">
+            <span className="text-[10px] tabular-nums text-[var(--muted)]">{row.sessions}</span>
+            <div className="flex h-28 w-full items-end justify-center">
+              <div
+                className="w-[70%] max-w-[2.25rem] rounded-t-md bg-violet-500/80"
+                style={{ height: `${Math.max(row.sessions > 0 ? 8 : 2, pct)}%` }}
+                title={`${row.label}: ${row.sessions} sessions, ${row.events} events`}
+              />
+            </div>
+            <span className="text-[11px] font-semibold">{row.label}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
 }
 
 function MetricCard({
@@ -244,6 +278,16 @@ export default function AdminSiteAnalyticsClient() {
           ))}
         </div>
       </div>
+
+      {data?.weekdayUsage && data.weekdayUsage.some((d) => d.events > 0 || d.sessions > 0) ? (
+        <section className="rounded-xl border border-[var(--border)] bg-[var(--surface)]/70 p-4">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2 className="text-sm font-semibold">Usage by weekday</h2>
+            <p className="text-[10px] text-[var(--muted)]">Pacific · sessions in this period</p>
+          </div>
+          <WeekdayBars rows={data.weekdayUsage} />
+        </section>
+      ) : null}
 
       {data?.landingAb ? (
         <section className="rounded-xl border border-violet-500/35 bg-violet-950/25 p-4">

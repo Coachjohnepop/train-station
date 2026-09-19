@@ -443,6 +443,10 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
+**Date:** 2026-09-19 (manual DB snapshot + weekday usage chart)
+
+**Status:** Snapshot **2026-09-19** gzip on Desktop `Stuff/Lemon Voice/The Train Station/backups/weekly-2026-09-19T15-52-23.json.gz` (1.5 MB, hashes redacted, 92 tables). Vercel Blob store is **public-only**, so the Monday cron cannot use `access: private` until a private store exists — do **not** put this gzip on a public store. Station pulse gets a Pacific **usage-by-weekday** bar chart.
+
 **Date:** 2026-09-19 (D&D card: consistent vs minimum SMS)
 
 **Status:** Member card (15-min intro) asks **Consistent** (every training day) vs **Minimum** (class / missed day / booked session). Stored as `User.smsReminderCadence`. Daily reminder send skips `minimum`. Twilio still parked — this is the interview answer for when texts go live.

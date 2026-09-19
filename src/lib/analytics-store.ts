@@ -286,7 +286,30 @@ export type AnalyticsOverview = {
   /** Coach/admin playbook: better / effective / fun + ranked tests. */
   playbook?: AnalyticsPlaybook;
   landingAb?: import("@/lib/landing-ab-report").LandingAbReport;
+  /** Pacific weekdays, Sun=0. Sessions + events in the selected period. */
+  weekdayUsage?: Array<{
+    dow: number;
+    label: string;
+    sessions: number;
+    events: number;
+  }>;
 };
+
+const WEEKDAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
+
+function emptyWeekdayUsage(): NonNullable<AnalyticsOverview["weekdayUsage"]> {
+  return WEEKDAY_LABELS.map((label, dow) => ({ dow, label, sessions: 0, events: 0 }));
+}
+
+function pacificWeekdayIndex(iso: Date | string): number {
+  const d = typeof iso === "string" ? new Date(iso) : iso;
+  const wd = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Los_Angeles",
+    weekday: "short",
+  }).format(d);
+  const i = WEEKDAY_LABELS.indexOf(wd as (typeof WEEKDAY_LABELS)[number]);
+  return i < 0 ? 0 : i;
+}
 
 function emptySections(): AnalyticsOverview["sections"] {
   return { landing: 0, member: 0, admin: 0, auth: 0, other: 0 };
@@ -453,6 +476,34 @@ export async function getAnalyticsOverview(days = 7): Promise<AnalyticsOverview>
     const { getLandingAbReport } = await import("@/lib/landing-ab-report");
     const landingAb = await getLandingAbReport(since).catch(() => undefined);
 
+    const weekdayUsage = emptyWeekdayUsage();
+    try {
+      const weekdayRows = await prisma.$queryRaw<
+        Array<{ dow: number; events: bigint | number; sessions: bigint | number }>
+      >`
+        SELECT
+          EXTRACT(DOW FROM ("occurredAt" AT TIME ZONE 'America/Los_Angeles'))::int AS dow,
+          COUNT(*)::int AS events,
+          COUNT(DISTINCT "sessionKey")::int AS sessions
+        FROM "AnalyticsEvent"
+        WHERE "occurredAt" >= ${since}
+        GROUP BY 1
+      `;
+      for (const row of weekdayRows) {
+        const dow = Number(row.dow);
+        if (dow >= 0 && dow <= 6) {
+          weekdayUsage[dow] = {
+            dow,
+            label: WEEKDAY_LABELS[dow],
+            sessions: Number(row.sessions) || 0,
+            events: Number(row.events) || 0,
+          };
+        }
+      }
+    } catch (e) {
+      console.warn("[analytics] weekdayUsage", e instanceof Error ? e.message : e);
+    }
+
     const hourAgo = new Date(Date.now() - 60 * 60 * 1000);
     const [hourViews, hourClicks, hourFacebook, liveRows, windowEvents] = await Promise.all([
       prisma.analyticsEvent.count({
@@ -561,6 +612,7 @@ export async function getAnalyticsOverview(days = 7): Promise<AnalyticsOverview>
         sessions,
       }),
       landingAb,
+      weekdayUsage,
     };
   }
 
@@ -576,8 +628,13 @@ export async function getAnalyticsOverview(days = 7): Promise<AnalyticsOverview>
   const pageCounts = new Map<string, number>();
   const clickCounts = new Map<string, { label: string; path: string; clicks: number }>();
   const sections = emptySections();
+  const weekdayUsage = emptyWeekdayUsage();
+  const weekdaySessionKeys: Array<Set<string>> = WEEKDAY_LABELS.map(() => new Set());
 
   for (const e of recent) {
+    const dow = pacificWeekdayIndex(e.ingestedAt || e.occurredAt);
+    weekdayUsage[dow]!.events += 1;
+    if (e.sessionKey) weekdaySessionKeys[dow]!.add(e.sessionKey);
     if (e.eventType === "page_view" && e.pagePath) {
       pageCounts.set(e.pagePath, (pageCounts.get(e.pagePath) ?? 0) + 1);
       bumpSection(sections, e.pagePath);
@@ -613,5 +670,9 @@ export async function getAnalyticsOverview(days = 7): Promise<AnalyticsOverview>
       paidCount: 0,
       sessions: sessionKeys.size,
     }),
+    weekdayUsage: weekdayUsage.map((row, i) => ({
+      ...row,
+      sessions: weekdaySessionKeys[i]!.size,
+    })),
   };
 }
