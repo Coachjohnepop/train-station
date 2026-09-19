@@ -487,6 +487,8 @@ export async function getAnalyticsOverview(days = 7): Promise<AnalyticsOverview>
           COUNT(DISTINCT "sessionKey")::int AS sessions
         FROM "AnalyticsEvent"
         WHERE "occurredAt" >= ${since}
+          AND COALESCE("pagePath", '') NOT LIKE '/admin%'
+          AND COALESCE("pagePath", '') NOT LIKE '/api%'
         GROUP BY 1
       `;
       for (const row of weekdayRows) {

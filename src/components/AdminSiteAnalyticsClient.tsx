@@ -224,6 +224,16 @@ function LandingAbBoard({ report }: { report: NonNullable<Overview["landingAb"]>
   );
 }
 
+const WEEKDAY_PIE_COLORS = [
+  "#a78bfa",
+  "#38bdf8",
+  "#34d399",
+  "#fbbf24",
+  "#fb7185",
+  "#c084fc",
+  "#f59e0b",
+];
+
 function WeekdayBars({
   rows,
 }: {
@@ -231,16 +241,19 @@ function WeekdayBars({
 }) {
   const max = Math.max(1, ...rows.map((r) => r.sessions));
   return (
-    <div className="mt-4 flex h-44 items-end gap-2">
-      {rows.map((row) => {
+    <div className="flex h-44 items-end gap-2">
+      {rows.map((row, i) => {
         const pct = Math.round((row.sessions / max) * 100);
         return (
           <div key={row.label} className="flex min-w-0 flex-1 flex-col items-center justify-end gap-1">
             <span className="text-[10px] tabular-nums text-[var(--muted)]">{row.sessions}</span>
             <div className="flex h-28 w-full items-end justify-center">
               <div
-                className="w-[70%] max-w-[2.25rem] rounded-t-md bg-violet-500/80"
-                style={{ height: `${Math.max(row.sessions > 0 ? 8 : 2, pct)}%` }}
+                className="w-[70%] max-w-[2.25rem] rounded-t-md"
+                style={{
+                  height: `${Math.max(row.sessions > 0 ? 8 : 2, pct)}%`,
+                  background: WEEKDAY_PIE_COLORS[i % WEEKDAY_PIE_COLORS.length],
+                }}
                 title={`${row.label}: ${row.sessions} sessions, ${row.events} events`}
               />
             </div>
@@ -249,6 +262,63 @@ function WeekdayBars({
         );
       })}
     </div>
+  );
+}
+
+function WeekdayPie({
+  rows,
+}: {
+  rows: Array<{ label: string; sessions: number }>;
+}) {
+  const total = rows.reduce((n, r) => n + r.sessions, 0) || 1;
+  let acc = 0;
+  const stops: string[] = [];
+  for (let i = 0; i < rows.length; i++) {
+    const slice = (rows[i]!.sessions / total) * 100;
+    const color = WEEKDAY_PIE_COLORS[i % WEEKDAY_PIE_COLORS.length];
+    stops.push(`${color} ${acc}% ${acc + slice}%`);
+    acc += slice;
+  }
+  return (
+    <div className="flex flex-col items-center gap-3">
+      <div
+        className="h-36 w-36 shrink-0 rounded-full border border-white/10"
+        style={{ background: `conic-gradient(${stops.join(",")})` }}
+        aria-label="Sessions by weekday"
+      />
+      <ul className="grid w-full grid-cols-2 gap-x-3 gap-y-1 text-[10px]">
+        {rows.map((row, i) => (
+          <li key={row.label} className="flex items-center gap-1.5">
+            <span
+              className="h-2 w-2 shrink-0 rounded-sm"
+              style={{ background: WEEKDAY_PIE_COLORS[i % WEEKDAY_PIE_COLORS.length] }}
+            />
+            <span className="text-[var(--muted)]">{row.label}</span>
+            <span className="ml-auto tabular-nums">
+              {Math.round((row.sessions / total) * 100)}%
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function WeekdaySkewNote({
+  rows,
+}: {
+  rows: Array<{ label: string; sessions: number }>;
+}) {
+  const total = rows.reduce((n, r) => n + r.sessions, 0);
+  if (total < 8) return null;
+  const top = [...rows].sort((a, b) => b.sessions - a.sessions)[0];
+  if (!top || top.sessions / total < 0.35) return null;
+  const pct = Math.round((top.sessions / total) * 100);
+  return (
+    <p className="mt-3 text-xs leading-relaxed text-amber-200/90">
+      {top.label} is {pct}% of this period. That is usually landing-loop cookies or a
+      campaign day — not the gym&apos;s normal week. Try 30d, or wait for a quiet weekday.
+    </p>
   );
 }
 
@@ -434,9 +504,15 @@ export default function AdminSiteAnalyticsClient() {
         <section className="rounded-xl border border-[var(--border)] bg-[var(--surface)]/70 p-4">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <h2 className="text-sm font-semibold">Usage by weekday</h2>
-            <p className="text-[10px] text-[var(--muted)]">Pacific · sessions in this period</p>
+            <p className="text-[10px] text-[var(--muted)]">
+              Pacific · sessions (admin/API hits left out)
+            </p>
           </div>
-          <WeekdayBars rows={data.weekdayUsage} />
+          <div className="mt-3 grid gap-6 lg:grid-cols-[1fr_13rem] lg:items-center">
+            <WeekdayBars rows={data.weekdayUsage} />
+            <WeekdayPie rows={data.weekdayUsage} />
+          </div>
+          <WeekdaySkewNote rows={data.weekdayUsage} />
         </section>
       ) : null}
 
