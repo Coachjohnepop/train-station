@@ -38,7 +38,7 @@ export const APP_WALK_COPY: Record<
   },
   done: {
     title: "That’s the console",
-    line: "Bring-your-own isn’t open yet. Train Station Style puts you on Jeremy’s board now.",
+    line: "You’re on the BYOW pilot list. Train Station Style puts you on Jeremy’s board now.",
   },
 };
 

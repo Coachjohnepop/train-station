@@ -164,7 +164,7 @@ export default function LandingAppWalkthrough({
               Would you use the Train Station if you could bring your own workout?
             </p>
             <p className="text-center text-sm text-white/70">
-              Paste isn&apos;t open yet. Tell us, then we&apos;ll show Today the way it looks in the app.
+              Paste isn&apos;t open to everyone yet. We&apos;re running a small pilot — you can be in it.
             </p>
             {capture ? (
               <form
@@ -182,7 +182,7 @@ export default function LandingAppWalkthrough({
                           email: email.trim(),
                           phone: phone.trim() || undefined,
                           plan: "byow",
-                          source: "byow-interest",
+                          source: "byow-pilot",
                         }),
                       });
                       const data = await res.json().catch(() => ({}));
@@ -201,7 +201,7 @@ export default function LandingAppWalkthrough({
                 }}
               >
                 <p className="text-center text-sm text-white/75">
-                  Paste isn&apos;t open yet. Leave a way to reach you — then we&apos;ll show Today.
+                  You can be part of the BYOW pilot. Leave a way to reach you — we&apos;ll show Today next.
                 </p>
                 <input
                   type="email"
@@ -232,7 +232,7 @@ export default function LandingAppWalkthrough({
                   disabled={leadBusy}
                   className="inline-flex h-14 w-full items-center justify-center rounded-full bg-[#7c3aed] text-[17px] font-extrabold text-white disabled:opacity-60"
                 >
-                  {leadBusy ? "Saving…" : "Save and see Today"}
+                  {leadBusy ? "Saving…" : "Join the pilot"}
                 </button>
               </form>
             ) : (
