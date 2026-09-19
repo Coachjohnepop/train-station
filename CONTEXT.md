@@ -443,6 +443,10 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
+**Date:** 2026-09-19 (BYOW interest captures email)
+
+**Status:** B “Yes I’d use it” now requires **email** (phone optional) → waitlist `source=byow-interest` `plan=byow` (Admin → Leads). Then the Today walk. Not-sure skips contact.
+
 **Date:** 2026-09-19 (manual DB snapshot + weekday usage chart)
 
 **Status:** Snapshot **2026-09-19** gzip on Desktop `Stuff/Lemon Voice/The Train Station/backups/weekly-2026-09-19T15-52-23.json.gz` (1.5 MB, hashes redacted, 92 tables). Vercel Blob store is **public-only**, so the Monday cron cannot use `access: private` until a private store exists — do **not** put this gzip on a public store. Station pulse gets a Pacific **usage-by-weekday** bar chart.

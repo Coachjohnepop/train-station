@@ -55,6 +55,11 @@ export default function LandingAppWalkthrough({
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [phase, setPhase] = useState<AppWalkPhase>("ask");
+  const [capture, setCapture] = useState(false);
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [leadBusy, setLeadBusy] = useState(false);
+  const [leadError, setLeadError] = useState("");
   const [restLeft, setRestLeft] = useState(45);
   const restRef = useRef<number | null>(null);
 
@@ -75,6 +80,10 @@ export default function LandingAppWalkthrough({
     if (!open) {
       stopWalkVoice();
       setPhase("ask");
+      setCapture(false);
+      setEmail("");
+      setPhone("");
+      setLeadError("");
       setRestLeft(45);
       if (restRef.current) window.clearInterval(restRef.current);
       return;
@@ -157,22 +166,95 @@ export default function LandingAppWalkthrough({
             <p className="text-center text-sm text-white/70">
               Paste isn&apos;t open yet. Tell us, then we&apos;ll show Today the way it looks in the app.
             </p>
-            <button
-              type="button"
-              data-analytics-action="hero-b-byow-interest-yes"
-              onClick={() => go("today")}
-              className="inline-flex h-14 items-center justify-center rounded-full bg-[#7c3aed] text-[17px] font-extrabold text-white"
-            >
-              Yes — I&apos;d use it
-            </button>
-            <button
-              type="button"
-              data-analytics-action="hero-b-byow-interest-no"
-              onClick={() => go("today")}
-              className="inline-flex h-12 items-center justify-center rounded-full border border-white/25 text-[15px] font-bold text-white/90"
-            >
-              Not sure yet
-            </button>
+            {capture ? (
+              <form
+                className="space-y-3"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  void (async () => {
+                    setLeadBusy(true);
+                    setLeadError("");
+                    try {
+                      const res = await fetch("/api/signup/waitlist", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          email: email.trim(),
+                          phone: phone.trim() || undefined,
+                          plan: "byow",
+                          source: "byow-interest",
+                        }),
+                      });
+                      const data = await res.json().catch(() => ({}));
+                      if (!res.ok) {
+                        setLeadError(data.error || "Need a real email.");
+                        return;
+                      }
+                      trackLandingCustom("walk-byow-lead");
+                      go("today");
+                    } catch {
+                      setLeadError("Could not save — try again.");
+                    } finally {
+                      setLeadBusy(false);
+                    }
+                  })();
+                }}
+              >
+                <p className="text-center text-sm text-white/75">
+                  Paste isn&apos;t open yet. Leave a way to reach you — then we&apos;ll show Today.
+                </p>
+                <input
+                  type="email"
+                  required
+                  autoComplete="email"
+                  name="email"
+                  data-analytics-action="walk-byow-email"
+                  placeholder="Email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="h-12 w-full rounded-full border border-white/20 bg-white/10 px-4 text-sm text-white placeholder:text-white/40"
+                />
+                <input
+                  type="tel"
+                  autoComplete="tel"
+                  name="tel"
+                  placeholder="Phone (optional)"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  className="h-12 w-full rounded-full border border-white/20 bg-white/10 px-4 text-sm text-white placeholder:text-white/40"
+                />
+                {leadError ? (
+                  <p className="text-center text-sm text-red-300">{leadError}</p>
+                ) : null}
+                <button
+                  type="submit"
+                  data-analytics-action="walk-byow-submit"
+                  disabled={leadBusy}
+                  className="inline-flex h-14 w-full items-center justify-center rounded-full bg-[#7c3aed] text-[17px] font-extrabold text-white disabled:opacity-60"
+                >
+                  {leadBusy ? "Saving…" : "Save and see Today"}
+                </button>
+              </form>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  data-analytics-action="hero-b-byow-interest-yes"
+                  onClick={() => setCapture(true)}
+                  className="inline-flex h-14 items-center justify-center rounded-full bg-[#7c3aed] text-[17px] font-extrabold text-white"
+                >
+                  Yes — I&apos;d use it
+                </button>
+                <button
+                  type="button"
+                  data-analytics-action="hero-b-byow-interest-no"
+                  onClick={() => go("today")}
+                  className="inline-flex h-12 items-center justify-center rounded-full border border-white/25 text-[15px] font-bold text-white/90"
+                >
+                  Not sure yet
+                </button>
+              </>
+            )}
           </div>
         ) : (
           <>

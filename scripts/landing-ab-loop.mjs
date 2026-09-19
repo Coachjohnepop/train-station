@@ -203,7 +203,15 @@ async function browserCtas(viewportKey) {
       return;
     }
     await yes.first().click();
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(400);
+    const email = page.locator('[data-analytics-action="walk-byow-email"]');
+    if ((await email.count()) === 0) {
+      fail(`${viewportKey} B BYOW email missing`);
+      return;
+    }
+    await email.first().fill(`byow-loop-${Date.now()}@example.com`);
+    await page.locator('[data-analytics-action="walk-byow-submit"]').first().click();
+    await page.waitForTimeout(800);
     const today = page.getByText("Air Squats");
     if ((await today.count()) > 0) pass(`${viewportKey} B today list`);
     else fail(`${viewportKey} B today list`);
