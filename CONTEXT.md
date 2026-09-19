@@ -445,7 +445,7 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 **Date:** 2026-09-19 (weekday pie + social drip desk)
 
-**Status:** Station pulse pie **largest→smallest**. Weekday chart uses last complete Pacific week, **Monday cron** `/api/cron/weekday-snapshot`. Social drip: Admin → Social drip; X / IG / FB queue; daily cron `/api/cron/social-drip`; TikTok later. Env: `SOCIAL_X_BEARER_TOKEN`, `SOCIAL_FACEBOOK_PAGE_ID`, `SOCIAL_FACEBOOK_PAGE_TOKEN`, `SOCIAL_INSTAGRAM_ACCOUNT_ID`.
+**Status:** Station pulse pie **largest→smallest**. Weekday chart uses last complete Pacific week, **Monday cron** `/api/cron/weekday-snapshot`. Social drip: Admin → Social drip; X / IG / FB queue; daily cron `/api/cron/social-drip`; TikTok later. Env: `SOCIAL_X_BEARER_TOKEN`, `SOCIAL_FACEBOOK_PAGE_ID`, `SOCIAL_FACEBOOK_PAGE_TOKEN`, `SOCIAL_INSTAGRAM_ACCOUNT_ID`. Instagram handle **@thetrainstation.co** (Meta login email jeremy@…). **Do not store IG passwords in git/Vercel** — Graph API needs a Page token.
 
 **Date:** 2026-09-19 (BYOW interest captures email)
 

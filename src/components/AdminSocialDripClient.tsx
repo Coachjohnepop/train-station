@@ -78,8 +78,9 @@ export default function AdminSocialDripClient() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Social drip</h1>
         <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">
-          Queue captions for X, Instagram, and Facebook. Daily cron posts one due item. TikTok later.
-          Paste tokens in Vercel env — never in this form.
+          Queue captions for X, Instagram (@thetrainstation.co), and Facebook. Daily cron posts
+          one due item. TikTok later. Instagram needs a Meta Page token in Vercel — not the IG
+          password.
         </p>
       </div>
 
