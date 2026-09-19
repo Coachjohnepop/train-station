@@ -40,6 +40,8 @@ function prismaSelect() {
 
 export type MeasurementSheetIdentity = {
   name: string | null;
+  email: string | null;
+  phone: string | null;
   ageYears: number | null;
   gender: string | null;
   startWeightLbs: string | null;
@@ -75,6 +77,8 @@ export async function getMeasurementSheetIdentity(
   if (!isDatabaseConfigured()) {
     return {
       name: null,
+      email: null,
+      phone: null,
       ageYears: null,
       gender: null,
       startWeightLbs: null,
@@ -89,7 +93,7 @@ export async function getMeasurementSheetIdentity(
   const [user, profile] = await Promise.all([
     prisma.user.findUnique({
       where: { id: userId },
-      select: { name: true, birthdate: true },
+      select: { name: true, email: true, phone: true, birthdate: true },
     }),
     prisma.memberProfile.findUnique({
       where: { userId },
@@ -114,6 +118,8 @@ export async function getMeasurementSheetIdentity(
   const goal = profile?.goalWeightLbs?.trim() || null;
   return {
     name: user?.name?.trim() || null,
+    email: user?.email?.trim().toLowerCase() || null,
+    phone: user?.phone?.trim() || null,
     ageYears:
       profile?.ageYears != null && Number.isFinite(profile.ageYears)
         ? profile.ageYears
@@ -141,6 +147,7 @@ export async function saveMeasurementSheetIdentity(
     gender?: string | null;
     startWeightLbs?: string | null;
     goalWeightLbs?: string | null;
+    phone?: string | null;
   },
 ): Promise<MeasurementSheetIdentity> {
   if (!isDatabaseConfigured()) {
@@ -148,11 +155,13 @@ export async function saveMeasurementSheetIdentity(
   }
   const { prisma } = await import("@/lib/prisma");
 
-  if (input.name !== undefined) {
-    const name = input.name?.trim() || null;
+  if (input.name !== undefined || input.phone !== undefined) {
+    const data: { name?: string | null; phone?: string | null } = {};
+    if (input.name !== undefined) data.name = input.name?.trim() || null;
+    if (input.phone !== undefined) data.phone = input.phone?.trim() || null;
     await prisma.user.update({
       where: { id: userId },
-      data: { name },
+      data,
     });
   }
 

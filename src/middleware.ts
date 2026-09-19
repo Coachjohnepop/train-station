@@ -36,6 +36,7 @@ const PUBLIC_PAGE_PREFIXES = [
   "/join",
   "/free",
   "/byow/signup",
+  "/measurements",
 ];
 
 function memberEntryFromRequest(request: NextRequest): string {
@@ -53,6 +54,7 @@ const PUBLIC_API_PREFIXES = [
   "/api/auth",
   "/api/signup",
   "/api/join",
+  "/api/measurements",
   "/api/payments/public",
   "/api/pricing/public",
   "/api/stripe/webhook",

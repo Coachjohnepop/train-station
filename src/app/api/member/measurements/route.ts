@@ -40,6 +40,8 @@ export async function GET(request: Request) {
         gender: identity.gender,
         startWeightLbs: identity.startWeightLbs,
         goalWeightLbs: identity.goalWeightLbs,
+        email: identity.email,
+        phone: identity.phone,
       },
       databaseConfigured: isDatabaseConfigured(),
     });
@@ -95,7 +97,8 @@ export async function POST(request: Request) {
       body.ageYears !== undefined ||
       body.gender !== undefined ||
       body.startWeightLbs !== undefined ||
-      body.goalWeightLbs !== undefined
+      body.goalWeightLbs !== undefined ||
+      body.phone !== undefined
     ) {
       await saveMeasurementSheetIdentity(auth.session.id, {
         name: body.name === undefined ? undefined : (body.name as string | null),
@@ -118,6 +121,7 @@ export async function POST(request: Request) {
             : body.goalWeightLbs === null
               ? null
               : String(body.goalWeightLbs),
+        phone: body.phone === undefined ? undefined : (body.phone as string | null),
       });
     }
 
@@ -179,6 +183,8 @@ export async function POST(request: Request) {
         gender: identity.gender,
         startWeightLbs: identity.startWeightLbs,
         goalWeightLbs: identity.goalWeightLbs,
+        email: identity.email,
+        phone: identity.phone,
       },
       beforePhotoUrl: identity.beforePhotoUrl,
       beforePhotoCrop: {

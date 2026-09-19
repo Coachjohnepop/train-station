@@ -241,6 +241,8 @@ export default function MemberMeasurementsClient({
   const [gender, setGender] = useState("");
   const [startWeightLbs, setStartWeightLbs] = useState("");
   const [goalWeightLbs, setGoalWeightLbs] = useState("");
+  const [contactEmail, setContactEmail] = useState("");
+  const [contactPhone, setContactPhone] = useState("");
   const [baseline, setBaseline] = useState(emptyMeasurementForm);
   /** Local preview while upload in flight (object URL). */
   const [beforePreviewLocal, setBeforePreviewLocal] = useState<string | null>(null);
@@ -311,6 +313,10 @@ export default function MemberMeasurementsClient({
           if (id.goalWeightLbs != null && String(id.goalWeightLbs).trim()) {
             setGoalWeightLbs(String(id.goalWeightLbs).trim());
           }
+          if (typeof id.email === "string" && id.email.trim()) {
+            setContactEmail(id.email.trim());
+          }
+          if (typeof id.phone === "string") setContactPhone(id.phone.trim());
           // Fresh form for a new check-in (originals show from history separately)
           setForm(emptyMeasurementForm());
           setBaseline(emptyMeasurementForm());
@@ -518,6 +524,10 @@ export default function MemberMeasurementsClient({
     setError(null);
     setMessage(null);
     try {
+      if (!contactEmail.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contactEmail.trim())) {
+        throw new Error("Email is required so we can keep your sheet and send invites.");
+      }
+
       const ageRaw = ageYears.trim();
       const ageNum = ageRaw === "" ? null : Number(ageRaw);
       if (ageRaw !== "" && (!Number.isFinite(ageNum) || (ageNum as number) < 1 || (ageNum as number) > 120)) {
@@ -536,6 +546,7 @@ export default function MemberMeasurementsClient({
         gender: gender.trim() || null,
         startWeightLbs: startWeightLbs.trim() || null,
         goalWeightLbs: goalWeightLbs.trim() || null,
+        phone: contactPhone.trim() || null,
       };
       for (const f of MEASUREMENT_FIELDS) {
         const nowVal = form[f.id]?.trim() || "";
@@ -570,6 +581,7 @@ export default function MemberMeasurementsClient({
             gender: body.gender,
             startWeightLbs: body.startWeightLbs,
             goalWeightLbs: body.goalWeightLbs,
+            phone: contactPhone.trim() || null,
             weightLbs: form.weightLbs?.trim() || startWeightLbs.trim() || null,
             notes: notes.trim() || "Weight check-in",
           }),
@@ -1089,6 +1101,29 @@ export default function MemberMeasurementsClient({
                 className="ms-key__input"
                 placeholder="Your name"
                 maxLength={80}
+              />
+            </KeyField>
+            <KeyField label="Email">
+              <input
+                type="email"
+                required
+                autoComplete="email"
+                value={contactEmail}
+                onChange={(e) => setContactEmail(e.target.value)}
+                disabled={saving}
+                className="ms-key__input"
+                placeholder="you@email.com"
+              />
+            </KeyField>
+            <KeyField label="Phone">
+              <input
+                type="tel"
+                autoComplete="tel"
+                value={contactPhone}
+                onChange={(e) => setContactPhone(e.target.value)}
+                disabled={saving}
+                className="ms-key__input"
+                placeholder="optional"
               />
             </KeyField>
             <KeyField label="Age">
