@@ -632,7 +632,8 @@ export async function getAnalyticsOverview(days = 7): Promise<AnalyticsOverview>
   const weekdaySessionKeys: Array<Set<string>> = WEEKDAY_LABELS.map(() => new Set());
 
   for (const e of recent) {
-    const dow = pacificWeekdayIndex(e.ingestedAt || e.occurredAt);
+    const when = e.ingestedAt || e.occurredAt || new Date();
+    const dow = pacificWeekdayIndex(when);
     weekdayUsage[dow]!.events += 1;
     if (e.sessionKey) weekdaySessionKeys[dow]!.add(e.sessionKey);
     if (e.eventType === "page_view" && e.pagePath) {

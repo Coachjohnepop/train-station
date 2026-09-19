@@ -147,14 +147,14 @@ describe("sortActiveUsers", () => {
       workouts: [{ name: "Leg", completed: true, progress: 100 }],
       setsChecked: 2,
       lastSeenAt: "2026-09-17T12:00:00.000Z",
-    } as DailyUserActivity;
+    } as unknown as DailyUserActivity;
     const coach = {
       userId: "c",
       role: "INSTRUCTOR",
       workouts: [],
       setsChecked: 0,
       lastSeenAt: "2026-09-17T20:00:00.000Z",
-    } as DailyUserActivity;
+    } as unknown as DailyUserActivity;
     const sorted = sortActiveUsers([coach, trained]);
     assert.equal(sorted[0].userId, "m");
   });

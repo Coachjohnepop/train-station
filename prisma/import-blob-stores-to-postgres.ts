@@ -269,6 +269,10 @@ function normalizeImportedProfile(raw: unknown, userId: string): MemberProfile |
     plan,
     phone: data.phone ?? null,
     dailyReminderTime: data.dailyReminderTime ?? null,
+    smsReminderCadence:
+      data.smsReminderCadence === "consistent" || data.smsReminderCadence === "minimum"
+        ? data.smsReminderCadence
+        : null,
     weightLbs: data.weightLbs ?? null,
     startWeightLbs: typeof data.startWeightLbs === "string" ? data.startWeightLbs : null,
     goalWeightLbs: typeof data.goalWeightLbs === "string" ? data.goalWeightLbs : null,
