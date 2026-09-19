@@ -48,6 +48,13 @@ type Overview = {
   landingAb?: {
     live: string[];
     liveTotalSessions: number;
+    test?: {
+      title: string;
+      mission: string;
+      goal: string;
+      a: string;
+      b: string;
+    };
     arms: Array<{
       variant: string;
       letter: string;
@@ -56,7 +63,13 @@ type Overview = {
       sessions: number;
       clicks: number;
       signupHits: number;
+      membershipHits?: number;
+      howItWorksHits?: number;
+      styleHits?: number;
+      byowYes?: number;
+      byowNo?: number;
     }>;
+    journeys?: Array<{ id: string; label: string; sessions: number }>;
   };
 };
 
@@ -73,6 +86,142 @@ function formatMoney(cents: number): string {
     currency: "USD",
     maximumFractionDigits: 0,
   }).format(cents / 100);
+}
+
+function LandingAbBoard({ report }: { report: NonNullable<Overview["landingAb"]> }) {
+  const a = report.arms.find((x) => x.letter === "A");
+  const b = report.arms.find((x) => x.letter === "B");
+  const test = report.test;
+  const metrics = [
+    { key: "sessions", label: "Sessions" },
+    { key: "clicks", label: "Clicks" },
+    { key: "howItWorksHits", label: "How it Works / walk" },
+    { key: "membershipHits", label: "Start membership" },
+    { key: "styleHits", label: "Train Station Style" },
+    { key: "signupHits", label: "Signup hits" },
+  ] as const;
+  const num = (arm: typeof a, key: (typeof metrics)[number]["key"]) => {
+    if (!arm) return 0;
+    if (key === "sessions") return arm.sessions;
+    if (key === "clicks") return arm.clicks;
+    if (key === "signupHits") return arm.signupHits;
+    return Number(arm[key] ?? 0);
+  };
+  const max = Math.max(1, ...metrics.flatMap((m) => [num(a, m.key), num(b, m.key)]));
+  const journeyMax = Math.max(1, ...(report.journeys ?? []).map((j) => j.sessions));
+
+  return (
+    <section className="space-y-4 rounded-xl border border-violet-500/35 bg-violet-950/20 p-4">
+      <div>
+        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-violet-300">
+          Live experiment
+        </p>
+        <h2 className="mt-1 text-lg font-semibold text-violet-50">
+          {test?.title ?? "Landing A / B"}
+        </h2>
+        <p className="mt-2 text-sm leading-relaxed text-white/85">
+          {test?.mission ?? "Compare the two homepage doors."}
+        </p>
+        <p className="mt-1 text-sm leading-relaxed text-white/70">
+          <span className="font-semibold text-white/90">Goal. </span>
+          {test?.goal}
+        </p>
+        <div className="mt-3 grid gap-2 sm:grid-cols-2 text-xs leading-relaxed text-white/75">
+          <p>
+            <span className="font-bold text-violet-200">A · </span>
+            {test?.a}
+          </p>
+          <p>
+            <span className="font-bold text-amber-200">B · </span>
+            {test?.b}
+          </p>
+        </div>
+        <p className="mt-2 text-[10px] text-[var(--muted)]">
+          {report.liveTotalSessions} live-split sessions this period · sticky cookie
+        </p>
+      </div>
+
+      <div>
+        <h3 className="text-sm font-semibold">A vs B this period</h3>
+        <div className="mt-3 space-y-2.5">
+          {metrics.map((m) => {
+            const av = num(a, m.key);
+            const bv = num(b, m.key);
+            return (
+              <div key={m.key}>
+                <div className="mb-0.5 flex justify-between text-[11px] text-[var(--muted)]">
+                  <span>{m.label}</span>
+                  <span className="tabular-nums">
+                    A {av} · B {bv}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="h-6 overflow-hidden rounded bg-black/30">
+                    <div
+                      className="h-full rounded bg-violet-500/85"
+                      style={{ width: `${Math.max(av ? 6 : 0, Math.round((av / max) * 100))}%` }}
+                    />
+                  </div>
+                  <div className="h-6 overflow-hidden rounded bg-black/30">
+                    <div
+                      className="h-full rounded bg-amber-400/85"
+                      style={{ width: `${Math.max(bv ? 6 : 0, Math.round((bv / max) * 100))}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <div className="mt-2 flex gap-4 text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">
+          <span className="text-violet-300">A left</span>
+          <span className="text-amber-300">B right</span>
+        </div>
+        {b && (b.byowYes || b.byowNo) ? (
+          <p className="mt-2 text-xs text-white/70">
+            B BYOW interest: <span className="font-semibold">{b.byowYes ?? 0} yes</span> ·{" "}
+            {b.byowNo ?? 0} not sure
+          </p>
+        ) : null}
+      </div>
+
+      {report.journeys && report.journeys.length > 0 ? (
+        <div>
+          <h3 className="text-sm font-semibold">Every journey into the station</h3>
+          <p className="mt-0.5 text-xs text-[var(--muted)]">
+            First page of each session this period — homepage split, class door, signup, tickets,
+            already-a-member.
+          </p>
+          <ul className="mt-3 space-y-1.5">
+            {report.journeys.map((j) => (
+              <li key={j.id} className="flex items-center gap-3 text-sm">
+                <span className="w-44 shrink-0 text-xs text-white/75 sm:w-64">{j.label}</span>
+                <div className="h-5 min-w-0 flex-1 overflow-hidden rounded bg-black/30">
+                  <div
+                    className="h-full rounded bg-sky-500/70"
+                    style={{
+                      width: `${Math.max(j.sessions ? 8 : 0, Math.round((j.sessions / journeyMax) * 100))}%`,
+                    }}
+                  />
+                </div>
+                <span className="w-8 shrink-0 text-right tabular-nums text-xs">{j.sessions}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      <div className="flex flex-wrap gap-2">
+        {report.arms
+          .filter((arm) => arm.status !== "live")
+          .map((arm) => (
+            <p key={arm.variant} className="text-[10px] text-[var(--muted)]">
+              {arm.letter} {arm.name} · {arm.status} · {arm.sessions} sessions
+            </p>
+          ))}
+      </div>
+    </section>
+  );
 }
 
 function WeekdayBars({
@@ -279,6 +428,8 @@ export default function AdminSiteAnalyticsClient() {
         </div>
       </div>
 
+      {data?.landingAb ? <LandingAbBoard report={data.landingAb} /> : null}
+
       {data?.weekdayUsage && data.weekdayUsage.some((d) => d.events > 0 || d.sessions > 0) ? (
         <section className="rounded-xl border border-[var(--border)] bg-[var(--surface)]/70 p-4">
           <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -286,40 +437,6 @@ export default function AdminSiteAnalyticsClient() {
             <p className="text-[10px] text-[var(--muted)]">Pacific · sessions in this period</p>
           </div>
           <WeekdayBars rows={data.weekdayUsage} />
-        </section>
-      ) : null}
-
-      {data?.landingAb ? (
-        <section className="rounded-xl border border-violet-500/35 bg-violet-950/25 p-4">
-          <div className="flex flex-wrap items-baseline justify-between gap-2">
-            <h2 className="text-sm font-semibold text-violet-100">Landing A / B</h2>
-            <p className="text-[10px] text-[var(--muted)]">
-              Live split {data.landingAb.live.join(" vs ")} · {data.landingAb.liveTotalSessions}{" "}
-              sessions this period
-            </p>
-          </div>
-          <div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-            {data.landingAb.arms.map((arm) => (
-              <div
-                key={arm.variant}
-                className={`rounded-xl border p-3 ${
-                  arm.status === "live"
-                    ? "border-violet-400/40 bg-violet-500/10"
-                    : "border-[var(--border)] bg-[var(--surface)]/60"
-                }`}
-              >
-                <p className="text-[10px] font-bold uppercase tracking-wide text-[var(--muted)]">
-                  {arm.letter} · {arm.status}
-                </p>
-                <p className="mt-0.5 text-sm font-semibold">{arm.name}</p>
-                <p className="mt-2 text-2xl font-semibold tabular-nums">{arm.sessions}</p>
-                <p className="text-[10px] text-[var(--muted)]">
-                  sessions · {arm.clicks} clicks
-                  {arm.signupHits ? ` · ${arm.signupHits} signup hits` : ""}
-                </p>
-              </div>
-            ))}
-          </div>
         </section>
       ) : null}
 

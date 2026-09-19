@@ -39,6 +39,16 @@ export const LANDING_AB_META: Record<
   class: { letter: "D", name: "6:30am Zoom class", status: "preview" },
 };
 
+/** What this live split is trying to learn. Shown on Station pulse. */
+export const LANDING_AB_TEST = {
+  title: "A · sell the ticket  vs  B · show the console",
+  mission:
+    "Find the first ask that gets a stranger using the Train Station — not just watching a video.",
+  goal: "More people start Today (Free / Train Station Style or a paid seat) without bouncing on a ticket pick.",
+  a: "A (control): tickets first. Start membership is the main tap. How it Works is the caricature tour.",
+  b: "B (challenger): teach the real Today / log-set / rest walk, ask if they’d bring their own workout later, then Train Station Style. No BYOW signup yet.",
+} as const;
+
 /** Old live D — keep /l/class sticky; do not assign it on `/`. */
 export const LANDING_AB_RETIRED_LIVE: readonly LandingAbVariant[] = [];
 
