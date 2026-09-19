@@ -7,4 +7,4 @@ PCI does **not** require this. Jeremy’s catalog has **no vendor backups** on F
 3. Organization **Settings → Billing → Change plan → Pro**.
 4. Confirm **daily backups, 7-day retention** is on.
 
-Until Pro is on, weekly cron `/api/cron/postgres-backup` (Sundays 16:00 UTC) writes a gzip snapshot to Vercel Blob (`backups/postgres/weekly-*.json.gz`, keep 8). Password hashes are redacted in Blob copies. Full local dumps (with hashes) stay on the Desktop `backups/` folder — keep those offline.
+Until Pro is on, weekly cron `/api/cron/postgres-backup` (**Mondays 15:00 UTC / 8am PT**) writes a **private** gzip snapshot to Vercel Blob (`backups/postgres/weekly-*.json.gz`, keep 8). Password hashes are redacted in Blob copies. Full local dumps (with hashes) stay on the Desktop `backups/` folder — keep those offline.

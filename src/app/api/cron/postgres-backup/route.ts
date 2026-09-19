@@ -1,3 +1,4 @@
+/** Weekly snapshot. Vercel cron: Mondays 15:00 UTC (8am PT). Bearer CRON_SECRET. */
 import { NextResponse } from "next/server";
 import { del, list, put } from "@vercel/blob";
 import { blobSdkOptions, isBlobConfigured } from "@/lib/demo-json-blob";
@@ -32,22 +33,13 @@ export async function GET(request: Request) {
   const stamp = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
   const pathname = `${PREFIX}${stamp}.json.gz`;
   const base = blobSdkOptions();
-  let blob;
-  try {
-    blob = await put(pathname, backup.gzip, {
-      ...base,
-      access: "private",
-      contentType: "application/gzip",
-      addRandomSuffix: false,
-    });
-  } catch {
-    blob = await put(pathname, backup.gzip, {
-      ...base,
-      access: "public",
-      contentType: "application/gzip",
-      addRandomSuffix: false,
-    });
-  }
+  // Private only — a public gzip is still a member roster + logs.
+  const blob = await put(pathname, backup.gzip, {
+    ...base,
+    access: "private",
+    contentType: "application/gzip",
+    addRandomSuffix: false,
+  });
 
   let pruned = 0;
   try {

@@ -443,6 +443,10 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
+**Date:** 2026-09-19 (Monday weekly DB backup cron)
+
+**Status:** Vercel cron `/api/cron/postgres-backup` runs **Mondays 15:00 UTC (8am PT)**. Private Blob `backups/postgres/weekly-*.json.gz`, keep 8, password hashes redacted. No public fallback.
+
 **Date:** 2026-09-19 (growth indexes + RLS deny policies)
 
 **Status:** `ProgramEnrollment` unique `(userId, programId)` + indexes; GIN on `CoachTodaySession.userIds`. Lockdown now adds explicit **deny anon/authenticated** RLS policies. **Do not FORCE RLS** until request `app.user_id` exists — sketch: `docs/db-security-rls.md`. Prisma still table-owner bypass.
@@ -569,7 +573,7 @@ Rollback: `POST /v1/balance_settings` `payments[payouts][schedule][interval]=dai
 - **Stripe PCI wizard answers:** `docs/pci/STRIPE-PCI-FORM-ANSWERS.md` — integration is SAQ A / Checkout redirect; copy into [Dashboard compliance documents](https://dashboard.stripe.com/settings/compliance/documents). Merchant = Jeremy LIVE. John does not sign.
 - **Stripe’s own AoC** still a Dashboard download (not wget). Same URL. Park next to `PCI-SAQ-A-Draft-2026-09-13.pdf`.
 - **ASV / counsel later** (only if Stripe or the bank requires a scan).
-- **Supabase Pro** (~$25) still a billing click for vendor backups. Until then: weekly cron `GET /api/cron/postgres-backup` (Sun 16:00 UTC, Blob, 8 kept, hashes redacted) + Desktop `backups/full-*.json.gz` (offline, includes hashes).
+- **Supabase Pro** (~$25) still a billing click for vendor backups. Until then: weekly cron `GET /api/cron/postgres-backup` (**Mon 15:00 UTC / 8am PT**, private Blob, 8 kept, hashes redacted) + Desktop `backups/full-*.json.gz` (offline, includes hashes).
 - Standing tripwire: Elements / card `<input>` / raw PAN API → void SAQ A → A-EP or D.
 
 **Date:** 2026-09-13 (PCI now-list + weekly DB backup)
