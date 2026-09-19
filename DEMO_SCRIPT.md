@@ -309,7 +309,7 @@ It also doubles as a **full end-to-end test script**:
 2. **Admin side** (/admin/bookings):
    - See the new booking.
    - Update status (pending → confirmed), add Zoom URL, notes.
-   - During "interview": set the member's daily reminder time + phone.
+   - During "interview": set phone, daily reminder time, and **Consistent vs Minimum** texts (D&D card).
    - Simulate sending reminders (as in Section 8).
 3. **Access tiers**:
    - Coach tier: on-demand workouts only.

@@ -47,6 +47,7 @@ function emptyProfile(userId: string, email: string, plan: SignupPlan): MemberPr
     plan,
     phone: null,
     dailyReminderTime: null,
+    smsReminderCadence: null,
     weightLbs: null,
     startWeightLbs: null,
     goalWeightLbs: null,
@@ -119,6 +120,10 @@ function normalizeProfile(raw: unknown, userId: string): MemberProfile | null {
     plan,
     phone: data.phone ?? null,
     dailyReminderTime: data.dailyReminderTime ?? null,
+    smsReminderCadence:
+      data.smsReminderCadence === "consistent" || data.smsReminderCadence === "minimum"
+        ? data.smsReminderCadence
+        : null,
     weightLbs: data.weightLbs ?? null,
     startWeightLbs: typeof data.startWeightLbs === "string" ? data.startWeightLbs : null,
     goalWeightLbs: typeof data.goalWeightLbs === "string" ? data.goalWeightLbs : null,

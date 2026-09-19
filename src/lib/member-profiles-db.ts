@@ -6,12 +6,14 @@ import {
   normalizePaymentStatus,
 } from "@/lib/member-gates";
 import type { MemberProfile, MemberProfilePatch, PaymentMethod } from "@/lib/member-profiles-types";
+import { parseSmsReminderCadence } from "@/lib/sms-reminder-cadence";
 import { prisma } from "@/lib/prisma";
 import { normalizeSignupPlan } from "@/lib/signup-plans";
 
 type UserContactFields = {
   phone: string | null;
   dailyReminderTime: string | null;
+  smsReminderCadence: string | null;
   city: string | null;
   state: string | null;
 };
@@ -53,6 +55,7 @@ function rowToMemberProfile(
     plan,
     phone: user.phone,
     dailyReminderTime: user.dailyReminderTime,
+    smsReminderCadence: parseSmsReminderCadence(user.smsReminderCadence),
     weightLbs: row.weightLbs,
     startWeightLbs: row.startWeightLbs ?? null,
     goalWeightLbs: row.goalWeightLbs ?? null,
@@ -164,6 +167,7 @@ async function syncUserContactFields(
     data: {
       phone: fields.phone,
       dailyReminderTime: fields.dailyReminderTime,
+      smsReminderCadence: fields.smsReminderCadence,
       city: fields.city,
       state: fields.state,
     },
@@ -180,6 +184,7 @@ export async function loadMemberProfileFromDb(
         select: {
           phone: true,
           dailyReminderTime: true,
+          smsReminderCadence: true,
           city: true,
           state: true,
         },
@@ -197,6 +202,7 @@ export async function loadMemberProfilesFromDb(): Promise<Record<string, MemberP
         select: {
           phone: true,
           dailyReminderTime: true,
+          smsReminderCadence: true,
           city: true,
           state: true,
         },
@@ -223,6 +229,7 @@ export async function upsertMemberProfileToDb(profile: MemberProfile): Promise<M
         select: {
           phone: true,
           dailyReminderTime: true,
+          smsReminderCadence: true,
           city: true,
           state: true,
         },
@@ -233,6 +240,7 @@ export async function upsertMemberProfileToDb(profile: MemberProfile): Promise<M
   await syncUserContactFields(profile.userId, {
     phone: profile.phone,
     dailyReminderTime: profile.dailyReminderTime,
+    smsReminderCadence: profile.smsReminderCadence,
     city: profile.city,
     state: profile.state,
   });
@@ -240,6 +248,7 @@ export async function upsertMemberProfileToDb(profile: MemberProfile): Promise<M
   return rowToMemberProfile(row, {
     phone: profile.phone,
     dailyReminderTime: profile.dailyReminderTime,
+    smsReminderCadence: profile.smsReminderCadence,
     city: profile.city,
     state: profile.state,
   });

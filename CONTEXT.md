@@ -443,6 +443,10 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
+**Date:** 2026-09-19 (D&D card: consistent vs minimum SMS)
+
+**Status:** Member card (15-min intro) asks **Consistent** (every training day) vs **Minimum** (class / missed day / booked session). Stored as `User.smsReminderCadence`. Daily reminder send skips `minimum`. Twilio still parked — this is the interview answer for when texts go live.
+
 **Date:** 2026-09-19 (Monday weekly DB backup cron)
 
 **Status:** Vercel cron `/api/cron/postgres-backup` runs **Mondays 15:00 UTC (8am PT)**. Private Blob `backups/postgres/weekly-*.json.gz`, keep 8, password hashes redacted. No public fallback.

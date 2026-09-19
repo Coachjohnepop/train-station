@@ -10,6 +10,8 @@ export type MemberProfile = {
   plan: SignupPlan;
   phone: string | null;
   dailyReminderTime: string | null;
+  /** consistent = every training day; minimum = class / miss / booked only. */
+  smsReminderCadence: "consistent" | "minimum" | null;
   weightLbs: string | null;
   startWeightLbs: string | null;
   goalWeightLbs: string | null;
@@ -62,6 +64,7 @@ export type MemberProfilePatch = Partial<
     MemberProfile,
     | "phone"
     | "dailyReminderTime"
+    | "smsReminderCadence"
     | "weightLbs"
     | "startWeightLbs"
     | "goalWeightLbs"

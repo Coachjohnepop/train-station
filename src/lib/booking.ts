@@ -613,6 +613,15 @@ export async function sendDailyReminders() {
 
   for (const user of users) {
     if (!user.phone || !user.dailyReminderTime) continue;
+    const { wantsDailyProgramReminder } = await import("@/lib/sms-reminder-cadence");
+    if (
+      !wantsDailyProgramReminder({
+        cadence: user.smsReminderCadence as "consistent" | "minimum" | null,
+        dailyReminderTime: user.dailyReminderTime,
+      })
+    ) {
+      continue;
+    }
 
     // For demo, always "send" today's reminder; in real would check current time matches user's reminderTime
     const enrollment = user.enrollments[0]; // assume primary

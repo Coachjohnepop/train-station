@@ -42,6 +42,8 @@ model User {
   /** Normalized E.164 when known (e.g. +15551234567). Prefer for match/send. */
   phoneE164          String?
   dailyReminderTime  String?             // e.g. "07:30" in 24h format
+  /** Intro-call choice: daily training texts vs only class / miss / booked session. */
+  smsReminderCadence String?
   /** Explicit SMS marketing/coaching consent timestamp (TCPA / carrier readiness). */
   smsConsentAt       DateTime?
   /** Last carrier/keyword or in-app opt-out. */

@@ -42,6 +42,7 @@ type FormState = {
   weightLossGoal: string;
   weightLossTimeline: string;
   dailyReminderTime: string;
+  smsReminderCadence: "consistent" | "minimum" | "";
   notes: string;
 };
 
@@ -60,6 +61,7 @@ function emptyForm(): FormState {
     weightLossGoal: "",
     weightLossTimeline: "",
     dailyReminderTime: "",
+    smsReminderCadence: "",
     notes: "",
   };
 }
@@ -80,6 +82,7 @@ function formFromCard(card: CardPayload): FormState {
     weightLossGoal: p.weightLossGoal || "",
     weightLossTimeline: p.weightLossTimeline || "",
     dailyReminderTime: p.dailyReminderTime || "",
+    smsReminderCadence: p.smsReminderCadence || "",
     notes: p.notes || "",
   };
 }
@@ -185,6 +188,7 @@ export default function AdminMemberCard({ userId }: { userId: string }) {
         weightLossGoal: form.weightLossGoal.trim() || null,
         weightLossTimeline: form.weightLossTimeline || null,
         dailyReminderTime: form.dailyReminderTime || null,
+        smsReminderCadence: form.smsReminderCadence || null,
         notes: form.notes.trim() || null,
       }),
     });
@@ -356,6 +360,38 @@ export default function AdminMemberCard({ userId }: { userId: string }) {
                     </button>
                   )}
                 </Field>
+                <div className="sm:col-span-2">
+                  <Field label="Texts — ask on the intro">
+                    <p className="mb-2 text-xs text-[var(--muted)]">
+                      Do they want a text every training day, or only the important ones (class,
+                      missed day, 15 minutes with you)?
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        className={`rounded-full px-3 py-1.5 text-xs font-semibold ring-1 ${
+                          form.smsReminderCadence === "consistent"
+                            ? "bg-[#7c3aed]/30 text-white ring-[#7c3aed]"
+                            : "bg-[var(--bg)] text-[var(--muted)] ring-[var(--border)]"
+                        }`}
+                        onClick={() => patchForm("smsReminderCadence", "consistent")}
+                      >
+                        Consistent
+                      </button>
+                      <button
+                        type="button"
+                        className={`rounded-full px-3 py-1.5 text-xs font-semibold ring-1 ${
+                          form.smsReminderCadence === "minimum"
+                            ? "bg-[#7c3aed]/30 text-white ring-[#7c3aed]"
+                            : "bg-[var(--bg)] text-[var(--muted)] ring-[var(--border)]"
+                        }`}
+                        onClick={() => patchForm("smsReminderCadence", "minimum")}
+                      >
+                        Minimum
+                      </button>
+                    </div>
+                  </Field>
+                </div>
                 <Field label="City">
                   <input
                     className={inputClass}

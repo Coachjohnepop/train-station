@@ -27,6 +27,7 @@ const patchSchema = z.object({
   name: z.string().min(1).max(120).optional(),
   phone: z.string().max(30).nullable().optional(),
   dailyReminderTime: z.string().max(10).nullable().optional(),
+  smsReminderCadence: z.enum(["consistent", "minimum"]).nullable().optional(),
   weightLbs: z.string().max(20).nullable().optional(),
   startWeightLbs: z.string().max(20).nullable().optional(),
   goalWeightLbs: z.string().max(20).nullable().optional(),
@@ -138,6 +139,9 @@ export async function PATCH(request: Request, { params }: Params) {
     ...(phone !== undefined ? { phone } : {}),
     ...(body.dailyReminderTime !== undefined
       ? { dailyReminderTime: blankToNull(body.dailyReminderTime) ?? null }
+      : {}),
+    ...(body.smsReminderCadence !== undefined
+      ? { smsReminderCadence: body.smsReminderCadence }
       : {}),
     ...(body.weightLbs !== undefined ? { weightLbs: blankToNull(body.weightLbs) ?? null } : {}),
     ...(body.startWeightLbs !== undefined
