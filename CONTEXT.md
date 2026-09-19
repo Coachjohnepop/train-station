@@ -443,6 +443,10 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
+**Date:** 2026-09-19 (social plumbing + allaboard DNS still parking)
+
+**Status:** Social drip desk has setup checklist, env presence (no secrets), queue/cancel, publish-due. IG target @thetrainstation.co. **allaboard.fit DNS still Namecheap parking** — app 308s `/` → `/l/class` once A `@` = `10.0.1.2` and www CNAME `cname.vercel-dns.com`. See `docs/allaboard-fit-dns.md`.
+
 **Date:** 2026-09-19 (weekday pie + social drip desk)
 
 **Status:** Station pulse pie **largest→smallest**. Weekday chart uses last complete Pacific week, **Monday cron** `/api/cron/weekday-snapshot`. Social drip: Admin → Social drip; X / IG / FB queue; daily cron `/api/cron/social-drip`; TikTok later. Env: `SOCIAL_X_BEARER_TOKEN`, `SOCIAL_FACEBOOK_PAGE_ID`, `SOCIAL_FACEBOOK_PAGE_TOKEN`, `SOCIAL_INSTAGRAM_ACCOUNT_ID`. Instagram handle **@thetrainstation.co** (Meta login email jeremy@…). **Do not store IG passwords in git/Vercel** — Graph API needs a Page token.

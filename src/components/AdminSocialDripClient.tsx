@@ -18,6 +18,8 @@ type Post = {
 type Payload = {
   posts: Post[];
   credentials: Record<string, boolean>;
+  env?: Record<string, boolean>;
+  instagramHandle?: string;
 };
 
 export default function AdminSocialDripClient() {
@@ -84,6 +86,44 @@ export default function AdminSocialDripClient() {
         </p>
       </div>
 
+      <section className="card space-y-2 p-4 text-sm">
+        <p className="font-medium">Plumbing</p>
+        <ol className="list-decimal space-y-1 pl-5 text-[var(--muted)]">
+          <li>
+            Instagram @{data?.instagramHandle || "thetrainstation.co"} must be a{" "}
+            <strong className="text-[var(--text)]">professional</strong> account linked to the
+            Facebook Page.
+          </li>
+          <li>
+            In{" "}
+            <a
+              className="text-accent underline"
+              href="https://developers.facebook.com"
+              target="_blank"
+              rel="noreferrer"
+            >
+              Meta for Developers
+            </a>
+            , app with <code>pages_manage_posts</code> + <code>instagram_content_publish</code>.
+          </li>
+          <li>
+            Long-lived Page token + Page ID + IG account ID → Vercel env (never the IG password):{" "}
+            <code>SOCIAL_FACEBOOK_PAGE_TOKEN</code>, <code>SOCIAL_FACEBOOK_PAGE_ID</code>,{" "}
+            <code>SOCIAL_INSTAGRAM_ACCOUNT_ID</code>, <code>SOCIAL_X_BEARER_TOKEN</code>.
+          </li>
+          <li>Instagram posts need a public image URL. Daily cron posts one due item at 9am PT.</li>
+        </ol>
+        {data?.env ? (
+          <ul className="mt-2 space-y-0.5 text-xs">
+            {Object.entries(data.env).map(([k, ok]) => (
+              <li key={k} className={ok ? "text-emerald-300" : "text-amber-200"}>
+                {ok ? "on" : "missing"} · {k}
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </section>
+
       <div className="flex flex-wrap gap-2 text-xs">
         {(["x", "instagram", "facebook"] as const).map((ch) => (
           <span
@@ -131,14 +171,43 @@ export default function AdminSocialDripClient() {
           ))}
         </div>
         {error ? <p className="text-sm text-red-400">{error}</p> : null}
-        <button
-          type="button"
-          className="btn-primary text-sm"
-          disabled={saving || !body.trim() || channels.length === 0}
-          onClick={() => void queue()}
-        >
-          {saving ? "Queueing…" : "Queue"}
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            className="btn-primary text-sm"
+            disabled={saving || !body.trim() || channels.length === 0}
+            onClick={() => void queue()}
+          >
+            {saving ? "Queueing…" : "Queue"}
+          </button>
+          <button
+            type="button"
+            className="btn-secondary text-sm"
+            disabled={saving}
+            onClick={() =>
+              void (async () => {
+                setSaving(true);
+                setError("");
+                try {
+                  const res = await fetch("/api/admin/social", {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ action: "publish-due" }),
+                  });
+                  const json = await res.json().catch(() => ({}));
+                  if (!res.ok) throw new Error(json.error || "Publish failed");
+                  await load();
+                } catch (e) {
+                  setError(e instanceof Error ? e.message : "Publish failed");
+                } finally {
+                  setSaving(false);
+                }
+              })()
+            }
+          >
+            Publish next due now
+          </button>
+        </div>
       </section>
 
       <section className="space-y-2">
@@ -162,6 +231,19 @@ export default function AdminSocialDripClient() {
                 <p className="mt-1 whitespace-pre-wrap">{p.body}</p>
                 {p.lastError ? (
                   <p className="mt-1 text-xs text-amber-300">{p.lastError}</p>
+                ) : null}
+                {p.status === "queued" ? (
+                  <button
+                    type="button"
+                    className="mt-2 text-xs text-[var(--muted)] underline"
+                    onClick={() =>
+                      void fetch(`/api/admin/social?id=${encodeURIComponent(p.id)}`, {
+                        method: "DELETE",
+                      }).then(() => load())
+                    }
+                  >
+                    Cancel
+                  </button>
                 ) : null}
               </li>
             ))}

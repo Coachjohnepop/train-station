@@ -31,7 +31,10 @@ export default async function AdminLandingPage() {
           <a href="/admin/analytics" className="text-accent hover:underline">
             Admin → Station pulse
           </a>
-          .
+          . <strong className="text-violet-50">allaboard.fit</strong> 308s to{" "}
+          <code>/l/class</code> once Namecheap DNS leaves parking (A{" "}
+          <code>@</code> → <code>10.0.1.2</code>, CNAME <code>www</code> →{" "}
+          <code>cname.vercel-dns.com</code>).
         </p>
         <ol className="mt-2 list-decimal space-y-1 pl-5">
           <li>

@@ -159,7 +159,8 @@ export async function getLandingAbReport(since: Date): Promise<LandingAbReport> 
       WITH first_page AS (
         SELECT DISTINCT ON ("sessionKey")
           "sessionKey",
-          COALESCE("pagePath", '/') AS path
+          COALESCE("pagePath", '/') AS path,
+          COALESCE("referrer", '') AS referrer
         FROM "AnalyticsEvent"
         WHERE "occurredAt" >= ${since}
           AND "eventType" = 'page_view'
@@ -168,6 +169,7 @@ export async function getLandingAbReport(since: Date): Promise<LandingAbReport> 
       )
       SELECT
         CASE
+          WHEN referrer ILIKE '%allaboard.fit%' THEN 'allaboard'
           WHEN path = '/' THEN 'home'
           WHEN path LIKE '/l/class%' THEN 'class'
           WHEN path LIKE '/l/jeremy%' THEN 'jeremy_door'
@@ -203,6 +205,7 @@ export async function getLandingAbReport(since: Date): Promise<LandingAbReport> 
     }
 
     const JOURNEY_LABELS: Record<string, string> = {
+      allaboard: "allaboard.fit → 6:30am class",
       home: "Homepage `/` (A/B split)",
       class: "6:30am class `/l/class`",
       jeremy_door: "Get started door `/l/jeremy`",

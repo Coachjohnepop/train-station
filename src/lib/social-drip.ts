@@ -29,17 +29,25 @@ function parseChannels(raw: string): SocialChannel[] {
   }
 }
 
-export function socialCredentialsStatus(): Record<SocialChannel | "tiktok", boolean> {
+export const SOCIAL_INSTAGRAM_HANDLE = "thetrainstation.co";
+
+export function socialEnvPresent(): Record<string, boolean> {
   return {
-    x: Boolean(process.env.SOCIAL_X_BEARER_TOKEN?.trim() || process.env.X_BEARER_TOKEN?.trim()),
-    facebook: Boolean(
-      process.env.SOCIAL_FACEBOOK_PAGE_ID?.trim() &&
-        process.env.SOCIAL_FACEBOOK_PAGE_TOKEN?.trim(),
+    SOCIAL_X_BEARER_TOKEN: Boolean(
+      process.env.SOCIAL_X_BEARER_TOKEN?.trim() || process.env.X_BEARER_TOKEN?.trim(),
     ),
-    instagram: Boolean(
-      process.env.SOCIAL_INSTAGRAM_ACCOUNT_ID?.trim() &&
-        process.env.SOCIAL_FACEBOOK_PAGE_TOKEN?.trim(),
-    ),
+    SOCIAL_FACEBOOK_PAGE_ID: Boolean(process.env.SOCIAL_FACEBOOK_PAGE_ID?.trim()),
+    SOCIAL_FACEBOOK_PAGE_TOKEN: Boolean(process.env.SOCIAL_FACEBOOK_PAGE_TOKEN?.trim()),
+    SOCIAL_INSTAGRAM_ACCOUNT_ID: Boolean(process.env.SOCIAL_INSTAGRAM_ACCOUNT_ID?.trim()),
+  };
+}
+
+export function socialCredentialsStatus(): Record<SocialChannel | "tiktok", boolean> {
+  const env = socialEnvPresent();
+  return {
+    x: env.SOCIAL_X_BEARER_TOKEN,
+    facebook: env.SOCIAL_FACEBOOK_PAGE_ID && env.SOCIAL_FACEBOOK_PAGE_TOKEN,
+    instagram: env.SOCIAL_INSTAGRAM_ACCOUNT_ID && env.SOCIAL_FACEBOOK_PAGE_TOKEN,
     tiktok: false,
   };
 }
