@@ -443,6 +443,10 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
+**Date:** 2026-09-19 (weekday pie + social drip desk)
+
+**Status:** Station pulse pie **largest→smallest**. Weekday chart uses last complete Pacific week, **Monday cron** `/api/cron/weekday-snapshot`. Social drip: Admin → Social drip; X / IG / FB queue; daily cron `/api/cron/social-drip`; TikTok later. Env: `SOCIAL_X_BEARER_TOKEN`, `SOCIAL_FACEBOOK_PAGE_ID`, `SOCIAL_FACEBOOK_PAGE_TOKEN`, `SOCIAL_INSTAGRAM_ACCOUNT_ID`.
+
 **Date:** 2026-09-19 (BYOW interest captures email)
 
 **Status:** B “Yes I’d use it” now requires **email** (phone optional) → waitlist `source=byow-interest` `plan=byow` (Admin → Leads). Then the Today walk. Not-sure skips contact.

@@ -45,6 +45,7 @@ type Overview = {
     sessions: number;
     events: number;
   }>;
+  weekdayWeekLabel?: string | null;
   landingAb?: {
     live: string[];
     liveTotalSessions: number;
@@ -234,6 +235,11 @@ const WEEKDAY_PIE_COLORS = [
   "#f59e0b",
 ];
 
+function weekdayColor(label: string): string {
+  const i = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].indexOf(label);
+  return WEEKDAY_PIE_COLORS[i >= 0 ? i : 0]!;
+}
+
 function WeekdayBars({
   rows,
 }: {
@@ -252,7 +258,7 @@ function WeekdayBars({
                 className="w-[70%] max-w-[2.25rem] rounded-t-md"
                 style={{
                   height: `${Math.max(row.sessions > 0 ? 8 : 2, pct)}%`,
-                  background: WEEKDAY_PIE_COLORS[i % WEEKDAY_PIE_COLORS.length],
+                  background: weekdayColor(row.label),
                 }}
                 title={`${row.label}: ${row.sessions} sessions, ${row.events} events`}
               />
@@ -270,12 +276,13 @@ function WeekdayPie({
 }: {
   rows: Array<{ label: string; sessions: number }>;
 }) {
-  const total = rows.reduce((n, r) => n + r.sessions, 0) || 1;
+  const ranked = [...rows].sort((a, b) => b.sessions - a.sessions);
+  const total = ranked.reduce((n, r) => n + r.sessions, 0) || 1;
   let acc = 0;
   const stops: string[] = [];
-  for (let i = 0; i < rows.length; i++) {
-    const slice = (rows[i]!.sessions / total) * 100;
-    const color = WEEKDAY_PIE_COLORS[i % WEEKDAY_PIE_COLORS.length];
+  for (const row of ranked) {
+    const slice = (row.sessions / total) * 100;
+    const color = weekdayColor(row.label);
     stops.push(`${color} ${acc}% ${acc + slice}%`);
     acc += slice;
   }
@@ -284,14 +291,14 @@ function WeekdayPie({
       <div
         className="h-36 w-36 shrink-0 rounded-full border border-white/10"
         style={{ background: `conic-gradient(${stops.join(",")})` }}
-        aria-label="Sessions by weekday"
+        aria-label="Sessions by weekday, largest first"
       />
       <ul className="grid w-full grid-cols-2 gap-x-3 gap-y-1 text-[10px]">
-        {rows.map((row, i) => (
+        {ranked.map((row) => (
           <li key={row.label} className="flex items-center gap-1.5">
             <span
               className="h-2 w-2 shrink-0 rounded-sm"
-              style={{ background: WEEKDAY_PIE_COLORS[i % WEEKDAY_PIE_COLORS.length] }}
+              style={{ background: weekdayColor(row.label) }}
             />
             <span className="text-[var(--muted)]">{row.label}</span>
             <span className="ml-auto tabular-nums">
@@ -505,7 +512,9 @@ export default function AdminSiteAnalyticsClient() {
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <h2 className="text-sm font-semibold">Usage by weekday</h2>
             <p className="text-[10px] text-[var(--muted)]">
-              Pacific · sessions (admin/API hits left out)
+              Pacific last complete week
+              {data.weekdayWeekLabel ? ` · ${data.weekdayWeekLabel}` : ""} · pie largest → smallest ·
+              Mondays refresh
             </p>
           </div>
           <div className="mt-3 grid gap-6 lg:grid-cols-[1fr_13rem] lg:items-center">

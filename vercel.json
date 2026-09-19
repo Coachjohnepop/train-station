@@ -45,6 +45,14 @@
     {
       "path": "/api/cron/postgres-backup",
       "schedule": "0 15 * * 1"
+    },
+    {
+      "path": "/api/cron/weekday-snapshot",
+      "schedule": "10 15 * * 1"
+    },
+    {
+      "path": "/api/cron/social-drip",
+      "schedule": "0 16 * * *"
     }
   ]
 }

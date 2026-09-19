@@ -293,6 +293,8 @@ export type AnalyticsOverview = {
     sessions: number;
     events: number;
   }>;
+  /** Last complete Pacific week (Sun–Sat), Monday cron. */
+  weekdayWeekLabel?: string | null;
 };
 
 const WEEKDAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
@@ -476,31 +478,17 @@ export async function getAnalyticsOverview(days = 7): Promise<AnalyticsOverview>
     const { getLandingAbReport } = await import("@/lib/landing-ab-report");
     const landingAb = await getLandingAbReport(since).catch(() => undefined);
 
-    const weekdayUsage = emptyWeekdayUsage();
+    let weekdayUsage = emptyWeekdayUsage();
+    let weekdayWeekLabel: string | null = null;
     try {
-      const weekdayRows = await prisma.$queryRaw<
-        Array<{ dow: number; events: bigint | number; sessions: bigint | number }>
-      >`
-        SELECT
-          EXTRACT(DOW FROM ("occurredAt" AT TIME ZONE 'America/Los_Angeles'))::int AS dow,
-          COUNT(*)::int AS events,
-          COUNT(DISTINCT "sessionKey")::int AS sessions
-        FROM "AnalyticsEvent"
-        WHERE "occurredAt" >= ${since}
-          AND COALESCE("pagePath", '') NOT LIKE '/admin%'
-          AND COALESCE("pagePath", '') NOT LIKE '/api%'
-        GROUP BY 1
-      `;
-      for (const row of weekdayRows) {
-        const dow = Number(row.dow);
-        if (dow >= 0 && dow <= 6) {
-          weekdayUsage[dow] = {
-            dow,
-            label: WEEKDAY_LABELS[dow],
-            sessions: Number(row.sessions) || 0,
-            events: Number(row.events) || 0,
-          };
-        }
+      const { loadLatestWeekdaySnapshot, snapshotLastCompleteWeek } = await import(
+        "@/lib/analytics-weekday-snapshot"
+      );
+      let snap = await loadLatestWeekdaySnapshot();
+      if (!snap) snap = await snapshotLastCompleteWeek();
+      if (snap) {
+        weekdayUsage = snap.rows;
+        weekdayWeekLabel = snap.label;
       }
     } catch (e) {
       console.warn("[analytics] weekdayUsage", e instanceof Error ? e.message : e);
@@ -615,6 +603,7 @@ export async function getAnalyticsOverview(days = 7): Promise<AnalyticsOverview>
       }),
       landingAb,
       weekdayUsage,
+      weekdayWeekLabel,
     };
   }
 

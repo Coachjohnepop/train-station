@@ -1498,6 +1498,35 @@ model FactCommissionPayout {
   @@index([status])
 }
 
+model AnalyticsWeekdaySnapshot {
+  id         String   @id @default(cuid())
+  weekStart  DateTime @db.Date
+  dow        Int
+  sessions   Int      @default(0)
+  events     Int      @default(0)
+  computedAt DateTime @default(now())
+
+  @@unique([weekStart, dow])
+  @@index([weekStart])
+}
+
+model SocialDripPost {
+  id          String    @id @default(cuid())
+  body        String    @db.Text
+  mediaUrl    String?
+  /// JSON string array: x, instagram, facebook (tiktok later)
+  channels    String    @default("[\"x\",\"instagram\",\"facebook\"]")
+  status      String    @default("queued")
+  scheduledAt DateTime  @default(now())
+  postedAt    DateTime?
+  lastError   String?   @db.Text
+  createdBy   String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([status, scheduledAt])
+}
+
 model MartDailyMetrics {
   id                   String   @id @default(cuid())
   metricDate           DateTime @db.Date
