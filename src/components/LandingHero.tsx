@@ -132,13 +132,6 @@ export default function LandingHero({
     return () => window.removeEventListener(FREE_QUICK_TOUR_EVENT, open);
   }, []);
 
-  // B: user-chosen fork — own workout vs Jeremy's Today.
-  useEffect(() => {
-    if (variant !== "jeremy" || returnMode) return;
-    setTourOpen(true);
-    trackLandingCustom("hero-b-auto-fork");
-  }, [variant, returnMode]);
-
   const imageIndex = images.length ? imageTick % images.length : 0;
 
   function goTo(nextIndex: number) {
@@ -399,29 +392,16 @@ function JeremyHeroStack({
   onExplore?: (origin: HTMLElement) => void;
   onTour: (path?: "own" | "jeremy") => void;
 }) {
+  const [showMeet, setShowMeet] = useState(false);
+  useEffect(() => {
+    const id = window.setTimeout(() => setShowMeet(true), 3000);
+    return () => window.clearTimeout(id);
+  }, []);
+
   return (
     <>
       <div className="w-full max-w-sm">
-        <EasyPathChoices
-          kicker=""
-          hint="Your notes or Jeremy’s board — same Today console"
-        >
-          <button
-            type="button"
-            data-analytics-action="hero-b-have-workout"
-            onClick={() => onTour("own")}
-            className={primaryCta}
-          >
-            I have a workout
-          </button>
-          <button
-            type="button"
-            data-analytics-action="hero-b-want-jeremy"
-            onClick={() => onTour("jeremy")}
-            className={secondaryCta}
-          >
-            I want Jeremy’s
-          </button>
+        <EasyPathChoices kicker="" hint="Tickets first · or start today’s work">
           <Link
             href={JOIN_TICKETS_HREF}
             data-analytics-action={returnMode ? "hero-start-membership-return" : "hero-start-membership"}
@@ -429,27 +409,45 @@ function JeremyHeroStack({
               markLandingConverted();
               fireLandingJoinHook(e.currentTarget);
             }}
-            className="landing-hero-explore-cta inline-flex h-11 w-full items-center justify-center rounded-full px-8 text-[15px] font-bold tracking-tight text-white/90"
+            className={primaryCta}
           >
             Start membership
           </Link>
+          <button
+            type="button"
+            data-analytics-action="hero-b-want-jeremy"
+            onClick={() => onTour("jeremy")}
+            className={secondaryCta}
+          >
+            See the program
+          </button>
+          <button
+            type="button"
+            data-analytics-action="hero-b-have-workout"
+            onClick={() => onTour("own")}
+            className="landing-hero-explore-cta inline-flex h-11 w-full items-center justify-center rounded-full px-8 text-[15px] font-bold tracking-tight text-white/90"
+          >
+            I workout today
+          </button>
         </EasyPathChoices>
       </div>
+      {showMeet ? (
+        <div className="mt-3 w-full max-w-sm">
+          <LandingAbClip
+            src={meetSrc}
+            title="Tap to meet Jeremy"
+            analyticsAction="hero-meet-jeremy-play"
+          />
+        </div>
+      ) : null}
       <h1 className="landing-hero-headline mt-8 mb-3 text-[clamp(2.4rem,11vw,3.4rem)] font-semibold leading-[0.9] tracking-[-0.04em] text-white sm:mt-10 sm:text-6xl">
         Your workout
         <br />
         <span className="landing-hero-accent">or ours.</span>
       </h1>
       <p className="landing-hero-subhead max-w-[20.5rem] text-[15px] font-semibold leading-snug text-white sm:max-w-sm sm:text-xl">
-        Paste today&apos;s notes or jump on Jeremy&apos;s board. Username only — 7 days.
+        Coach Jeremy&apos;s app on your phone. See his board, or log the session you already have.
       </p>
-      <div className="mt-5 w-full max-w-sm">
-        <LandingAbClip
-          src={meetSrc}
-          title="Or tap to meet Jeremy"
-          analyticsAction="hero-meet-jeremy-play"
-        />
-      </div>
     </>
   );
 }

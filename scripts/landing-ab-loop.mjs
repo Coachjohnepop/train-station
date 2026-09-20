@@ -127,7 +127,7 @@ async function assertVariant(page, expect, label) {
     else pass(`${label} tour is not B`);
   }
   if (expect === "jeremy") {
-    if (/already working out/i.test(body) || /I have a workout/i.test(body)) {
+    if (/Start membership/i.test(body) && /See the program/i.test(body) && /I workout today/i.test(body)) {
       pass(`${label} B fork`);
     } else fail(`${label} B fork`, body.slice(0, 180));
   }
@@ -191,38 +191,31 @@ async function browserCtas(viewportKey) {
   await withBrowser("cta", viewportKey, async (page) => {
     await page.goto(BASE + "/l/jeremy", { waitUntil: "domcontentloaded", timeout: 45000 });
     await page.waitForTimeout(800);
-    const ask = page.getByText("Already working out?");
-    if ((await ask.count()) > 0) pass(`${viewportKey} B fork visible`);
-    else fail(`${viewportKey} B fork visible`, (await page.locator("body").innerText()).slice(0, 180));
+    const start = page.getByRole("link", { name: "Start membership" });
+    const see = page.locator('[data-analytics-action="hero-b-want-jeremy"]');
+    const own = page.locator('[data-analytics-action="hero-b-have-workout"]');
+    if ((await start.count()) > 0 && (await see.count()) > 0 && (await own.count()) > 0) {
+      pass(`${viewportKey} B choices`);
+    } else fail(`${viewportKey} B choices`, (await page.locator("body").innerText()).slice(0, 180));
+    if ((await page.getByText("Tap to meet Jeremy").count()) === 0) {
+      pass(`${viewportKey} meet Jeremy hidden at start`);
+    } else fail(`${viewportKey} meet Jeremy hidden at start`);
+    await page.waitForTimeout(2500);
+    if ((await page.getByText("Tap to meet Jeremy").count()) > 0) pass(`${viewportKey} meet Jeremy after 3s`);
+    else fail(`${viewportKey} meet Jeremy after 3s`);
 
-    const own = page.locator('[data-analytics-action="b-fork-own"]');
-    if ((await own.count()) === 0) {
-      fail(`${viewportKey} B yes-own missing`);
-      return;
-    }
     await own.first().click();
     await page.waitForTimeout(400);
     if ((await page.getByPlaceholder("Username").count()) > 0) pass(`${viewportKey} B username`);
     else fail(`${viewportKey} B username`);
     if ((await page.locator("textarea").count()) > 0) pass(`${viewportKey} B paste`);
     else fail(`${viewportKey} B paste`);
-    await page.getByText("Back").first().click();
-    await page.waitForTimeout(300);
-    const jer = page.locator('[data-analytics-action="b-fork-jeremy"]');
-    await jer.first().click();
-    await page.waitForTimeout(400);
-    if ((await page.getByText("Jeremy").count()) > 0) pass(`${viewportKey} B jeremy path`);
-    else fail(`${viewportKey} B jeremy path`);
-
     await page.getByRole("button", { name: "Close" }).first().click();
+    await page.waitForTimeout(300);
+    await see.first().click();
     await page.waitForTimeout(400);
-    const have = page.locator('[data-analytics-action="hero-b-have-workout"]');
-    if ((await have.count()) > 0) {
-      await have.first().click();
-      await page.waitForTimeout(400);
-      if ((await page.locator("textarea").count()) > 0) pass(`${viewportKey} hero own skips ask`);
-      else fail(`${viewportKey} hero own skips ask`);
-    } else fail(`${viewportKey} hero own after close`);
+    if ((await page.getByText("Jeremy").count()) > 0) pass(`${viewportKey} B see program`);
+    else fail(`${viewportKey} B see program`);
   });
   await withBrowser("cta-class", viewportKey, async (page) => {
     await page.goto(BASE + "/l/class", { waitUntil: "domcontentloaded", timeout: 45000 });
