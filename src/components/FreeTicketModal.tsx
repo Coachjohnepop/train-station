@@ -223,9 +223,14 @@ export default function FreeTicketModal({
                   onClose();
                   onUpgrade();
                 }}
-                className="btn-ghost min-h-12 w-full"
+                className="btn-primary min-h-12 w-full"
+                style={{
+                  background: "linear-gradient(180deg, #34d399 0%, #059669 100%)",
+                  borderColor: "#34d399",
+                  boxShadow: "0 4px 18px rgba(16, 185, 129, 0.45)",
+                }}
               >
-                Show me Coach Class
+                Shop Other Seats
               </button>
             </EasyPathChoices>
           )}
