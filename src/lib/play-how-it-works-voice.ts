@@ -20,6 +20,33 @@ import {
 let voice: HTMLAudioElement | null = null;
 let playingKey = "";
 let endWatch: (() => void) | null = null;
+let dualMonoCtx: AudioContext | null = null;
+let dualMonoHooked = false;
+
+function hookDualMono(audio: HTMLAudioElement): void {
+  if (dualMonoHooked || typeof window === "undefined") return;
+  const AC =
+    window.AudioContext ||
+    (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+  if (!AC) return;
+  try {
+    audio.crossOrigin = "anonymous";
+    dualMonoCtx = dualMonoCtx ?? new AC();
+    const source = dualMonoCtx.createMediaElementSource(audio);
+    const split = dualMonoCtx.createChannelSplitter(2);
+    const merge = dualMonoCtx.createChannelMerger(2);
+    source.connect(split);
+    // Copy L and R into both speakers so a left-only phone recording is dual-mono.
+    split.connect(merge, 0, 0);
+    split.connect(merge, 0, 1);
+    split.connect(merge, 1, 0);
+    split.connect(merge, 1, 1);
+    merge.connect(dualMonoCtx.destination);
+    dualMonoHooked = true;
+  } catch {
+    dualMonoHooked = false;
+  }
+}
 
 function voiceKey(step: HowItWorksStep): string {
   return `${step.id}:${step.voice.audioUrl}:${step.voice.startSec}:${step.voice.endSec ?? ""}`;
@@ -29,6 +56,7 @@ function getVoice(): HTMLAudioElement {
   if (!voice) {
     voice = new Audio();
     voice.preload = "auto";
+    voice.crossOrigin = "anonymous";
     voice.setAttribute(MIX_AUDIO_ATTR, "true");
     voice.setAttribute("playsinline", "true");
     voice.addEventListener("ended", () => {
@@ -102,6 +130,7 @@ export function startHowItWorksVoice(step: HowItWorksStep | null | undefined): v
   };
   seekStart();
   audio.addEventListener("playing", seekStart, { once: true });
+  hookDualMono(audio);
 
   if (end != null) {
     const guard = () => {
@@ -113,8 +142,14 @@ export function startHowItWorksVoice(step: HowItWorksStep | null | undefined): v
   }
 
   preferPlaybackAudioSession();
-  void audio
-    .play()
+  void (async () => {
+    try {
+      if (dualMonoCtx && dualMonoCtx.state === "suspended") await dualMonoCtx.resume();
+    } catch {
+      /* ignore */
+    }
+    return audio.play();
+  })()
     .then(() => {
       if (playingKey !== key) return;
       setBackgroundMusicDuck(true);
