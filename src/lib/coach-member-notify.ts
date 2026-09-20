@@ -20,15 +20,10 @@ const DEFAULT_COACH_EMAILS = [
   "john@thetrainstation.co",
 ] as const;
 
-/** Funnel + member progress — always email coaches (and Messages for progress). */
-const FORCE_EMAIL_EVENTS: ReadonlySet<CoachAlertEvent> = new Set([
+/** Email coaches only for money / new people / intro booked. Progress stays in Messages. */
+const EMAIL_ALERT_EVENTS: ReadonlySet<CoachAlertEvent> = new Set([
   "newMember",
   "memberPaid",
-  "equipmentSelected",
-  "programStartChosen",
-  "messagesOpened",
-  "warmupStarted",
-  "workoutLogged",
   "intakeScheduled",
 ]);
 
@@ -51,9 +46,6 @@ const FORCE_IN_APP_EVENTS: ReadonlySet<CoachAlertEvent> = new Set([
 const FORCE_SMS_EVENTS: ReadonlySet<CoachAlertEvent> = new Set([
   "newMember",
   "memberPaid",
-  "equipmentSelected",
-  "programStartChosen",
-  "messagesOpened",
   "intakeScheduled",
 ]);
 
@@ -156,8 +148,11 @@ export async function notifyCoachForMemberEvent(params: {
   const forceEmail =
     params.forceEmail !== undefined
       ? params.forceEmail
-      : FORCE_EMAIL_EVENTS.has(params.event);
+      : EMAIL_ALERT_EVENTS.has(params.event);
   if (forceEmail) channels.email = true;
+  if (!EMAIL_ALERT_EVENTS.has(params.event) && params.forceEmail !== true) {
+    channels.email = false;
+  }
   if (FORCE_IN_APP_EVENTS.has(params.event)) channels.inApp = true;
   if (FORCE_SMS_EVENTS.has(params.event)) channels.sms = true;
 

@@ -18,7 +18,18 @@ type Lead = {
   createdAt?: string;
 };
 
+/** Signup already emails via notifyCoachNewSignup — don't double. */
+const SKIP_LEAD_EMAIL_SOURCES = new Set([
+  "signup-register",
+  "byow-signup",
+  "signup",
+]);
+
 export async function notifyNewLead(lead: Lead): Promise<void> {
+  const source = (lead.source || "").trim();
+  if (SKIP_LEAD_EMAIL_SOURCES.has(source) || source.startsWith("quote:")) {
+    return;
+  }
   if (!process.env.RESEND_API_KEY || RECIPIENTS.length === 0) {
     console.log(
       `[LEAD] new pre-sign-up: ${lead.name || "Guest"} <${lead.email}>` +

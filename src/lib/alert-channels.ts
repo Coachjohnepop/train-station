@@ -34,13 +34,12 @@ export function defaultCoachAlertPrefs(): CoachAlertPrefs {
     newMember: { ...FUNNEL_ALERT_CHANNELS },
     /** First paid (Stripe / Venmo mark-paid) — same urgency as signup. */
     memberPaid: { ...FUNNEL_ALERT_CHANNELS },
-    equipmentSelected: { ...FUNNEL_ALERT_CHANNELS },
-    programStartChosen: { ...FUNNEL_ALERT_CHANNELS },
-    messagesOpened: { ...FUNNEL_ALERT_CHANNELS },
-    warmupStarted: { inApp: true, sms: true, email: false },
+    equipmentSelected: { inApp: true, sms: false, email: false },
+    programStartChosen: { inApp: true, sms: false, email: false },
+    messagesOpened: { inApp: true, sms: false, email: false },
+    warmupStarted: { inApp: true, sms: false, email: false },
     intakeScheduled: { inApp: true, sms: false, email: true },
-    /** Default: Messages + email so coach sees what the member did. */
-    workoutLogged: { inApp: true, sms: false, email: true },
+    workoutLogged: { inApp: true, sms: false, email: false },
   };
 }
 
