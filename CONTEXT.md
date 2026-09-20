@@ -443,6 +443,12 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
+**Date:** 2026-09-20 (A/B + B-fork loop, then real traffic)
+
+**Prod HEAD:** shipping this note with B-fork metrics + loop-traffic skip.
+
+**A/B next (what “works” means):** Live `/` is still **A tour** vs **B overlay** (already have a workout?). B inner split is paste-mine vs Jeremy’s Today — username only, 7-day trial, email later (not built). Station pulse now counts `b-fork-own` / `b-fork-jeremy` / ingest / Open Today, not the old “BYOW interest yes.” Hero “I have a workout” / “I want Jeremy’s” skip the ask after Close. Loop UAs (`TrainStationLoop`, HeadlessChrome, Playwright, old iPhone loop UA) are **not stored**. After the verification loop, run `npx tsx scripts/purge-loop-traffic-prod.mjs` so Saturday’s ~237 loop sessions and `ltp-*@example.com` waitlist rows are gone, then weekday snapshot rebuilds.
+
 **Date:** 2026-09-20 (full day + GitHub ERP typo)
 
 **Prod HEAD:** `4a7accd` on `main` · live https://www.thetrainstation.co (Vercel Ready). Local `tsc --noEmit` clean.

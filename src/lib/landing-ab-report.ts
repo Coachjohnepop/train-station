@@ -25,8 +25,10 @@ export type LandingAbArmRow = {
   membershipHits: number;
   howItWorksHits: number;
   styleHits: number;
-  byowYes: number;
-  byowNo: number;
+  forkOwn: number;
+  forkJeremy: number;
+  forkIngest: number;
+  forkJeremyGo: number;
 };
 
 export type LandingJourneyRow = {
@@ -54,8 +56,10 @@ function emptyArm(variant: LandingAbVariant): LandingAbArmRow {
     membershipHits: 0,
     howItWorksHits: 0,
     styleHits: 0,
-    byowYes: 0,
-    byowNo: 0,
+    forkOwn: 0,
+    forkJeremy: 0,
+    forkIngest: 0,
+    forkJeremyGo: 0,
   };
 }
 
@@ -84,14 +88,17 @@ export async function getLandingAbReport(since: Date): Promise<LandingAbReport> 
       Array<{ variant: string; sessions: bigint | number }>
     >`
       WITH first_ev AS (
-        SELECT DISTINCT ON ("sessionKey")
-          "sessionKey",
-          properties->>'landingVariant' AS v
-        FROM "AnalyticsEvent"
-        WHERE "occurredAt" >= ${since}
-          AND properties->>'landingVariant' IN ('tour', 'jeremy', 'floor', 'class')
-          AND "sessionKey" IS NOT NULL
-        ORDER BY "sessionKey", "occurredAt" ASC
+        SELECT DISTINCT ON (e."sessionKey")
+          e."sessionKey",
+          e.properties->>'landingVariant' AS v
+        FROM "AnalyticsEvent" e
+        LEFT JOIN "AnalyticsSession" sess ON sess."sessionKey" = e."sessionKey"
+        WHERE e."occurredAt" >= ${since}
+          AND e.properties->>'landingVariant' IN ('tour', 'jeremy', 'floor', 'class')
+          AND e."sessionKey" IS NOT NULL
+          AND COALESCE(sess."userAgent", '') !~* 'TrainStationLoop|HeadlessChrome|Playwright'
+          AND COALESCE(sess."userAgent", '') <> 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1'
+        ORDER BY e."sessionKey", e."occurredAt" ASC
       ),
       assigned AS (
         SELECT COALESCE(
@@ -103,6 +110,8 @@ export async function getLandingAbReport(since: Date): Promise<LandingAbReport> 
         FROM "AnalyticsSession" s
         LEFT JOIN first_ev f ON f."sessionKey" = s."sessionKey"
         WHERE s."lastActivityAt" >= ${since}
+          AND COALESCE(s."userAgent", '') !~* 'TrainStationLoop|HeadlessChrome|Playwright'
+          AND COALESCE(s."userAgent", '') <> 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1'
       )
       SELECT variant, COUNT(*)::int AS sessions
       FROM assigned
@@ -118,38 +127,49 @@ export async function getLandingAbReport(since: Date): Promise<LandingAbReport> 
         membership_hits: bigint | number;
         how_it_works: bigint | number;
         style_hits: bigint | number;
-        byow_yes: bigint | number;
-        byow_no: bigint | number;
+        fork_own: bigint | number;
+        fork_jeremy: bigint | number;
+        fork_ingest: bigint | number;
+        fork_jeremy_go: bigint | number;
       }>
     >`
       SELECT
-        properties->>'landingVariant' AS variant,
-        COUNT(*) FILTER (WHERE "eventType" = 'page_click')::int AS clicks,
+        e.properties->>'landingVariant' AS variant,
+        COUNT(*) FILTER (WHERE e."eventType" = 'page_click')::int AS clicks,
         COUNT(*) FILTER (
-          WHERE COALESCE("clickHref", "pagePath", '') ILIKE '%signup%'
+          WHERE COALESCE(e."clickHref", e."pagePath", '') ILIKE '%signup%'
         )::int AS signup_hits,
         COUNT(*) FILTER (
-          WHERE COALESCE("clickAction", '') ILIKE '%start-membership%'
+          WHERE COALESCE(e."clickAction", '') ILIKE '%start-membership%'
         )::int AS membership_hits,
         COUNT(*) FILTER (
-          WHERE COALESCE("clickAction", '') IN (
+          WHERE COALESCE(e."clickAction", '') IN (
             'hero-free-tour', 'hero-b-see-the-app', 'hero-b-auto-walk', 'hero-b-auto-tour'
           )
         )::int AS how_it_works,
         COUNT(*) FILTER (
-          WHERE COALESCE("clickAction", '') IN (
+          WHERE COALESCE(e."clickAction", '') IN (
             'hero-b-train-station-style', 'walk-train-station-style', 'hero-b-try-it-now'
           )
         )::int AS style_hits,
         COUNT(*) FILTER (
-          WHERE COALESCE("clickAction", '') = 'hero-b-byow-interest-yes'
-        )::int AS byow_yes,
+          WHERE COALESCE(e."clickAction", '') IN ('b-fork-own', 'hero-b-have-workout')
+        )::int AS fork_own,
         COUNT(*) FILTER (
-          WHERE COALESCE("clickAction", '') = 'hero-b-byow-interest-no'
-        )::int AS byow_no
-      FROM "AnalyticsEvent"
-      WHERE "occurredAt" >= ${since}
-        AND properties->>'landingVariant' IN ('tour', 'jeremy', 'floor', 'class')
+          WHERE COALESCE(e."clickAction", '') IN ('b-fork-jeremy', 'hero-b-want-jeremy')
+        )::int AS fork_jeremy,
+        COUNT(*) FILTER (
+          WHERE COALESCE(e."clickAction", '') IN ('b-ingest', 'b-byow-ingest')
+        )::int AS fork_ingest,
+        COUNT(*) FILTER (
+          WHERE COALESCE(e."clickAction", '') IN ('b-jeremy-go', 'b-jeremy-today')
+        )::int AS fork_jeremy_go
+      FROM "AnalyticsEvent" e
+      LEFT JOIN "AnalyticsSession" s ON s."sessionKey" = e."sessionKey"
+      WHERE e."occurredAt" >= ${since}
+        AND e.properties->>'landingVariant' IN ('tour', 'jeremy', 'floor', 'class')
+        AND COALESCE(s."userAgent", '') !~* 'TrainStationLoop|HeadlessChrome|Playwright'
+        AND COALESCE(s."userAgent", '') <> 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1'
       GROUP BY 1
     `;
 
@@ -157,15 +177,18 @@ export async function getLandingAbReport(since: Date): Promise<LandingAbReport> 
       Array<{ door: string; sessions: bigint | number }>
     >`
       WITH first_page AS (
-        SELECT DISTINCT ON ("sessionKey")
-          "sessionKey",
-          COALESCE("pagePath", '/') AS path,
-          COALESCE("referrer", '') AS referrer
-        FROM "AnalyticsEvent"
-        WHERE "occurredAt" >= ${since}
-          AND "eventType" = 'page_view'
-          AND "sessionKey" IS NOT NULL
-        ORDER BY "sessionKey", "occurredAt" ASC
+        SELECT DISTINCT ON (e."sessionKey")
+          e."sessionKey",
+          COALESCE(e."pagePath", '/') AS path,
+          COALESCE(e."referrer", '') AS referrer
+        FROM "AnalyticsEvent" e
+        LEFT JOIN "AnalyticsSession" s ON s."sessionKey" = e."sessionKey"
+        WHERE e."occurredAt" >= ${since}
+          AND e."eventType" = 'page_view'
+          AND e."sessionKey" IS NOT NULL
+          AND COALESCE(s."userAgent", '') !~* 'TrainStationLoop|HeadlessChrome|Playwright'
+          AND COALESCE(s."userAgent", '') <> 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1'
+        ORDER BY e."sessionKey", e."occurredAt" ASC
       )
       SELECT
         CASE
@@ -200,8 +223,10 @@ export async function getLandingAbReport(since: Date): Promise<LandingAbReport> 
       arm.membershipHits = Number(row.membership_hits) || 0;
       arm.howItWorksHits = Number(row.how_it_works) || 0;
       arm.styleHits = Number(row.style_hits) || 0;
-      arm.byowYes = Number(row.byow_yes) || 0;
-      arm.byowNo = Number(row.byow_no) || 0;
+      arm.forkOwn = Number(row.fork_own) || 0;
+      arm.forkJeremy = Number(row.fork_jeremy) || 0;
+      arm.forkIngest = Number(row.fork_ingest) || 0;
+      arm.forkJeremyGo = Number(row.fork_jeremy_go) || 0;
     }
 
     const JOURNEY_LABELS: Record<string, string> = {

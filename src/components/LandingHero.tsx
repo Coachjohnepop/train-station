@@ -89,6 +89,7 @@ export default function LandingHero({
   const [phraseTick, setPhraseTick] = useState(0);
   const [canRotateCopy, setCanRotateCopy] = useState(false);
   const [tourOpen, setTourOpen] = useState(false);
+  const [forkPath, setForkPath] = useState<"own" | "jeremy" | null>(null);
   const [liveReturn, setLiveReturn] = useState(false);
   const [fadingOut, setFadingOut] = useState<number | null>(null);
   const fadeClearRef = useRef<number | null>(null);
@@ -253,7 +254,10 @@ export default function LandingHero({
                 returnMode={returnMode}
                 exploreOpen={exploreOpen}
                 onExplore={onExplore}
-                onTour={() => setTourOpen(true)}
+                onTour={(path) => {
+                  setForkPath(path ?? null);
+                  setTourOpen(true);
+                }}
               />
             ) : variant === "floor" ? (
               <FloorHeroStack
@@ -361,7 +365,14 @@ export default function LandingHero({
       </div>
 
       {variant === "jeremy" ? (
-        <LandingByowFork open={tourOpen} onClose={() => setTourOpen(false)} />
+        <LandingByowFork
+          open={tourOpen}
+          initialPath={forkPath}
+          onClose={() => {
+            setTourOpen(false);
+            setForkPath(null);
+          }}
+        />
       ) : (
         <LandingSeeInsideTour open={tourOpen} onClose={() => setTourOpen(false)} />
       )}
@@ -387,7 +398,7 @@ function JeremyHeroStack({
   returnMode: boolean;
   exploreOpen: boolean;
   onExplore?: (origin: HTMLElement) => void;
-  onTour: () => void;
+  onTour: (path?: "own" | "jeremy") => void;
 }) {
   return (
     <>
@@ -399,7 +410,7 @@ function JeremyHeroStack({
           <button
             type="button"
             data-analytics-action="hero-b-have-workout"
-            onClick={onTour}
+            onClick={() => onTour("own")}
             className={primaryCta}
           >
             I have a workout
@@ -407,7 +418,7 @@ function JeremyHeroStack({
           <button
             type="button"
             data-analytics-action="hero-b-want-jeremy"
-            onClick={onTour}
+            onClick={() => onTour("jeremy")}
             className={secondaryCta}
           >
             I want Jeremy’s

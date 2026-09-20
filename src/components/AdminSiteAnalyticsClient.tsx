@@ -67,8 +67,10 @@ type Overview = {
       membershipHits?: number;
       howItWorksHits?: number;
       styleHits?: number;
-      byowYes?: number;
-      byowNo?: number;
+      forkOwn?: number;
+      forkJeremy?: number;
+      forkIngest?: number;
+      forkJeremyGo?: number;
     }>;
     journeys?: Array<{ id: string; label: string; sessions: number }>;
   };
@@ -178,10 +180,16 @@ function LandingAbBoard({ report }: { report: NonNullable<Overview["landingAb"]>
           <span className="text-violet-300">A left</span>
           <span className="text-amber-300">B right</span>
         </div>
-        {b && (b.byowYes || b.byowNo) ? (
+        {b && (b.forkOwn || b.forkJeremy || b.forkIngest || b.forkJeremyGo) ? (
           <p className="mt-2 text-xs text-white/70">
-            B BYOW interest: <span className="font-semibold">{b.byowYes ?? 0} yes</span> ·{" "}
-            {b.byowNo ?? 0} not sure
+            B fork: <span className="font-semibold">{b.forkOwn ?? 0} paste mine</span> ·{" "}
+            {b.forkJeremy ?? 0} Jeremy’s Today
+            {(b.forkIngest || b.forkJeremyGo) ? (
+              <>
+                {" "}
+                · started {b.forkIngest ?? 0} ingest · {b.forkJeremyGo ?? 0} Open Today
+              </>
+            ) : null}
           </p>
         ) : null}
       </div>

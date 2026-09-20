@@ -68,11 +68,14 @@ export async function computeWeekdayUsage(since: Date, until: Date): Promise<Wee
       EXTRACT(DOW FROM ("occurredAt" AT TIME ZONE 'America/Los_Angeles'))::int AS dow,
       COUNT(*)::int AS events,
       COUNT(DISTINCT "sessionKey")::int AS sessions
-    FROM "AnalyticsEvent"
-    WHERE "occurredAt" >= ${since}
-      AND "occurredAt" < ${until}
-      AND COALESCE("pagePath", '') NOT LIKE '/admin%'
-      AND COALESCE("pagePath", '') NOT LIKE '/api%'
+    FROM "AnalyticsEvent" e
+    LEFT JOIN "AnalyticsSession" s ON s."sessionKey" = e."sessionKey"
+    WHERE e."occurredAt" >= ${since}
+      AND e."occurredAt" < ${until}
+      AND COALESCE(e."pagePath", '') NOT LIKE '/admin%'
+      AND COALESCE(e."pagePath", '') NOT LIKE '/api%'
+      AND COALESCE(s."userAgent", '') !~* 'TrainStationLoop|HeadlessChrome|Playwright'
+      AND COALESCE(s."userAgent", '') <> 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1'
     GROUP BY 1
   `;
   for (const row of rows) {

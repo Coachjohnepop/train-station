@@ -5,7 +5,10 @@
  *   BASE_URL=https://www.thetrainstation.co node scripts/landing-ab-loop.mjs
  *   ROUNDS=2 VIEWPORTS=mobile,desktop FRESH=12 node scripts/landing-ab-loop.mjs
  *
- * Does not create accounts. Checks cookie split, stickiness, and /l/* doors.
+ * UI checks do not keep accounts. With LOOP_INGEST=1 (default) it also
+ * POSTs guest-start for own + Jeremy paths, then the purge script deletes them.
+ *
+ *   LOOP_INGEST=0 to skip creating guest members.
  */
 import { chromium } from "playwright";
 import { writeFileSync } from "fs";
@@ -13,6 +16,8 @@ import { writeFileSync } from "fs";
 const BASE = (process.env.BASE_URL || "https://www.thetrainstation.co").replace(/\/$/, "");
 const ROUNDS = Math.max(1, Number(process.env.ROUNDS || 2));
 const FRESH = Math.max(8, Number(process.env.FRESH || 12));
+const LOOP_INGEST = process.env.LOOP_INGEST !== "0";
+const LOOP_UA_TOKEN = "TrainStationLoop/1";
 const VIEWPORTS = (process.env.VIEWPORTS || "mobile,desktop")
   .split(",")
   .map((s) => s.trim())
@@ -34,13 +39,13 @@ const VIEW = {
     viewport: { width: 390, height: 844 },
     isMobile: true,
     hasTouch: true,
-    userAgent:
-      "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+    userAgent: `Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1 ${LOOP_UA_TOKEN}`,
   },
   desktop: {
     viewport: { width: 1280, height: 800 },
     isMobile: false,
     hasTouch: false,
+    userAgent: `Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 ${LOOP_UA_TOKEN}`,
   },
 };
 
@@ -208,6 +213,16 @@ async function browserCtas(viewportKey) {
     await page.waitForTimeout(400);
     if ((await page.getByText("Jeremy").count()) > 0) pass(`${viewportKey} B jeremy path`);
     else fail(`${viewportKey} B jeremy path`);
+
+    await page.getByRole("button", { name: "Close" }).first().click();
+    await page.waitForTimeout(400);
+    const have = page.locator('[data-analytics-action="hero-b-have-workout"]');
+    if ((await have.count()) > 0) {
+      await have.first().click();
+      await page.waitForTimeout(400);
+      if ((await page.locator("textarea").count()) > 0) pass(`${viewportKey} hero own skips ask`);
+      else fail(`${viewportKey} hero own skips ask`);
+    } else fail(`${viewportKey} hero own after close`);
   });
   await withBrowser("cta-class", viewportKey, async (page) => {
     await page.goto(BASE + "/l/class", { waitUntil: "domcontentloaded", timeout: 45000 });
@@ -221,10 +236,46 @@ async function browserCtas(viewportKey) {
   });
 }
 
+async function liveGuestStart() {
+  console.log("\n=== Guest start (own + Jeremy) ===");
+  if (!LOOP_INGEST) {
+    pass("guest-start skipped", "LOOP_INGEST=0");
+    return;
+  }
+  const stamp = Date.now().toString(36).replace(/[^a-z0-9]/gi, "").slice(-5);
+  const ownName = `Loopown${stamp}`;
+  const jerName = `Loopjer${stamp}`;
+  const notes = "Air Squats\n3x10\nPush Ups\n3x8";
+  const headers = { "Content-Type": "application/json", "User-Agent": `node ${LOOP_UA_TOKEN}` };
+
+  const ownRes = await fetch(BASE + "/api/byow/guest-start", {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ username: ownName, path: "own", rawText: notes }),
+  });
+  const own = await ownRes.json().catch(() => ({}));
+  if (ownRes.ok && typeof own.redirectTo === "string" && own.redirectTo.includes("byow=")) {
+    pass("guest-start own", `${ownName} → ${own.redirectTo}`);
+  } else fail("guest-start own", `${ownRes.status} ${JSON.stringify(own).slice(0, 180)}`);
+
+  const jerRes = await fetch(BASE + "/api/byow/guest-start", {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ username: jerName, path: "jeremy" }),
+  });
+  const jer = await jerRes.json().catch(() => ({}));
+  if (jerRes.ok && typeof jer.redirectTo === "string" && jer.redirectTo.includes("/member/today")) {
+    pass("guest-start jeremy", `${jerName} → ${jer.redirectTo}`);
+  } else fail("guest-start jeremy", `${jerRes.status} ${JSON.stringify(jer).slice(0, 180)}`);
+}
+
 async function main() {
-  console.log(`Landing A/B loop  ${BASE}  rounds=${ROUNDS}  ${VIEWPORTS.join(",")}  fresh=${FRESH}`);
+  console.log(
+    `Landing A/B loop  ${BASE}  rounds=${ROUNDS}  ${VIEWPORTS.join(",")}  fresh=${FRESH}  ingest=${LOOP_INGEST ? "on" : "off"}`,
+  );
   await httpDoors();
   await httpSplit();
+  await liveGuestStart();
   for (let r = 1; r <= ROUNDS; r++) {
     console.log(`\n── round ${r}/${ROUNDS} ──`);
     for (const vp of VIEWPORTS) {

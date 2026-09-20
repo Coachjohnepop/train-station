@@ -15,6 +15,7 @@ import {
   emptyInsightInput,
   type AnalyticsPlaybook,
 } from "@/lib/analytics-insights";
+import { isLoopUserAgent } from "@/lib/loop-traffic";
 
 const DEV_FILE = path.join(process.cwd(), "prisma", "analytics-events.dev.json");
 const BLOB_PATH = "demo/analytics-events.json";
@@ -234,6 +235,13 @@ export async function ingestAnalyticsEvents(
 ): Promise<{ accepted: number; storage: "database" | "demo" }> {
   if (!payload.session?.sessionKey || !Array.isArray(payload.events)) {
     return { accepted: 0, storage: isDatabaseConfigured() ? "database" : "demo" };
+  }
+
+  if (isLoopUserAgent(payload.session.userAgent)) {
+    return {
+      accepted: payload.events.length,
+      storage: isDatabaseConfigured() && !isDemoMode() ? "database" : "demo",
+    };
   }
 
   const userId = opts?.userId ?? null;

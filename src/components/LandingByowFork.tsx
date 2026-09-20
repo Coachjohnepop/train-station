@@ -2,15 +2,17 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { trackLandingCustom } from "@/lib/landing-return-visit";
+import { markLandingConverted, trackLandingCustom } from "@/lib/landing-return-visit";
 
 type Path = "own" | "jeremy" | null;
 
 export default function LandingByowFork({
   open,
+  initialPath = null,
   onClose,
 }: {
   open: boolean;
+  initialPath?: Path;
   onClose: () => void;
 }) {
   const [mounted, setMounted] = useState(false);
@@ -28,8 +30,11 @@ export default function LandingByowFork({
     if (!open) {
       setPath(null);
       setError("");
+      return;
     }
-  }, [open]);
+    setPath(initialPath);
+    setError("");
+  }, [open, initialPath]);
 
   if (!open || !mounted) return null;
 
@@ -51,6 +56,7 @@ export default function LandingByowFork({
         setError(data.error || "Could not start.");
         return;
       }
+      markLandingConverted();
       trackLandingCustom(path === "own" ? "b-byow-ingest" : "b-jeremy-today");
       window.location.href = data.redirectTo || "/member/today";
     } catch {
