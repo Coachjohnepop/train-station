@@ -65,9 +65,9 @@ export async function computeWeekdayUsage(since: Date, until: Date): Promise<Wee
     Array<{ dow: number; events: bigint | number; sessions: bigint | number }>
   >`
     SELECT
-      EXTRACT(DOW FROM ("occurredAt" AT TIME ZONE 'America/Los_Angeles'))::int AS dow,
+      EXTRACT(DOW FROM (e."occurredAt" AT TIME ZONE 'America/Los_Angeles'))::int AS dow,
       COUNT(*)::int AS events,
-      COUNT(DISTINCT "sessionKey")::int AS sessions
+      COUNT(DISTINCT e."sessionKey")::int AS sessions
     FROM "AnalyticsEvent" e
     LEFT JOIN "AnalyticsSession" s ON s."sessionKey" = e."sessionKey"
     WHERE e."occurredAt" >= ${since}
