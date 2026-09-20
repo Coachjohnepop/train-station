@@ -86,7 +86,6 @@ function GuideFinger({
   playKey,
   stops,
   duration,
-  label = "Like this",
 }: {
   playKey: string | number;
   stops: readonly GuideStop[];
@@ -95,14 +94,12 @@ function GuideFinger({
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const fingerRef = useRef<HTMLDivElement>(null);
-  const chipRef = useRef<HTMLDivElement>(null);
   const stopsRef = useRef(stops);
   stopsRef.current = stops;
 
   useEffect(() => {
     const host = hostRef.current;
     const finger = fingerRef.current;
-    const chip = chipRef.current;
     const path = stopsRef.current;
     if (!host || !finger || path.length === 0) return;
     const started = performance.now();
@@ -155,10 +152,6 @@ function GuideFinger({
       const ms = now - started;
       const p = posAt(Math.min(ms, duration));
       finger.style.transform = `translate(${p.x}px, ${p.y}px) translate(-50%, -90%) rotate(${p.rot}deg) scale(${1.22 * p.press})`;
-      if (chip) {
-        chip.style.transform = `translate(${p.x}px, ${p.y}px) translate(-50%, calc(-90% - 3.4rem))`;
-        chip.style.opacity = ms < 160 ? "0" : "1";
-      }
       if (ms < duration) raf = window.requestAnimationFrame(frame);
     };
     raf = window.requestAnimationFrame(frame);
@@ -167,12 +160,6 @@ function GuideFinger({
 
   return (
     <div ref={hostRef} className="pointer-events-none absolute inset-0 z-20 overflow-visible">
-      <div
-        ref={chipRef}
-        className="absolute left-0 top-0 rounded-full bg-[#fde68a] px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-[0.12em] text-[#3b2a08] shadow-[0_8px_18px_rgba(0,0,0,0.35)]"
-      >
-        {label}
-      </div>
       <div
         ref={fingerRef}
         className="absolute left-0 top-0 text-[3.6rem] leading-none drop-shadow-[0_10px_22px_rgba(0,0,0,0.55)] sm:text-[4.6rem]"
@@ -365,7 +352,6 @@ function WorkoutScene({
               <GuideFinger
                 playKey={`${playKey}-${Math.round(d)}`}
                 duration={timed ? d * 0.84 : 4200}
-                label="Like this"
                 stops={
                   timed
                     ? [
@@ -480,7 +466,6 @@ function TicketScene({
           <GuideFinger
             playKey={`${playKey}-${Math.round(pickAt)}`}
             duration={pickAt + 400}
-            label="Like this"
             stops={[{ id: "business", at: pickAt }]}
           />
         ) : null}
