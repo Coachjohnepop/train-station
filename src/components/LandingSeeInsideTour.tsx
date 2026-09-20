@@ -340,6 +340,8 @@ export default function LandingSeeInsideTour({
                 motion={phase === "gate" ? "still" : "animate"}
                 playKey={`${open}-${beat}-${phase}`}
                 voiceUrl={howStep.voice.audioUrl}
+                voiceStartSec={howStep.voice.startSec}
+                voiceEndSec={howStep.voice.endSec}
                 onReady={() => {
                   if (phase !== "auto" || howStep.id !== "workout") return;
                   if (confettiFired.current || reducedMotion.current) return;

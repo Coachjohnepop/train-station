@@ -92,13 +92,16 @@ export function startHowItWorksVoice(step: HowItWorksStep | null | undefined): v
 
   const duration = Number.isFinite(audio.duration) ? audio.duration : 0;
   const { start, end } = howItWorksVoiceWindow(step.voice, duration || null);
-  if (start > 0.05) {
+  const seekStart = () => {
+    if (start <= 0.05) return;
     try {
       audio.currentTime = start;
     } catch {
       /* iOS may ignore until play */
     }
-  }
+  };
+  seekStart();
+  audio.addEventListener("playing", seekStart, { once: true });
 
   if (end != null) {
     const guard = () => {

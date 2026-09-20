@@ -153,6 +153,8 @@ export default function LandingByowFork({
                 motion={previewArmed ? "animate" : "still"}
                 playKey={`program-${previewBeat}-${previewArmed ? "go" : "wait"}`}
                 voiceUrl={howItWorksStepById(howItWorks, previewStep).voice.audioUrl}
+                voiceStartSec={howItWorksStepById(howItWorks, previewStep).voice.startSec}
+                voiceEndSec={howItWorksStepById(howItWorks, previewStep).voice.endSec}
               />
               <button
                 type="button"

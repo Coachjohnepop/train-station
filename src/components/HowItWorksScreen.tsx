@@ -184,8 +184,8 @@ function GuideFinger({
   );
 }
 
-/** Prod Today clip is ~17.5s; used until metadata loads so the first play is already in sync. */
-const WORKOUT_VOICE_FALLBACK_MS = 17540;
+/** Trimmed Today talking window (~1.06–16.54 of the 17.5s file). */
+const WORKOUT_VOICE_FALLBACK_MS = 15480;
 
 function useVoiceDurationMs(url?: string | null): number | null {
   const [ms, setMs] = useState<number | null>(null);
@@ -252,6 +252,8 @@ export default function HowItWorksScreen({
   playKey = 0,
   onReady,
   voiceUrl = null,
+  voiceStartSec = 0,
+  voiceEndSec = null,
 }: {
   stepId: HowItWorksStepId;
   lastSetRef?: Ref<HTMLDivElement>;
@@ -261,7 +263,14 @@ export default function HowItWorksScreen({
   onReady?: () => void;
   /** When set, on-screen cues stretch to this clip so they land with Jeremy’s line. */
   voiceUrl?: string | null;
+  voiceStartSec?: number;
+  voiceEndSec?: number | null;
 }) {
+  const voice = {
+    url: voiceUrl,
+    startSec: voiceStartSec ?? 0,
+    endSec: voiceEndSec ?? null,
+  };
   if (stepId === "workout") {
     return (
       <WorkoutScene
@@ -269,20 +278,32 @@ export default function HowItWorksScreen({
         motion={motion}
         playKey={playKey}
         onReady={onReady}
-        voiceUrl={voiceUrl}
+        voice={voice}
       />
     );
   }
   if (stepId === "ticket") {
-    return <TicketScene motion={motion} playKey={playKey} onReady={onReady} voiceUrl={voiceUrl} />;
+    return <TicketScene motion={motion} playKey={playKey} onReady={onReady} voice={voice} />;
   }
   if (stepId === "program") {
-    return <ProgramScene motion={motion} playKey={playKey} onReady={onReady} voiceUrl={voiceUrl} />;
+    return <ProgramScene motion={motion} playKey={playKey} onReady={onReady} voice={voice} />;
   }
   if (stepId === "gear") {
-    return <GearScene motion={motion} playKey={playKey} onReady={onReady} voiceUrl={voiceUrl} />;
+    return <GearScene motion={motion} playKey={playKey} onReady={onReady} voice={voice} />;
   }
-  return <BookScene motion={motion} playKey={playKey} onReady={onReady} voiceUrl={voiceUrl} />;
+  return <BookScene motion={motion} playKey={playKey} onReady={onReady} voice={voice} />;
+}
+
+type VoiceWindow = { url?: string | null; startSec: number; endSec: number | null };
+
+function useVoiceSpanMs(voice: VoiceWindow, fallbackMs: number): number {
+  const full = useVoiceDurationMs(voice.url);
+  const start = Math.max(0, voice.startSec || 0);
+  if (voice.endSec != null && voice.endSec > start + 0.4) {
+    return Math.round((voice.endSec - start) * 1000);
+  }
+  if (full != null) return Math.max(900, Math.round(full - start * 1000));
+  return fallbackMs;
 }
 
 function WorkoutScene({
@@ -290,18 +311,18 @@ function WorkoutScene({
   motion,
   playKey,
   onReady,
-  voiceUrl,
+  voice,
 }: {
   lastSetRef?: Ref<HTMLDivElement>;
   motion: "animate" | "still";
   playKey: string | number;
   onReady?: () => void;
-  voiceUrl?: string | null;
+  voice: VoiceWindow;
 }) {
   const reduce = usePrefersReducedMotion();
-  const measured = useVoiceDurationMs(voiceUrl);
-  const timed = Boolean(voiceUrl);
-  const d = timed ? Math.max(9000, measured ?? WORKOUT_VOICE_FALLBACK_MS) : 4200;
+  const span = useVoiceSpanMs(voice, WORKOUT_VOICE_FALLBACK_MS);
+  const timed = Boolean(voice.url);
+  const d = timed ? Math.max(9000, span) : 4200;
   const delays = timed
     ? [d * 0.3, d * 0.36, d * 0.42, d * 0.58, d * 0.7, d * 0.8]
     : [350, 700, 1000, 2000, 3000, 4000];
@@ -408,16 +429,16 @@ function TicketScene({
   motion,
   playKey,
   onReady,
-  voiceUrl,
+  voice,
 }: {
   motion: "animate" | "still";
   playKey: string | number;
   onReady?: () => void;
-  voiceUrl?: string | null;
+  voice: VoiceWindow;
 }) {
   const reduce = usePrefersReducedMotion();
-  const measured = useVoiceDurationMs(voiceUrl);
-  const pickAt = voiceUrl ? Math.max(2400, (measured ?? 7660) * 0.62) : 2400;
+  const span = useVoiceSpanMs(voice, 5380);
+  const pickAt = voice.url ? Math.max(2400, span * 0.62) : 2400;
   const tick = useSceneClock(motion, `${playKey}-${Math.round(pickAt)}`, reduce ? [240] : [pickAt], onReady);
   const selected = tick >= 1 ? "business" : null;
   const showFinger = motion === "animate" && !reduce;
@@ -472,16 +493,16 @@ function ProgramScene({
   motion,
   playKey,
   onReady,
-  voiceUrl,
+  voice,
 }: {
   motion: "animate" | "still";
   playKey: string | number;
   onReady?: () => void;
-  voiceUrl?: string | null;
+  voice: VoiceWindow;
 }) {
   const reduce = usePrefersReducedMotion();
-  const measured = useVoiceDurationMs(voiceUrl);
-  const pickAt = voiceUrl ? Math.max(2200, (measured ?? 8300) * 0.58) : 2200;
+  const span = useVoiceSpanMs(voice, 5620);
+  const pickAt = voice.url ? Math.max(2200, span * 0.58) : 2200;
   const tick = useSceneClock(motion, `${playKey}-${Math.round(pickAt)}`, reduce ? [240] : [pickAt], onReady);
   const selected = tick >= 1 ? "adult" : null;
   return (
@@ -525,16 +546,16 @@ function GearScene({
   motion,
   playKey,
   onReady,
-  voiceUrl,
+  voice,
 }: {
   motion: "animate" | "still";
   playKey: string | number;
   onReady?: () => void;
-  voiceUrl?: string | null;
+  voice: VoiceWindow;
 }) {
-  const measured = useVoiceDurationMs(voiceUrl);
-  const d = voiceUrl ? Math.max(4000, measured ?? 12567) : 1650;
-  const delays = voiceUrl
+  const span = useVoiceSpanMs(voice, 10680);
+  const d = voice.url ? Math.max(4000, span) : 1650;
+  const delays = voice.url
     ? [0.22, 0.32, 0.42, 0.52, 0.62, 0.72].map((f) => d * f)
     : [400, 650, 900, 1150, 1400, 1650];
   const tick = useSceneClock(motion, `${playKey}-${Math.round(d)}`, delays, onReady);
@@ -581,16 +602,16 @@ function BookScene({
   motion,
   playKey,
   onReady,
-  voiceUrl,
+  voice,
 }: {
   motion: "animate" | "still";
   playKey: string | number;
   onReady?: () => void;
-  voiceUrl?: string | null;
+  voice: VoiceWindow;
 }) {
-  const measured = useVoiceDurationMs(voiceUrl);
-  const d = voiceUrl ? Math.max(6000, measured ?? 20012) : 3200;
-  const delays = voiceUrl
+  const span = useVoiceSpanMs(voice, 18420);
+  const d = voice.url ? Math.max(6000, span) : 3200;
+  const delays = voice.url
     ? [d * 0.22, d * 0.4, d * 0.58, d * 0.74]
     : [800, 1600, 2400, 3200];
   const tick = useSceneClock(motion, `${playKey}-${Math.round(d)}`, delays, onReady);
