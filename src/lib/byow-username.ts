@@ -1,6 +1,12 @@
 /** Auto-minted names from See the program → Let’s begin. */
+export const GUEST_EMAIL_DOMAIN = "guest.thetrainstation.co";
+
 export function isPlaceholderGuestUsername(name: string | null | undefined): boolean {
   return /^Guest[a-z0-9]{6,}$/i.test((name || "").trim());
+}
+
+export function isGuestStubEmail(email: string | null | undefined): boolean {
+  return (email || "").toLowerCase().endsWith(`@${GUEST_EMAIL_DOMAIN}`);
 }
 
 const USE_DAYS_COOKIE = "ts-guest-use-days";

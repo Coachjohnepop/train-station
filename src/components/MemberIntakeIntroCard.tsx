@@ -7,6 +7,7 @@ import { GAMIFICATION_POINTS } from "@/lib/gamification-types";
 import { dispatchMemberScoreCelebrate } from "@/lib/member-score-celebrate";
 import EmbeddedCalendlyModal from "@/components/EmbeddedCalendlyModal";
 import { NextStepButton, NextStepLink } from "@/components/NextStepButton";
+import { isGuestStubEmail, isPlaceholderGuestUsername } from "@/lib/byow-username";
 
 type IntakeStatus = {
   introBookedAt: string | null;
@@ -43,6 +44,9 @@ export default function MemberIntakeIntroCard({
     },
   );
   const [booking, setBooking] = useState(false);
+  const [open, setOpen] = useState(false);
+  const [bookEmail, setBookEmail] = useState("");
+  const [emailError, setEmailError] = useState("");
 
   const introBooked = Boolean(status.introBookedAt);
   const meetingRequested = Boolean(status.coachMeetingRequestedAt);
@@ -62,8 +66,10 @@ export default function MemberIntakeIntroCard({
       if (sessionRes.ok) {
         const session = await sessionRes.json();
         if (session.signedIn && session.user) {
-          setMemberEmail(session.user.email);
-          setMemberName(session.user.name);
+          const email = session.user.email as string | undefined;
+          const name = session.user.name as string | undefined;
+          if (email && !isGuestStubEmail(email)) setMemberEmail(email);
+          if (name && !isPlaceholderGuestUsername(name)) setMemberName(name);
         }
       }
       if (statusRes?.ok) {
@@ -131,7 +137,33 @@ export default function MemberIntakeIntroCard({
     }
   }
 
+  const needsRealEmail = !memberEmail;
   const showIntroBook = !introBooked;
+
+  async function openBooking() {
+    setEmailError("");
+    if (needsRealEmail) {
+      const email = bookEmail.trim().toLowerCase();
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || isGuestStubEmail(email)) {
+        setEmailError("Use a real email to book Jeremy.");
+        return;
+      }
+      const res = await fetch("/api/byow/claim-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setEmailError(data.error || "Could not save email.");
+        return;
+      }
+      setMemberEmail(data.email || email);
+    }
+    setModalOpen(true);
+  }
+
+  const calendlyEmail = memberEmail || (bookEmail.includes("@") ? bookEmail.trim() : undefined);
   const showFollowUpBook = meetingRequested;
   const modalTitle = bookingFollowUp ? "Book your follow-up call" : "Book your 15-min intro";
 
@@ -144,25 +176,39 @@ export default function MemberIntakeIntroCard({
           introBooked ? "intake-next-step-card--booked" : ""
         }`}
       >
-        <p className={`intake-next-step-badge ${introBooked ? "intake-next-step-badge--booked" : ""}`}>
-          <span aria-hidden>{introBooked ? "✓" : "★"}</span>
-          {introBooked
-            ? meetingRequested
-              ? "Follow-up requested"
-              : "Intro scheduled"
-            : pester
-              ? "Required — every seat"
-              : "Your next step"}
-        </p>
-        <h2
-          className={`intake-next-step-title font-bold leading-tight ${
-            compact ? "text-lg" : "text-xl sm:text-2xl"
-          } ${introBooked ? "intake-next-step-title--booked" : ""}`}
+        <button
+          type="button"
+          className="flex w-full items-center justify-between gap-2 text-left"
+          aria-expanded={open}
+          onClick={() => setOpen((v) => !v)}
         >
-          {meetingRequested && introBooked
-            ? "Coach requested another check-in"
-            : "Meet Jeremy — book your 15-minute intro"}
-        </h2>
+          <span>
+            <p className={`intake-next-step-badge ${introBooked ? "intake-next-step-badge--booked" : ""}`}>
+              <span aria-hidden>{introBooked ? "✓" : "★"}</span>
+              {introBooked
+                ? meetingRequested
+                  ? "Follow-up requested"
+                  : "Intro scheduled"
+                : pester
+                  ? "Required — every seat"
+                  : "Your next step"}
+            </p>
+            <h2
+              className={`intake-next-step-title mt-1 font-bold leading-tight ${
+                compact ? "text-lg" : "text-xl sm:text-2xl"
+              } ${introBooked ? "intake-next-step-title--booked" : ""}`}
+            >
+              {meetingRequested && introBooked
+                ? "Coach requested another check-in"
+                : "Meet Jeremy — book your 15-minute intro"}
+            </h2>
+          </span>
+          <span aria-hidden className={`shrink-0 text-sm text-[var(--muted)] transition ${open ? "rotate-180" : ""}`}>
+            ▾
+          </span>
+        </button>
+        {!open ? null : (
+          <>
         <p className="text-sm text-[var(--muted)]">
           {meetingRequested && introBooked ? (
             <>
@@ -173,8 +219,8 @@ export default function MemberIntakeIntroCard({
             <>You&apos;re on the board — warm up below while you wait for your call.</>
           ) : (
             <>
-              Working out is personal. This call is how you get to know your coach — Free, Coach Class,
-              or Business. Pick a time. You can still train today; we&apos;ll keep this up until it&apos;s booked.
+              Working out is personal. Train today if you want — book this intro before or after.
+              Use a real email so Jeremy can reach you.
             </>
           )}
         </p>
@@ -194,13 +240,28 @@ export default function MemberIntakeIntroCard({
           ) : null}
 
           {showIntroBook && (
-            <NextStepButton
-              onClick={() => setModalOpen(true)}
-              disabled={booking}
-              data-analytics-action="book-jeremy"
-            >
-              {booking ? "Saving…" : "Book 15 min with Jeremy"}
-            </NextStepButton>
+            <div className="flex w-full flex-col gap-2 sm:max-w-md">
+              {needsRealEmail ? (
+                <>
+                  <input
+                    type="email"
+                    autoComplete="email"
+                    placeholder="Your email"
+                    value={bookEmail}
+                    onChange={(e) => setBookEmail(e.target.value)}
+                    className="h-12 w-full rounded-full border border-[var(--border)] bg-[var(--surface)] px-4 text-sm"
+                  />
+                  {emailError ? <p className="text-sm text-red-300">{emailError}</p> : null}
+                </>
+              ) : null}
+              <NextStepButton
+                onClick={() => void openBooking()}
+                disabled={booking}
+                data-analytics-action="book-jeremy"
+              >
+                {booking ? "Saving…" : "Book 15 min with Jeremy"}
+              </NextStepButton>
+            </div>
           )}
 
           {showFollowUpBook && (
@@ -213,13 +274,17 @@ export default function MemberIntakeIntroCard({
             Message coach
           </Link>
         </div>
+          </>
+        )}
       </div>
 
       <EmbeddedCalendlyModal
         open={modalOpen}
         calendlyUrl={calendlyUrl}
         prefill={
-          memberEmail || memberName ? { email: memberEmail, name: memberName } : undefined
+          calendlyEmail || memberName
+            ? { email: calendlyEmail, name: memberName }
+            : undefined
         }
         title={modalTitle}
         onClose={() => setModalOpen(false)}

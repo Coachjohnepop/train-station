@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import PingCoachZoomModal from "@/components/PingCoachZoomModal";
 import { isFreeExplorerPlan } from "@/lib/free-tier-product";
+import { canPingCoachZoom } from "@/lib/signup-plans";
 import { markZoomJoined, readZoomJoined } from "@/lib/member-zoom-join-ui";
 import { useMemberLiveZoomStatus } from "@/lib/use-member-live-zoom-status";
 
@@ -28,6 +29,7 @@ export default function MemberZoomHeaderButton({
   const [joined, setJoined] = useState(false);
   const [pingOpen, setPingOpen] = useState(false);
   const freeExplorer = isFreeExplorerPlan(membershipPlan);
+  const pingAllowed = canPingCoachZoom(membershipPlan);
   const hostLive = Boolean(status?.canJoin && status?.joinUrl && status?.hostStarted);
 
   useEffect(() => {
@@ -69,6 +71,8 @@ export default function MemberZoomHeaderButton({
       </a>
     );
   }
+
+  if (!pingAllowed) return null;
 
   // Landscape used to hide the blue strip, so waiting Zoom must live in the
   // header. Portrait already has Ping Coach on the strip (CSS hides this).

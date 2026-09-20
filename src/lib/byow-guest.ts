@@ -7,8 +7,9 @@ import { applyByowCookie } from "@/lib/complete-member-signup";
 import { buildByowWorkoutFromNotes } from "@/lib/byow-build";
 import { enrollUserInProgram } from "@/lib/data/user-data";
 import { NextResponse } from "next/server";
+import { GUEST_EMAIL_DOMAIN, isGuestStubEmail } from "@/lib/byow-username";
 
-export const GUEST_EMAIL_DOMAIN = "guest.thetrainstation.co";
+export { GUEST_EMAIL_DOMAIN };
 
 const RESERVED = new Set(
   [
@@ -114,7 +115,7 @@ export async function startByowGuest(input: {
 
   const id = `member-${randomUUID().slice(0, 12)}`;
   const email = `guest.${username.toLowerCase()}.${id.slice(-8)}@${GUEST_EMAIL_DOMAIN}`;
-  const trialEnds = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+  const trialEnds = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
   await prisma.user.create({
     data: {
@@ -171,4 +172,36 @@ export async function startByowGuest(input: {
       applyByowCookie(res);
     },
   };
+}
+
+export async function claimGuestEmail(input: {
+  userId: string;
+  email: string;
+}): Promise<{ email: string }> {
+  const email = input.email.trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    throw new Error("Enter a real email.");
+  }
+  if (isGuestStubEmail(email)) {
+    throw new Error("Use a personal email — not a guest address.");
+  }
+  const taken = await prisma.user.findFirst({
+    where: { email: { equals: email, mode: "insensitive" }, NOT: { id: input.userId } },
+    select: { id: true },
+  });
+  if (taken) throw new Error("That email is already on an account. Sign in with it.");
+  const user = await prisma.user.findUnique({
+    where: { id: input.userId },
+    select: { id: true, email: true, name: true, role: true },
+  });
+  if (!user) throw new Error("Account not found.");
+  if (!isGuestStubEmail(user.email) && user.email.toLowerCase() !== email) {
+    throw new Error("This account already has an email.");
+  }
+  await prisma.user.update({ where: { id: input.userId }, data: { email } });
+  await prisma.memberProfile.updateMany({
+    where: { userId: input.userId },
+    data: { email },
+  });
+  return { email };
 }

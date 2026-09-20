@@ -95,6 +95,12 @@ export function normalizeSignupPlan(raw: string | null | undefined): SignupPlan 
   return "explorer";
 }
 
+/** Ping Coach to start Zoom — Business Class and 1st Class only. */
+export function canPingCoachZoom(plan: string | null | undefined): boolean {
+  const p = normalizeSignupPlan(plan);
+  return p === "business" || p === "pro";
+}
+
 export function signupPlanLabel(plan: SignupPlan): string {
   switch (plan) {
     case "member":
