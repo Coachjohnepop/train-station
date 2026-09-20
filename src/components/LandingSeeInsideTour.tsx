@@ -20,6 +20,7 @@ import {
 import { FREE_TICKET_FULL_SRC } from "@/lib/landing-media";
 import {
   fireLandingJoinHook,
+  JOIN_TICKETS_HREF,
   markLandingConverted,
 } from "@/lib/landing-return-visit";
 import {
@@ -73,14 +74,17 @@ const TOUR_BEAT_TO_STEP: Record<TourBeat, HowItWorksStepId> = {
 export default function LandingSeeInsideTour({
   open,
   onClose,
+  pausedStart = false,
 }: {
   open: boolean;
   onClose: () => void;
+  /** First screen still; Start begins the tour, Memberships goes to tickets. */
+  pausedStart?: boolean;
 }) {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [beat, setBeat] = useState(0);
-  const [phase, setPhase] = useState<"auto" | "end">("auto");
+  const [phase, setPhase] = useState<"gate" | "auto" | "end">("auto");
   const lastSetRef = useRef<HTMLDivElement | null>(null);
   const confettiFired = useRef(false);
   const reducedMotion = useRef(false);
@@ -125,7 +129,7 @@ export default function LandingSeeInsideTour({
     reducedMotion.current =
       typeof window !== "undefined" &&
       window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    setPhase("auto");
+    setPhase(pausedStart ? "gate" : "auto");
     setBeat(0);
     confettiFired.current = false;
     setFreeOpen(false);
@@ -148,9 +152,10 @@ export default function LandingSeeInsideTour({
       .catch(() => {
         preloadFreeTicketGag(FREE_TICKET_FULL_SRC);
       });
-  }, [open]);
+  }, [open, pausedStart]);
 
   const goPrev = useCallback(() => {
+    if (phase === "gate") return;
     if (phase === "end") {
       setPhase("auto");
       setBeat(TOUR_BEATS.length - 1);
@@ -164,7 +169,17 @@ export default function LandingSeeInsideTour({
     startHowItWorksVoice(howItWorksStepById(howItWorks, TOUR_BEAT_TO_STEP[TOUR_BEATS[nextBeat]]));
   }, [phase, beat, howItWorks]);
 
+  const startTour = useCallback(() => {
+    setPhase("auto");
+    setBeat(0);
+    startHowItWorksVoice(howItWorksStepById(howItWorks, TOUR_BEAT_TO_STEP[TOUR_BEATS[0]]));
+  }, [howItWorks]);
+
   const goNext = useCallback(() => {
+    if (phase === "gate") {
+      startTour();
+      return;
+    }
     if (phase === "end") return;
     if (beat >= TOUR_BEATS.length - 1) {
       stopHowItWorksVoice();
@@ -174,7 +189,7 @@ export default function LandingSeeInsideTour({
     const nextBeat = beat + 1;
     setBeat(nextBeat);
     startHowItWorksVoice(howItWorksStepById(howItWorks, TOUR_BEAT_TO_STEP[TOUR_BEATS[nextBeat]]));
-  }, [phase, beat, howItWorks]);
+  }, [phase, beat, howItWorks, startTour]);
 
   // Last set (set 3) fires confetti — same as live member console
   useEffect(() => {
@@ -232,18 +247,22 @@ export default function LandingSeeInsideTour({
 
   if (!open || !mounted) return null;
 
-  const current = phase === "auto" ? TOUR_BEATS[beat] : null;
+  const current = phase === "end" ? null : TOUR_BEATS[beat];
   const progress =
-    phase === "auto"
-      ? ((beat + 1) / (TOUR_BEATS.length + 1)) * 100
-      : 100;
+    phase === "gate"
+      ? 0
+      : phase === "auto"
+        ? ((beat + 1) / (TOUR_BEATS.length + 1)) * 100
+        : 100;
 
   const howStep =
     current != null ? howItWorksStepById(howItWorks, TOUR_BEAT_TO_STEP[current]) : null;
   const coachLine =
-    phase === "end"
-      ? "Choose by price or by program — one tap and you’re in."
-      : howStep?.coachLine || "";
+    phase === "gate"
+      ? "Start the tour, or go to Memberships."
+      : phase === "end"
+        ? "Choose by price or by program — one tap and you’re in."
+        : howStep?.coachLine || "";
 
   return createPortal(
     <>
@@ -259,9 +278,11 @@ export default function LandingSeeInsideTour({
             How it Works
           </p>
           <h2 id="see-inside-title" className="text-base font-semibold text-[var(--text)] sm:text-lg">
-            {phase === "end"
-              ? "Your move"
-              : howItWorksStepById(howItWorks, TOUR_BEAT_TO_STEP[TOUR_BEATS[beat]]).title}
+            {phase === "gate"
+              ? "How it Works"
+              : phase === "end"
+                ? "Your move"
+                : howItWorksStepById(howItWorks, TOUR_BEAT_TO_STEP[TOUR_BEATS[beat]]).title}
           </h2>
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
@@ -309,13 +330,13 @@ export default function LandingSeeInsideTour({
             phase === "end" ? "max-w-xl" : "max-w-lg"
           }`}
         >
-          {phase === "auto" && howStep ? (
+          {(phase === "auto" || phase === "gate") && howStep ? (
             <div className="w-full">
               <HowItWorksScreen
                 stepId={howStep.id}
                 lastSetRef={lastSetRef}
-                motion="animate"
-                playKey={`${open}-${beat}`}
+                motion={phase === "gate" ? "still" : "animate"}
+                playKey={`${open}-${beat}-${phase}`}
               />
             </div>
           ) : null}
@@ -417,7 +438,7 @@ export default function LandingSeeInsideTour({
       {/* Dots + thumb Next. No timer — too fast for some, too slow for others. */}
       <div
         className={`flex shrink-0 justify-center gap-1.5 pt-1 ${
-          phase === "auto" ? "pb-1" : "pb-[max(0.5rem,env(safe-area-inset-bottom))]"
+          phase === "auto" || phase === "gate" ? "pb-1" : "pb-[max(0.5rem,env(safe-area-inset-bottom))]"
         }`}
       >
         {TOUR_BEATS.map((_, i) => {
@@ -439,6 +460,36 @@ export default function LandingSeeInsideTour({
           aria-hidden
         />
       </div>
+
+      {phase === "gate" ? (
+        <div
+          className="shrink-0 space-y-2 px-3 pt-1 sm:px-5"
+          style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
+        >
+          <div className="flex flex-col gap-2">
+            <button
+              type="button"
+              data-analytics-action="tour-start"
+              onClick={startTour}
+              className="landing-hero-early-signup inline-flex min-h-14 w-full items-center justify-center rounded-full px-8 text-[19px] font-extrabold tracking-tight transition-transform active:scale-[0.98]"
+            >
+              Start
+            </button>
+            <button
+              type="button"
+              data-analytics-action="tour-memberships"
+              onClick={() => {
+                markLandingConverted();
+                stopHowItWorksVoice();
+                exitToSite(JOIN_TICKETS_HREF);
+              }}
+              className="landing-hero-secondary-cta inline-flex min-h-14 w-full items-center justify-center rounded-full px-8 text-[17px] font-extrabold tracking-tight transition-transform active:scale-[0.98]"
+            >
+              Memberships
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       {phase === "auto" ? (
         <div

@@ -222,8 +222,10 @@ async function browserCtas(viewportKey) {
     await page.waitForTimeout(300);
     await learn.first().click();
     await page.waitForTimeout(500);
-    if ((await page.getByText("How it Works").count()) > 0) pass(`${viewportKey} B learn tour`);
-    else fail(`${viewportKey} B learn tour`);
+    if ((await page.getByRole("button", { name: "Start" }).count()) > 0) pass(`${viewportKey} B learn Start`);
+    else fail(`${viewportKey} B learn Start`);
+    if ((await page.getByRole("button", { name: "Memberships" }).count()) > 0) pass(`${viewportKey} B learn Memberships`);
+    else fail(`${viewportKey} B learn Memberships`);
     const closeTour = page.getByRole("button", { name: "Close tour" });
     if ((await closeTour.count()) > 0) await closeTour.first().click();
     await page.waitForTimeout(300);

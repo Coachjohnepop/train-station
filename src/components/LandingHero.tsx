@@ -375,6 +375,7 @@ export default function LandingHero({
           />
           <LandingSeeInsideTour
             open={howItWorksOpen}
+            pausedStart
             onClose={() => setHowItWorksOpen(false)}
           />
         </>
