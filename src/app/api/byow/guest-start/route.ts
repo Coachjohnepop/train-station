@@ -5,7 +5,7 @@ import { startByowGuest } from "@/lib/byow-guest";
 export const dynamic = "force-dynamic";
 
 const schema = z.object({
-  username: z.string().min(3).max(24),
+  username: z.string().min(3).max(24).optional(),
   path: z.enum(["own", "jeremy"]),
   rawText: z.string().max(20000).optional(),
 });
@@ -13,7 +13,7 @@ const schema = z.object({
 export async function POST(request: Request) {
   const parsed = schema.safeParse(await request.json().catch(() => ({})));
   if (!parsed.success) {
-    return NextResponse.json({ error: "Username and a path are required." }, { status: 400 });
+    return NextResponse.json({ error: "Pick a path to get started." }, { status: 400 });
   }
   try {
     const started = await startByowGuest({

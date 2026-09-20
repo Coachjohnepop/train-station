@@ -246,10 +246,11 @@ async function browserCtas(viewportKey) {
     await page.waitForTimeout(300);
     if ((await next.count()) > 0) await next.first().click();
     await page.waitForTimeout(400);
-    if ((await page.getByText("Like what you see").count()) > 0) pass(`${viewportKey} B program username last`);
-    else fail(`${viewportKey} B program username last`);
-    if ((await page.getByPlaceholder("Username").count()) > 0) pass(`${viewportKey} B program username field`);
-    else fail(`${viewportKey} B program username field`);
+    if ((await page.getByRole("button", { name: "Let’s begin" }).count()) > 0) {
+      pass(`${viewportKey} B program let’s begin`);
+    } else fail(`${viewportKey} B program let’s begin`);
+    if ((await page.getByPlaceholder("Username").count()) === 0) pass(`${viewportKey} B program no username`);
+    else fail(`${viewportKey} B program no username`);
   });
   await withBrowser("cta-class", viewportKey, async (page) => {
     await page.goto(BASE + "/l/class", { waitUntil: "domcontentloaded", timeout: 45000 });

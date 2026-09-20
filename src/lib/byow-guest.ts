@@ -47,8 +47,18 @@ export async function usernameTaken(username: string): Promise<boolean> {
   return Boolean(hit);
 }
 
+export async function allocateGuestUsername(): Promise<string> {
+  for (let i = 0; i < 8; i++) {
+    const username = `Guest${randomUUID().replace(/-/g, "").slice(0, 8)}`;
+    if (!RESERVED.has(username.toLowerCase()) && !(await usernameTaken(username))) {
+      return username;
+    }
+  }
+  return `Guest${Date.now().toString(36)}`;
+}
+
 export async function startByowGuest(input: {
-  username: string;
+  username?: string;
   path: "own" | "jeremy";
   rawText?: string;
 }): Promise<{
@@ -58,11 +68,18 @@ export async function startByowGuest(input: {
   redirectTo: string;
   applyCookies: (res: NextResponse) => void;
 }> {
-  const err = validateByowUsername(input.username);
-  if (err) throw new Error(err);
-  const username = normalizeByowUsername(input.username);
-  if (await usernameTaken(username)) {
-    throw new Error("That username is taken. Try another.");
+  if (input.path === "own" && !input.username?.trim()) {
+    throw new Error("Username is required to upload.");
+  }
+  const username = input.username?.trim()
+    ? normalizeByowUsername(input.username)
+    : await allocateGuestUsername();
+  if (input.username?.trim()) {
+    const err = validateByowUsername(username);
+    if (err) throw new Error(err);
+    if (await usernameTaken(username)) {
+      throw new Error("That username is taken. Try another.");
+    }
   }
   if (input.path === "own" && !input.rawText?.trim()) {
     throw new Error("Paste today’s workout, then tap Ingest.");

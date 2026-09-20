@@ -84,8 +84,8 @@ export default function LandingByowFork({
   if (!open || !mounted) return null;
 
   const showingJeremyPreview = path === "jeremy" && previewBeat < PROGRAM_PREVIEW.length;
-  const showingJeremyName = path === "jeremy" && previewBeat >= PROGRAM_PREVIEW.length;
   const previewStep = PROGRAM_PREVIEW[previewBeat] ?? "workout";
+  const lastPreview = previewBeat >= PROGRAM_PREVIEW.length - 1;
 
   async function start() {
     setBusy(true);
@@ -95,7 +95,7 @@ export default function LandingByowFork({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          username,
+          username: path === "own" ? username : undefined,
           path,
           rawText: path === "own" ? rawText : undefined,
         }),
@@ -130,11 +130,7 @@ export default function LandingByowFork({
               See the program
             </p>
             <h2 id="byow-fork-title" className="text-base font-semibold text-white sm:text-lg">
-              {showingJeremyName
-                ? "Like what you see?"
-                : previewStep === "workout"
-                  ? "Today on Your Board"
-                  : "Adult is the home base"}
+              {previewStep === "workout" ? "Today on Your Board" : "Adult is the home base"}
             </h2>
           </div>
           <button
@@ -168,58 +164,22 @@ export default function LandingByowFork({
                     setPreviewArmed(true);
                     return;
                   }
+                  if (lastPreview) {
+                    stopHowItWorksVoice();
+                    void start();
+                    return;
+                  }
                   const nextBeat = previewBeat + 1;
                   setPreviewBeat(nextBeat);
                   const nextStep = PROGRAM_PREVIEW[nextBeat];
                   if (nextStep) startHowItWorksVoice(howItWorksStepById(howItWorks, nextStep));
-                  else stopHowItWorksVoice();
                 }}
-              >
-                {previewArmed ? "Next" : "Play"}
-              </button>
-            </div>
-          ) : null}
-          {showingJeremyName ? (
-            <form
-              className="mx-auto mt-6 w-full max-w-md space-y-3 rounded-[1.75rem] border border-white/15 bg-[#12081c]/92 p-5 sm:p-6"
-              onSubmit={(e) => {
-                e.preventDefault();
-                void start();
-              }}
-            >
-              <h2 className="text-xl font-semibold text-white sm:text-2xl">Like what you see?</h2>
-              <p className="text-[15px] leading-relaxed text-white/80">
-                Create a username and let’s begin.
-              </p>
-              <input
-                required
-                autoComplete="username"
-                name="username"
-                placeholder="Username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                className="h-12 w-full rounded-full border border-white/20 bg-white/10 px-4 text-sm text-white placeholder:text-white/40"
-              />
-              <p className="text-center text-[11px] text-white/50">
-                No email yet. 7 days on the console.
-              </p>
-              {error ? <p className="text-center text-sm text-red-300">{error}</p> : null}
-              <button
-                type="submit"
                 disabled={busy}
-                data-analytics-action="b-jeremy-go"
-                className="inline-flex h-14 w-full items-center justify-center rounded-full bg-[#7c3aed] text-[17px] font-extrabold text-white disabled:opacity-60"
               >
-                {busy ? "Opening…" : "Let’s begin"}
+                {busy ? "Opening…" : !previewArmed ? "Play" : lastPreview ? "Let’s begin" : "Next"}
               </button>
-              <button
-                type="button"
-                className="w-full text-center text-xs text-white/50 underline"
-                onClick={() => setPreviewBeat(PROGRAM_PREVIEW.length - 1)}
-              >
-                Back
-              </button>
-            </form>
+              {error ? <p className="text-center text-sm text-red-300">{error}</p> : null}
+            </div>
           ) : null}
         </div>
       </div>,
