@@ -443,6 +443,36 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 ## WHERE WE LEFT OFF
 
+**Date:** 2026-09-20 (full day + GitHub ERP typo)
+
+**Prod HEAD:** `4a7accd` on `main` · live https://www.thetrainstation.co (Vercel Ready). Local `tsc --noEmit` clean.
+
+**GitHub / Vercel spelling:** Empty leftover was **`train-statino-erp`** (`statino`). Correct name is **[`Coachjohnepop/train-station-erp`](https://github.com/Coachjohnepop/train-station-erp)**. Vercel project renamed the same way. Old empty GitHub repo still exists — delete in GitHub → Settings when convenient. Product code stays in **`train-station`**.
+
+**Landing A/B (live):** `/` 50/50 **A tour** (tickets / How it Works — never delete) vs **B user-chosen fork**. B overlay: already have a workout? **Yes** → username (3–24, unique) + paste → ingest on isolated `Byow*` tables → `/member/workout?byow=`. **No** → username → enroll Adult → `/member/today`. Guest stub email `guest.{username}.{id}@guest.thetrainstation.co`. Trial `MemberProfile.byowTrialEndsAt` = +7d, `plan=explorer`, `paymentNote=byow`. After 7d `memberNeedsPayment` is true. Email/weekly recap and Jeremy-day substitute **not built** — wait for John. Kill switch: `LANDING_AB_ENABLED`. Mission on Station pulse: sell ticket vs show console. Sat 9/19 pie spike = landing-loop cookies (~125), not gym traffic. Sample too small to call B inferior.
+
+**Measurements:** Any signed-in weigh-in writes `UserMeasurement` (no paid gate). Public `/measurements` is a **free promo** — email required, phone optional → waitlist `measurements-promo`, then explorer sheet.
+
+**Coach email:** Key alerts only — **new member, paid, intro booked**. Workout / warmup / equipment / messages-opened stay in-app Messages. Duplicate signup lead emails skipped (`signup-register`, `byow-signup`, `signup`, `quote:*`).
+
+**Money (durable):** One business. Jeremy Live **`acct_1TmKSWQWnajU9uyk`** (one W). Payouts **manual**. FA `fa_65V54Y9…` `transfer_all` cleared. Visible cash 25% × 4: Platform Fees · John Pay · Reinvest · Jeremy Pay. Savings floor = bills × 4 ($85 → **$340**). Platform Fees + John Pay hold on John’s Stripe until his Mercury. Reinvest holds until Train Station Mercury. Jeremy Pay → mapped Stripe. Never a second merchant secret on Vercel. Venmo is a rail (`@JeremyByrdCSCS`). Staff grants (never billed): Lemon John, Stephanie, Ali, yahoo soak Coach Ed. Admin `john@thetrainstation.co` is not a member. Todd stays paying Coach Class unless John says otherwise.
+
+**DB / backups:** Indexes on enrollments + GIN on class `userIds`. RLS ENABLE + deny anon/authenticated. **Do not FORCE RLS** this weekend. Monday cron `/api/cron/postgres-backup` 15:00 UTC — Vercel Blob store is **public-only**, so do not upload the gzip there until a private store exists. Desktop snapshot **2026-09-19** at `Stuff/Lemon Voice/The Train Station/backups/weekly-2026-09-19T15-52-23.json.gz`. Weekday snapshot cron Mon 15:10 UTC. Never hot-poll Postgres faster than 5s.
+
+**Analytics:** Admin → Station pulse `/admin/analytics` — A/B board + weekday bars/pie (largest-first, last complete Pacific week). Journeys include allaboard.fit.
+
+**Social drip:** Admin → Social. Queue / cancel / publish-due. Daily cron 16:00 UTC. IG handle **@thetrainstation.co**. Env wants Graph **Page tokens**, not passwords. **Do not store Instagram passwords in git, Vercel, or this file.** X / FB / TikTok later. Tokens not in env yet.
+
+**allaboard.fit:** Code 308s `/` → `/l/class` (and other paths same-path to www). Hosts on the Vercel `train-station` project. **Namecheap still parking** (`162.255.119.127`, www CNAME parkingpage). Need A `@` = `10.0.1.2` and www CNAME `cname.vercel-dns.com`. See `docs/allaboard-fit-dns.md`.
+
+**SMS:** Twilio still parked. Member card stores `User.smsReminderCadence` consistent vs minimum for when texts go live.
+
+**Loops:** B fork UI-only in `scripts/landing-ab-loop.mjs` (no prod ingest). Do not recreate `@example.com` loop members.
+
+**Not this weekend:** FORCE RLS · private Blob for backups · BYOW email-later · Jeremy-day substitute after first BYOW day · social tokens · allaboard DNS (John at Namecheap).
+
+---
+
 **Date:** 2026-09-19 (social plumbing + allaboard DNS still parking)
 
 **Status:** Social drip desk has setup checklist, env presence (no secrets), queue/cancel, publish-due. IG target @thetrainstation.co. **allaboard.fit DNS still Namecheap parking** — app 308s `/` → `/l/class` once A `@` = `10.0.1.2` and www CNAME `cname.vercel-dns.com`. See `docs/allaboard-fit-dns.md`.
