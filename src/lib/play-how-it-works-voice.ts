@@ -50,6 +50,25 @@ function clearEndWatch(): void {
   endWatch = null;
 }
 
+/** Set src and buffer without playing — call as soon as the tour can open. */
+export function primeHowItWorksVoice(step: HowItWorksStep | null | undefined): void {
+  if (typeof window === "undefined") return;
+  if (!step || !howItWorksHasVoice(step) || !step.voice.audioUrl) return;
+  const audio = getVoice();
+  const url = step.voice.audioUrl;
+  const already =
+    audio.getAttribute("src") === url || (audio.src && audio.src.endsWith(url.split("?")[0] || url));
+  if (!already) {
+    audio.src = url;
+  }
+  audio.preload = "auto";
+  try {
+    audio.load();
+  } catch {
+    /* ignore */
+  }
+}
+
 export function startHowItWorksVoice(step: HowItWorksStep | null | undefined): void {
   if (typeof window === "undefined") return;
   if (!step || !howItWorksHasVoice(step) || !step.voice.audioUrl) {

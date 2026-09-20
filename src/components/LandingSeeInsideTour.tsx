@@ -11,7 +11,12 @@ import {
 import FreeTicketModal from "@/components/FreeTicketModal";
 import HowItWorksScreen from "@/components/HowItWorksScreen";
 import HowItWorksVoice from "@/components/HowItWorksVoice";
-import { startHowItWorksVoice, stopHowItWorksVoice } from "@/lib/play-how-it-works-voice";
+import {
+  primeHowItWorksVoice,
+  startHowItWorksVoice,
+  stopHowItWorksVoice,
+} from "@/lib/play-how-it-works-voice";
+import { warmUrl } from "@/lib/warm-media";
 import {
   FREE_TICKET_GAG_HOST_ID,
   preloadFreeTicketGag,
@@ -153,6 +158,15 @@ export default function LandingSeeInsideTour({
         preloadFreeTicketGag(FREE_TICKET_FULL_SRC);
       });
   }, [open, pausedStart]);
+
+  useEffect(() => {
+    if (!open) return;
+    for (const id of TOUR_BEATS) {
+      const step = howItWorksStepById(howItWorks, TOUR_BEAT_TO_STEP[id]);
+      warmUrl(step.voice.audioUrl, "audio");
+    }
+    primeHowItWorksVoice(howItWorksStepById(howItWorks, TOUR_BEAT_TO_STEP[TOUR_BEATS[0]]));
+  }, [open, howItWorks]);
 
   const goPrev = useCallback(() => {
     if (phase === "gate") return;

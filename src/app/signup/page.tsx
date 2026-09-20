@@ -9,9 +9,9 @@ import PasswordInput from "@/components/PasswordInput";
 import { offerSavePassword, offerSavePasswordFromForm } from "@/lib/browser-credentials";
 import { generateSignupPassword } from "@/lib/signup-password";
 import { useFormAutofillSync } from "@/hooks/useFormAutofillSync";
-import OAuthButtons from "@/components/OAuthButtons";
 import MembershipSeatArt from "@/components/MembershipSeatArt";
 import { NextStepButton } from "@/components/NextStepButton";
+import { TICKET_TIERS } from "@/lib/landing-tickets";
 
 /** Ticket signup UI. Account creation is completeMemberSignup (shared with /byow). */
 function SignupForm() {
@@ -224,7 +224,7 @@ function SignupForm() {
       </div>
 
       <div className="flex-1 flex items-center justify-center px-6 py-16">
-        <div className="w-full max-w-md">
+        <div className="w-full max-w-xl">
           <div className="text-center mb-6">
             <div className="uppercase tracking-[3px] text-xs font-semibold text-[#7c3aed] mb-3">
               {isWaitlistOnly ? "Coming soon" : "Get started"}
@@ -232,37 +232,50 @@ function SignupForm() {
             <h1 className="text-4xl font-semibold tracking-tight">
               {isWaitlistOnly ? "Join the waitlist" : "Create your account"}
             </h1>
-            <p className="mt-3 text-[var(--muted)] text-sm leading-relaxed">
-              {isWaitlistOnly
-                ? "We'll notify you when this program track launches."
-                : "Email, name, password — then your training dashboard."}
-            </p>
+            {isWaitlistOnly ? (
+              <p className="mt-3 text-[var(--muted)] text-sm leading-relaxed">
+                We'll notify you when this program track launches.
+              </p>
+            ) : null}
           </div>
 
-          {!isWaitlistOnly && ticketPlan && (
-            <div className="mb-6 flex flex-col items-center">
-              <div className="w-full max-w-[220px] overflow-hidden rounded-2xl border border-[var(--border)] shadow-[0_12px_40px_rgba(124,58,237,0.35)]">
-                <MembershipSeatArt
-                  plan={ticketPlan}
-                  priority
-                  className="w-full"
-                  alt={`${signupPlanLabel(ticketPlan)} membership`}
-                />
-              </div>
-              <p className="mt-2 text-sm font-semibold text-[var(--accent-fg)]">
-                {signupPlanLabel(ticketPlan)}
-              </p>
+          {!isWaitlistOnly && ticketPlan ? (
+            <div className="mb-5 grid grid-cols-4 gap-2">
+              {TICKET_TIERS.map((tier) => {
+                const active = tier.signupPlan === ticketPlan;
+                return (
+                  <button
+                    key={tier.id}
+                    type="button"
+                    onClick={() => {
+                      const next = new URLSearchParams(searchParams.toString());
+                      next.set("plan", tier.signupPlan);
+                      router.replace(`/signup?${next.toString()}`);
+                    }}
+                    className={`overflow-hidden rounded-xl border text-center transition ${
+                      active
+                        ? "z-10 scale-[1.08] border-[4px] border-[#d4af37] shadow-[0_8px_24px_rgba(212,175,55,0.35)]"
+                        : "border-[var(--border)] opacity-75 hover:opacity-100"
+                    }`}
+                  >
+                    <MembershipSeatArt
+                      plan={normalizeSignupPlan(tier.signupPlan)}
+                      priority={active}
+                      className="w-full"
+                      alt={signupPlanLabel(normalizeSignupPlan(tier.signupPlan))}
+                    />
+                    <p
+                      className={`px-0.5 py-1 text-[10px] font-semibold leading-tight sm:text-[11px] ${
+                        active ? "text-[var(--accent-fg)]" : "text-[var(--muted)]"
+                      }`}
+                    >
+                      {signupPlanLabel(normalizeSignupPlan(tier.signupPlan))}
+                    </p>
+                  </button>
+                );
+              })}
             </div>
-          )}
-
-          {!isWaitlistOnly && ticketPlan && (
-            <>
-              <OAuthButtons mode="signup" plan={ticketPlan} className="mb-4" />
-              <p className="mb-4 text-center text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
-                or create with email
-              </p>
-            </>
-          )}
+          ) : null}
 
           <form
             ref={formRef}

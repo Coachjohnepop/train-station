@@ -30,6 +30,7 @@ import {
   JEREMY_WELCOME_VIDEO_SRC,
   meetJeremyClipSrc,
 } from "@/lib/landing-media";
+import { warmLandingPlayback, warmUrl } from "@/lib/warm-media";
 
 /** Locked first headline so SMS open doesn’t fight a rotating word. */
 const FIRST_HEADLINE = (
@@ -100,6 +101,10 @@ export default function LandingHero({
     const active = activeHeroSlides(heroSlides);
     return active.length ? active : DEFAULT_HERO_SLIDES;
   }, [heroSlides]);
+
+  useEffect(() => {
+    warmLandingPlayback();
+  }, []);
 
   useEffect(() => {
     if (!returnMode) return;
@@ -408,9 +413,11 @@ function JeremyHeroStack({
 }) {
   const [showMeet, setShowMeet] = useState(false);
   useEffect(() => {
+    warmUrl(meetSrc, "video");
+    warmUrl(JEREMY_WELCOME_READY_VIDEO_SRC, "video");
     const id = window.setTimeout(() => setShowMeet(true), 3000);
     return () => window.clearTimeout(id);
-  }, []);
+  }, [meetSrc]);
 
   return (
     <>

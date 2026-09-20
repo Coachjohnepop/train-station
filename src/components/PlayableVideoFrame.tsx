@@ -159,7 +159,7 @@ export default function PlayableVideoFrame({
         // Never start muted — blob intros must be audible after user opens the player.
         muted={false}
         autoPlay={autoplay}
-        preload="metadata"
+        preload="auto"
         onLoadedMetadata={(e) => {
           e.currentTarget.muted = false;
           applyMediaVolumeDb(e.currentTarget, volumeDb);

@@ -1,6 +1,7 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { warmUrl } from "@/lib/warm-media";
 
 type Phase = "idle" | "intro" | "ready" | "part2";
 
@@ -21,6 +22,11 @@ export default function LandingAbClip({
   const ref = useRef<HTMLVideoElement>(null);
   const [phase, setPhase] = useState<Phase>("idle");
   const [clip, setClip] = useState(src);
+
+  useEffect(() => {
+    warmUrl(src, "video");
+    if (readySrc) warmUrl(readySrc, "video");
+  }, [src, readySrc]);
 
   async function playFrom(url: string, next: Phase) {
     const el = ref.current;
@@ -56,7 +62,7 @@ export default function LandingAbClip({
         src={clip}
         poster={poster || undefined}
         playsInline
-        preload="metadata"
+        preload="auto"
         controls={showControls}
         onPlay={() => {
           setPhase((p) => (p === "idle" ? "intro" : p));
