@@ -114,7 +114,11 @@ export default function MembershipTicketGrid({
         ) : null}
       </div>
 
-      <div className="mx-auto mt-8 grid max-w-4xl grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
+      <div
+        className={`mx-auto grid max-w-4xl grid-cols-2 gap-3 overflow-visible py-8 sm:grid-cols-4 sm:gap-5 ${
+          heading ? "mt-8" : "mt-2"
+        } ${mode === "landing" ? "ticket-grid--gold-hover" : ""}`}
+      >
         {tiers.map((tier) => {
           const isFree = tier.id === "free";
           const paidHighlight = highlightPaid && !isFree;
@@ -157,9 +161,9 @@ export default function MembershipTicketGrid({
             </>
           );
 
-          const cardClass = `group relative isolate flex min-h-[200px] flex-col overflow-hidden rounded-xl border text-left shadow-lg transition-all active:scale-[0.97] sm:min-h-[280px] sm:rounded-2xl ${tier.themeClass} ${
-            paidHighlight ? "scale-[1.02] shadow-[var(--tier-trim-glow)]" : "hover:scale-[1.02]"
-          }`;
+          const cardClass = `group relative isolate flex min-h-[200px] flex-col overflow-hidden rounded-xl border text-left shadow-lg transition-all duration-200 active:scale-[0.97] sm:min-h-[280px] sm:rounded-2xl ${tier.themeClass} ${
+            paidHighlight ? "z-20 scale-[1.02] shadow-[var(--tier-trim-glow)]" : ""
+          } ${mode === "landing" ? "" : "hover:scale-[1.02]"}`;
 
           if (mode === "checkout" && isFree) {
             if (onFreeSelect) {

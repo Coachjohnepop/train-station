@@ -4,15 +4,17 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { markLandingConverted, trackLandingCustom } from "@/lib/landing-return-visit";
 
-type Path = "own" | "jeremy" | null;
+type Path = "today" | "own" | "jeremy" | null;
 
 export default function LandingByowFork({
   open,
   initialPath = null,
+  onLearn,
   onClose,
 }: {
   open: boolean;
   initialPath?: Path;
+  onLearn?: () => void;
   onClose: () => void;
 }) {
   const [mounted, setMounted] = useState(false);
@@ -94,36 +96,35 @@ export default function LandingByowFork({
           </button>
         </div>
 
-        {!path ? (
+        {!path || path === "today" ? (
           <div className="space-y-4">
             <h2 id="byow-fork-title" className="text-[1.65rem] font-semibold leading-tight tracking-tight text-white sm:text-3xl">
-              Already working out?
+              I workout today
             </h2>
             <p className="text-[15px] leading-relaxed text-white/80 sm:text-base">
-              Would you like to track your workout in our app? It&apos;s easy — start by uploading
-              your workout.
+              Learn how The Train Station works, or upload the session you already have.
             </p>
             <button
               type="button"
-              data-analytics-action="b-fork-own"
+              data-analytics-action="b-learn-station"
               className="inline-flex h-14 w-full items-center justify-center rounded-full bg-[#7c3aed] text-[17px] font-extrabold text-white"
+              onClick={() => {
+                trackLandingCustom("b-learn-station");
+                onLearn?.();
+              }}
+            >
+              Learn About The Train Station
+            </button>
+            <button
+              type="button"
+              data-analytics-action="b-fork-own"
+              className="inline-flex h-12 w-full items-center justify-center rounded-full border border-white/25 text-[15px] font-bold text-white/90"
               onClick={() => {
                 setPath("own");
                 trackLandingCustom("b-fork-own");
               }}
             >
-              Yes — upload mine
-            </button>
-            <button
-              type="button"
-              data-analytics-action="b-fork-jeremy"
-              className="inline-flex h-12 w-full items-center justify-center rounded-full border border-white/25 text-[15px] font-bold text-white/90"
-              onClick={() => {
-                setPath("jeremy");
-                trackLandingCustom("b-fork-jeremy");
-              }}
-            >
-              No — use Jeremy’s Today
+              Upload Your Own Workout
             </button>
           </div>
         ) : (

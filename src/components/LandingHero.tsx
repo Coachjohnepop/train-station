@@ -89,7 +89,8 @@ export default function LandingHero({
   const [phraseTick, setPhraseTick] = useState(0);
   const [canRotateCopy, setCanRotateCopy] = useState(false);
   const [tourOpen, setTourOpen] = useState(false);
-  const [forkPath, setForkPath] = useState<"own" | "jeremy" | null>(null);
+  const [howItWorksOpen, setHowItWorksOpen] = useState(false);
+  const [forkPath, setForkPath] = useState<"today" | "own" | "jeremy" | null>(null);
   const [liveReturn, setLiveReturn] = useState(false);
   const [fadingOut, setFadingOut] = useState<number | null>(null);
   const fadeClearRef = useRef<number | null>(null);
@@ -358,14 +359,25 @@ export default function LandingHero({
       </div>
 
       {variant === "jeremy" ? (
-        <LandingByowFork
-          open={tourOpen}
-          initialPath={forkPath}
-          onClose={() => {
-            setTourOpen(false);
-            setForkPath(null);
-          }}
-        />
+        <>
+          <LandingByowFork
+            open={tourOpen}
+            initialPath={forkPath}
+            onLearn={() => {
+              setTourOpen(false);
+              setForkPath(null);
+              setHowItWorksOpen(true);
+            }}
+            onClose={() => {
+              setTourOpen(false);
+              setForkPath(null);
+            }}
+          />
+          <LandingSeeInsideTour
+            open={howItWorksOpen}
+            onClose={() => setHowItWorksOpen(false)}
+          />
+        </>
       ) : (
         <LandingSeeInsideTour open={tourOpen} onClose={() => setTourOpen(false)} />
       )}
@@ -391,7 +403,7 @@ function JeremyHeroStack({
   returnMode: boolean;
   exploreOpen: boolean;
   onExplore?: (origin: HTMLElement) => void;
-  onTour: (path?: "own" | "jeremy") => void;
+  onTour: (path?: "today" | "own" | "jeremy") => void;
 }) {
   const [showMeet, setShowMeet] = useState(false);
   useEffect(() => {
@@ -425,7 +437,7 @@ function JeremyHeroStack({
           <button
             type="button"
             data-analytics-action="hero-b-have-workout"
-            onClick={() => onTour("own")}
+            onClick={() => onTour("today")}
             className="landing-hero-explore-cta inline-flex h-11 w-full items-center justify-center rounded-full px-8 text-[15px] font-bold tracking-tight text-white/90"
           >
             I workout today

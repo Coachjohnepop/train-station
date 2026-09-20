@@ -63,7 +63,7 @@ export default function LandingTicketPicker({
   return (
     <section
       id="tickets"
-      className="relative z-20 isolate scroll-mt-20 bg-[var(--bg)] px-3 py-10 shadow-[0_-12px_32px_var(--bg)] sm:px-6 sm:py-14"
+      className="relative z-20 isolate scroll-mt-20 overflow-visible bg-[var(--bg)] px-3 py-10 shadow-[0_-12px_32px_var(--bg)] sm:px-6 sm:py-14"
     >
       {/* Alias for /#plans; parent join page may also set #tickets on a wrapper. */}
       <div id="plans" className="h-0 scroll-mt-20" aria-hidden tabIndex={-1} />

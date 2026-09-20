@@ -2108,6 +2108,20 @@ html[data-free-ticket="open"] .landing-nav .theme-mode-toggle {
   border-color: var(--ticket-border) !important;
 }
 
+/* Join / landing seats: +20% hover, gold border 10× the 1px hairline. */
+.ticket-grid--gold-hover .ticket-card {
+  z-index: 1;
+  transform-origin: center center;
+}
+.ticket-grid--gold-hover .ticket-card:hover,
+.ticket-grid--gold-hover .ticket-card:focus-visible {
+  z-index: 30;
+  transform: scale(1.2);
+  border-width: 10px;
+  border-color: #d4af37 !important;
+  box-shadow: 0 16px 48px rgba(212, 175, 55, 0.4);
+}
+
 [data-theme-mode="light"] .ticket-card--business-class {
   --ticket-trim: #6b7280;
   --ticket-border: rgba(107, 114, 128, 0.45);

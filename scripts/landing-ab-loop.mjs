@@ -206,11 +206,26 @@ async function browserCtas(viewportKey) {
 
     await own.first().click();
     await page.waitForTimeout(400);
+    const learn = page.getByRole("button", { name: "Learn About The Train Station" });
+    const upload = page.getByRole("button", { name: "Upload Your Own Workout" });
+    if ((await learn.count()) > 0 && (await upload.count()) > 0) pass(`${viewportKey} B today split`);
+    else fail(`${viewportKey} B today split`);
+    await upload.first().click();
+    await page.waitForTimeout(400);
     if ((await page.getByPlaceholder("Username").count()) > 0) pass(`${viewportKey} B username`);
     else fail(`${viewportKey} B username`);
     if ((await page.locator("textarea").count()) > 0) pass(`${viewportKey} B paste`);
     else fail(`${viewportKey} B paste`);
     await page.getByRole("button", { name: "Close" }).first().click();
+    await page.waitForTimeout(300);
+    await own.first().click();
+    await page.waitForTimeout(300);
+    await learn.first().click();
+    await page.waitForTimeout(500);
+    if ((await page.getByText("How it Works").count()) > 0) pass(`${viewportKey} B learn tour`);
+    else fail(`${viewportKey} B learn tour`);
+    const closeTour = page.getByRole("button", { name: "Close tour" });
+    if ((await closeTour.count()) > 0) await closeTour.first().click();
     await page.waitForTimeout(300);
     await see.first().click();
     await page.waitForTimeout(400);

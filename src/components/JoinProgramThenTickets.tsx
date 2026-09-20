@@ -45,22 +45,15 @@ export default function JoinProgramThenTickets({
     <div>
       {/* Tickets always present for Memberships nav → /join#tickets */}
       <div id="tickets" className="scroll-mt-20">
-        <div className="mx-auto max-w-3xl px-6 pb-2 pt-2 text-center">
+        <div className="mx-auto max-w-3xl px-6 pb-0 pt-2 text-center">
           <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-[#7c3aed]">
             Pick a seat
           </p>
-          <h2 className="mt-1 text-2xl font-semibold text-[var(--text)] sm:text-3xl">
-            Free is first
-          </h2>
           {selected ? (
             <p className="mt-1 text-sm text-[var(--accent-fg)]">
               For program: <span className="font-semibold text-[var(--text)]">{selected.name}</span>
             </p>
-          ) : (
-            <p className="mt-1 text-sm text-[var(--muted)]">
-              Free · Coach · Business · 1st Class — pay anytime
-            </p>
-          )}
+          ) : null}
         </div>
         <LandingTicketPicker
           freeChastiseVideoUrl={freeChastiseVideoUrl}
