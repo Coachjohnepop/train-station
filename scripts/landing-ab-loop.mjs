@@ -228,9 +228,21 @@ async function browserCtas(viewportKey) {
     if ((await closeTour.count()) > 0) await closeTour.first().click();
     await page.waitForTimeout(300);
     await see.first().click();
+    await page.waitForTimeout(600);
+    if ((await page.getByPlaceholder("Username").count()) === 0) pass(`${viewportKey} B program no username yet`);
+    else fail(`${viewportKey} B program no username yet`);
+    if ((await page.getByText("Today").count()) > 0 || (await page.getByText("Live session").count()) > 0) {
+      pass(`${viewportKey} B program preview`);
+    } else fail(`${viewportKey} B program preview`);
+    const next = page.locator('[data-analytics-action="b-program-next"]');
+    if ((await next.count()) > 0) await next.first().click();
     await page.waitForTimeout(400);
-    if ((await page.getByText("Jeremy").count()) > 0) pass(`${viewportKey} B see program`);
-    else fail(`${viewportKey} B see program`);
+    if ((await next.count()) > 0) await next.first().click();
+    await page.waitForTimeout(400);
+    if ((await page.getByText("Like what you see").count()) > 0) pass(`${viewportKey} B program username last`);
+    else fail(`${viewportKey} B program username last`);
+    if ((await page.getByPlaceholder("Username").count()) > 0) pass(`${viewportKey} B program username field`);
+    else fail(`${viewportKey} B program username field`);
   });
   await withBrowser("cta-class", viewportKey, async (page) => {
     await page.goto(BASE + "/l/class", { waitUntil: "domcontentloaded", timeout: 45000 });
