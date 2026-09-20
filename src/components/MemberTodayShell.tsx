@@ -19,6 +19,7 @@ import {
 } from "@/lib/member-program-block";
 import type { ResolvedDayPart } from "@/lib/program-day-sessions";
 import FreeContentLockCard from "@/components/FreeContentLockCard";
+import SaveGuestUsernamePrompt from "@/components/SaveGuestUsernamePrompt";
 import type { ContentAccessResult } from "@/lib/gamification-content-access";
 
 import MemberMaintainConsoleStage, {
@@ -80,6 +81,7 @@ type Props = {
   previewFutureReadOnly?: boolean;
   /** First visit to the site — not a returning member. */
   firstTimeOnSite?: boolean;
+  promptSaveUsername?: boolean;
 };
 
 function DaySummaryCard({
@@ -248,6 +250,7 @@ export default function MemberTodayShell({
   schedulePreviewChips,
   previewFutureReadOnly = false,
   firstTimeOnSite = false,
+  promptSaveUsername = false,
 }: Props) {
   const canUseMaintain = Boolean(maintainAccess?.allowed);
   const router = useRouter();
@@ -417,6 +420,7 @@ export default function MemberTodayShell({
       onTouchStart={onSwipeTouchStart}
       onTouchEnd={onSwipeTouchEnd}
     >
+      {promptSaveUsername ? <SaveGuestUsernamePrompt /> : null}
       {programBlock?.status === "pending" && (
         <div className="rounded-xl border border-[#7c3aed]/40 bg-[#7c3aed]/10 px-4 py-3 text-sm">
           <p className="font-semibold text-[#e9d5ff]">Program starts soon</p>

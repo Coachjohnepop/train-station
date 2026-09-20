@@ -1860,6 +1860,9 @@ export default function MemberWorkoutConsole({
       });
 
       if (!wasDone) {
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new Event("ts-guest-workout-step"));
+        }
         awardSetLogged();
         fireEngage();
         // User gesture: unlock iOS audio so rest-end can play when countdown hits 0.

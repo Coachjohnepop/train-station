@@ -38,6 +38,33 @@ export function validateByowUsername(raw: string): string | null {
   return null;
 }
 
+export async function claimByowUsername(input: {
+  userId: string;
+  username: string;
+}): Promise<{ username: string }> {
+  const err = validateByowUsername(input.username);
+  if (err) throw new Error(err);
+  const username = normalizeByowUsername(input.username);
+  const taken = await prisma.user.findFirst({
+    where: {
+      name: { equals: username, mode: "insensitive" },
+      NOT: { id: input.userId },
+    },
+    select: { id: true },
+  });
+  if (taken) throw new Error("That username is taken. Try another.");
+  const user = await prisma.user.findUnique({
+    where: { id: input.userId },
+    select: { id: true, email: true, name: true, role: true },
+  });
+  if (!user) throw new Error("Account not found.");
+  await prisma.user.update({
+    where: { id: input.userId },
+    data: { name: username },
+  });
+  return { username };
+}
+
 export async function usernameTaken(username: string): Promise<boolean> {
   const u = normalizeByowUsername(username);
   const hit = await prisma.user.findFirst({

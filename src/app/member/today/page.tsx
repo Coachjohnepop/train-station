@@ -76,6 +76,7 @@ import {
   schedulePreviewForEmail,
 } from "@/lib/member-schedule-preview";
 import { normalizeSignupPlan } from "@/lib/signup-plans";
+import { isPlaceholderGuestUsername } from "@/lib/byow-username";
 
 export const dynamic = "force-dynamic";
 
@@ -425,6 +426,7 @@ export default async function MemberTodayPage({ searchParams }: Props) {
 
           <Suspense fallback={<div className="card h-40 animate-pulse p-4" />}>
             <MemberTodayShell
+              promptSaveUsername={isPlaceholderGuestUsername(dashboard.user.name)}
               todayIso={programTodayKey}
               selectedDate={clampedViewDate}
               days={memberDays}
