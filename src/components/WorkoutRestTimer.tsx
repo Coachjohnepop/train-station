@@ -2,7 +2,9 @@
 
 import { useEffect } from "react";
 import { createPortal } from "react-dom";
+import YoutubeAutoplayFrame from "@/components/YoutubeAutoplayFrame";
 import { formatRestCountdown } from "@/lib/rest-timer";
+import { isYoutubeUrl } from "@/lib/youtube";
 
 export type WorkoutTimerPhase = "exercise" | "rest";
 
@@ -29,6 +31,8 @@ type Props = {
   /** HIT series: current work/rest round of total rounds. */
   hitRound?: number | null;
   hitRounds?: number | null;
+  /** Demo clip under the timer (free-mode timed sets). */
+  videoUrl?: string | null;
 };
 
 export default function WorkoutRestTimer({
@@ -46,6 +50,7 @@ export default function WorkoutRestTimer({
   phase = "rest",
   hitRound = null,
   hitRounds = null,
+  videoUrl = null,
 }: Props) {
   const isExercise = phase === "exercise";
   const isHit = typeof hitRound === "number" && typeof hitRounds === "number" && hitRounds > 0;
@@ -125,7 +130,7 @@ export default function WorkoutRestTimer({
     : done
     ? "Close"
     : isExercise
-      ? "Skip hold"
+      ? "Skip set"
       : "Skip rest";
 
   const player = (
@@ -154,7 +159,7 @@ export default function WorkoutRestTimer({
           type="button"
           className="workout-rest-player__close"
           onClick={onSkip}
-          aria-label={isExercise ? "Skip hold timer" : "Close rest timer"}
+          aria-label={isExercise ? "Skip set" : "Close rest timer"}
           title="Close"
         >
           ✕
@@ -219,8 +224,37 @@ export default function WorkoutRestTimer({
     </div>
   );
 
+  const clip =
+    isExercise && videoUrl ? (
+      <div className="workout-rest-player__video mt-3 overflow-hidden rounded-xl bg-black">
+        {isYoutubeUrl(videoUrl) ? (
+          <YoutubeAutoplayFrame
+            className="aspect-video w-full"
+            videoUrl={videoUrl}
+            title={`${exerciseName || "Exercise"} demo`}
+            autoplay
+            embedOptions={{ mute: true }}
+          />
+        ) : (
+          <video
+            className="aspect-video w-full"
+            src={videoUrl}
+            autoPlay
+            muted
+            playsInline
+            controls
+          />
+        )}
+      </div>
+    ) : null;
+
   if (!sticky) {
-    return <div className="workout-rest-player-inline">{player}</div>;
+    return (
+      <div className="workout-rest-player-inline">
+        {player}
+        {clip}
+      </div>
+    );
   }
 
   const overlay = (
@@ -233,10 +267,13 @@ export default function WorkoutRestTimer({
       <button
         type="button"
         className="workout-rest-player-backdrop"
-        aria-label={isExercise ? "Skip hold timer" : "Close rest timer"}
+        aria-label={isExercise ? "Skip set" : "Close rest timer"}
         onClick={onSkip}
       />
-      <div className="workout-rest-player-stage">{player}</div>
+      <div className="workout-rest-player-stage">
+        {player}
+        {clip}
+      </div>
     </div>
   );
 

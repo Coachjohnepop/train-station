@@ -20,6 +20,7 @@ type Payload = {
   credentials: Record<string, boolean>;
   env?: Record<string, boolean>;
   instagramHandle?: string;
+  xHandle?: string;
 };
 
 export default function AdminSocialDripClient() {
@@ -80,9 +81,8 @@ export default function AdminSocialDripClient() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Social drip</h1>
         <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">
-          Queue captions for X, Instagram (@thetrainstation.co), and Facebook. Daily cron posts
-          one due item. TikTok later. Instagram needs a Meta Page token in Vercel — not the IG
-          password.
+          Queue captions for X (@{data?.xHandle || "thetrainstationco"}), Instagram
+          (@thetrainstation.co), and Facebook. Daily cron posts one due item. TikTok later.
         </p>
       </div>
 
@@ -107,9 +107,10 @@ export default function AdminSocialDripClient() {
             , app with <code>pages_manage_posts</code> + <code>instagram_content_publish</code>.
           </li>
           <li>
-            Long-lived Page token + Page ID + IG account ID → Vercel env (never the IG password):{" "}
-            <code>SOCIAL_FACEBOOK_PAGE_TOKEN</code>, <code>SOCIAL_FACEBOOK_PAGE_ID</code>,{" "}
-            <code>SOCIAL_INSTAGRAM_ACCOUNT_ID</code>, <code>SOCIAL_X_BEARER_TOKEN</code>.
+            X is live: add user OAuth 1.0a in Vercel to post (not just a bearer):{" "}
+            <code>SOCIAL_X_API_KEY</code>, <code>SOCIAL_X_API_SECRET</code>,{" "}
+            <code>SOCIAL_X_ACCESS_TOKEN</code>, <code>SOCIAL_X_ACCESS_SECRET</code>. Instagram
+            still needs a Meta Page token — never the IG password.
           </li>
           <li>Instagram posts need a public image URL. Daily cron posts one due item at 9am PT.</li>
         </ol>

@@ -246,7 +246,7 @@ export const ADMIN_APP_SEARCH_INDEX: AdminSearchItem[] = [
   {
     id: "coach-sponsorship",
     title: "Sponsorships",
-    description: "Eco Delight affiliate · JEREMYDISC · commission",
+    description: "The Coffee Crew · Instagram partner",
     href: "/admin/sponsorship",
     workspace: "coach",
     group: "Site",

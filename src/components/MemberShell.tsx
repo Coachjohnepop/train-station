@@ -16,6 +16,8 @@ import MemberGateCookieSync from "@/components/MemberGateCookieSync";
 import SiteSeenLatch from "@/components/SiteSeenLatch";
 import DisablePullToRefresh from "@/components/DisablePullToRefresh";
 import LogoutButton from "@/components/LogoutButton";
+import GuestSignUpButton from "@/components/GuestSignUpButton";
+import { isGuestStubEmail } from "@/lib/byow-username";
 import ThemeAttributesSync from "@/components/ThemeAttributesSync";
 import ThemeModeToggle from "@/components/ThemeModeToggle";
 import UserBicepAvatar from "@/components/UserBicepAvatar";
@@ -171,7 +173,11 @@ export default function MemberShell({
               <div className="global-theme-toggle">
                 <ThemeModeToggle />
               </div>
-              <LogoutButton className="member-chrome-logout text-sm" />
+              {isGuestStubEmail(memberEmail) ? (
+                <GuestSignUpButton email={memberEmail} className="member-chrome-logout" />
+              ) : (
+                <LogoutButton className="member-chrome-logout text-sm" />
+              )}
             </div>
           </div>
           {hideMemberNav ? null : (

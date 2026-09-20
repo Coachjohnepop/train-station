@@ -3701,6 +3701,7 @@ input:-webkit-autofill {
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow-y: auto;
   padding: max(0.75rem, env(safe-area-inset-top)) 0.75rem
     max(0.75rem, env(safe-area-inset-bottom));
   pointer-events: auto;
@@ -3720,7 +3721,10 @@ input:-webkit-autofill {
 .workout-rest-player-stage {
   position: relative;
   z-index: 1;
-  width: min(100%, 26rem);
+  display: flex;
+  width: min(100%, 28rem);
+  flex-direction: column;
+  gap: 0.75rem;
   animation: rest-player-pop 0.28s cubic-bezier(0.22, 1, 0.36, 1);
 }
 

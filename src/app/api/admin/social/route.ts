@@ -8,6 +8,7 @@ import {
   socialEnvPresent,
   SOCIAL_CHANNELS,
   SOCIAL_INSTAGRAM_HANDLE,
+  SOCIAL_X_HANDLE,
   dueSocialDripPosts,
 } from "@/lib/social-drip";
 import { publishSocialDrip } from "@/lib/social-publish";
@@ -34,6 +35,7 @@ export async function GET() {
     env: socialEnvPresent(),
     channels: SOCIAL_CHANNELS,
     instagramHandle: SOCIAL_INSTAGRAM_HANDLE,
+    xHandle: SOCIAL_X_HANDLE,
     tiktok: "later",
   });
 }

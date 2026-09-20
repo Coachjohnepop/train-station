@@ -2060,10 +2060,11 @@ export default function MemberWorkoutConsole({
     clearRestTimer();
   }, [restTimer, flipExerciseTimerToRest, clearRestTimer, maybeStartRestTimer]);
 
-  const restBlockName =
-    restTimer != null
-      ? workout.exercises.find((e) => e.id === restTimer.blockId)?.name ?? null
-      : null;
+  const restBlock =
+    restTimer != null ? workout.exercises.find((e) => e.id === restTimer.blockId) : null;
+  const restBlockName = restBlock?.name ?? null;
+  const restBlockVideo =
+    restTimer?.phase === "exercise" && freeExplorer ? restBlock?.videoUrl ?? null : null;
 
   const displayRestSeconds =
     restTimer != null
@@ -2087,6 +2088,7 @@ export default function MemberWorkoutConsole({
         phase={restTimer.phase}
         hitRound={restTimer.hitRound}
         hitRounds={restTimer.hitRounds}
+        videoUrl={restBlockVideo}
       />
     ) : null;
 
