@@ -205,33 +205,9 @@ export default function LandingSeeInsideTour({
     startHowItWorksVoice(howItWorksStepById(howItWorks, TOUR_BEAT_TO_STEP[TOUR_BEATS[nextBeat]]));
   }, [phase, beat, howItWorks, startTour]);
 
-  // Last set (set 3) fires confetti — same as live member console
   useEffect(() => {
-    if (!open || phase !== "auto") return;
-    const step = TOUR_BEATS[beat];
-    if (step !== "w_set3") {
-      confettiFired.current = false;
-      return;
-    }
-    if (reducedMotion.current) return;
-
-    let cancelled = false;
-    const t = window.setTimeout(() => {
-      if (cancelled || confettiFired.current) return;
-      confettiFired.current = true;
-      const el = lastSetRef.current;
-      const burstMs = Math.max(1200, SET3_CONFETTI_HOLD_MS - 200);
-      if (el) {
-        fireWorkoutConfetti(confettiOriginFromElement(el), burstMs);
-      } else {
-        fireWorkoutConfetti(undefined, burstMs);
-      }
-    }, 4000);
-    return () => {
-      cancelled = true;
-      window.clearTimeout(t);
-    };
-  }, [open, phase, beat]);
+    if (phase !== "auto" || TOUR_BEATS[beat] !== "w_set3") confettiFired.current = false;
+  }, [phase, beat]);
 
   useEffect(() => {
     if (!open) return;
@@ -351,6 +327,16 @@ export default function LandingSeeInsideTour({
                 lastSetRef={lastSetRef}
                 motion={phase === "gate" ? "still" : "animate"}
                 playKey={`${open}-${beat}-${phase}`}
+                voiceUrl={howStep.voice.audioUrl}
+                onReady={() => {
+                  if (phase !== "auto" || howStep.id !== "workout") return;
+                  if (confettiFired.current || reducedMotion.current) return;
+                  confettiFired.current = true;
+                  const el = lastSetRef.current;
+                  const burstMs = Math.max(1200, SET3_CONFETTI_HOLD_MS - 200);
+                  if (el) fireWorkoutConfetti(confettiOriginFromElement(el), burstMs);
+                  else fireWorkoutConfetti(undefined, burstMs);
+                }}
               />
             </div>
           ) : null}

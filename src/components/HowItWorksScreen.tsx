@@ -184,6 +184,33 @@ function GuideFinger({
   );
 }
 
+/** Prod Today clip is ~17.5s; used until metadata loads so the first play is already in sync. */
+const WORKOUT_VOICE_FALLBACK_MS = 17540;
+
+function useVoiceDurationMs(url?: string | null): number | null {
+  const [ms, setMs] = useState<number | null>(null);
+  useEffect(() => {
+    if (!url) {
+      setMs(null);
+      return;
+    }
+    const audio = new Audio();
+    audio.preload = "metadata";
+    const onMeta = () => {
+      if (Number.isFinite(audio.duration) && audio.duration > 1) {
+        setMs(Math.round(audio.duration * 1000));
+      }
+    };
+    audio.addEventListener("loadedmetadata", onMeta);
+    audio.src = url;
+    return () => {
+      audio.removeEventListener("loadedmetadata", onMeta);
+      audio.removeAttribute("src");
+    };
+  }, [url]);
+  return ms;
+}
+
 function useSceneClock(
   motion: "animate" | "still",
   playKey: string | number,
@@ -224,6 +251,7 @@ export default function HowItWorksScreen({
   motion = "still",
   playKey = 0,
   onReady,
+  voiceUrl = null,
 }: {
   stepId: HowItWorksStepId;
   lastSetRef?: Ref<HTMLDivElement>;
@@ -231,6 +259,8 @@ export default function HowItWorksScreen({
   motion?: "animate" | "still";
   playKey?: string | number;
   onReady?: () => void;
+  /** When set, on-screen cues stretch to this clip so they land with Jeremy’s line. */
+  voiceUrl?: string | null;
 }) {
   if (stepId === "workout") {
     return (
@@ -239,19 +269,20 @@ export default function HowItWorksScreen({
         motion={motion}
         playKey={playKey}
         onReady={onReady}
+        voiceUrl={voiceUrl}
       />
     );
   }
   if (stepId === "ticket") {
-    return <TicketScene motion={motion} playKey={playKey} onReady={onReady} />;
+    return <TicketScene motion={motion} playKey={playKey} onReady={onReady} voiceUrl={voiceUrl} />;
   }
   if (stepId === "program") {
-    return <ProgramScene motion={motion} playKey={playKey} onReady={onReady} />;
+    return <ProgramScene motion={motion} playKey={playKey} onReady={onReady} voiceUrl={voiceUrl} />;
   }
   if (stepId === "gear") {
-    return <GearScene motion={motion} playKey={playKey} onReady={onReady} />;
+    return <GearScene motion={motion} playKey={playKey} onReady={onReady} voiceUrl={voiceUrl} />;
   }
-  return <BookScene motion={motion} playKey={playKey} onReady={onReady} />;
+  return <BookScene motion={motion} playKey={playKey} onReady={onReady} voiceUrl={voiceUrl} />;
 }
 
 function WorkoutScene({
@@ -259,15 +290,22 @@ function WorkoutScene({
   motion,
   playKey,
   onReady,
+  voiceUrl,
 }: {
   lastSetRef?: Ref<HTMLDivElement>;
   motion: "animate" | "still";
   playKey: string | number;
   onReady?: () => void;
+  voiceUrl?: string | null;
 }) {
   const reduce = usePrefersReducedMotion();
-  // Weight edits first (~1s), then each set 1s apart.
-  const tick = useSceneClock(motion, playKey, [350, 700, 1000, 2000, 3000, 4000], onReady);
+  const measured = useVoiceDurationMs(voiceUrl);
+  const timed = Boolean(voiceUrl);
+  const d = timed ? Math.max(9000, measured ?? WORKOUT_VOICE_FALLBACK_MS) : 4200;
+  const delays = timed
+    ? [d * 0.3, d * 0.36, d * 0.42, d * 0.58, d * 0.7, d * 0.8]
+    : [350, 700, 1000, 2000, 3000, 4000];
+  const tick = useSceneClock(motion, `${playKey}-${Math.round(d)}`, delays, onReady);
   const weight = tick >= 3 || tick === 99 ? 135 : tick === 2 ? 115 : tick === 1 ? 95 : 0;
   const doneSets = tick === 99 ? [1, 2, 3] : tick >= 6 ? [1, 2, 3] : tick >= 5 ? [1, 2] : tick >= 4 ? [1] : [];
   const editing = tick < 3 && tick !== 99;
@@ -304,15 +342,24 @@ function WorkoutScene({
           <div className="relative mt-2 flex items-end gap-1.5">
             {showFinger ? (
               <GuideFinger
-                playKey={playKey}
-                duration={4200}
+                playKey={`${playKey}-${Math.round(d)}`}
+                duration={timed ? d * 0.84 : 4200}
                 label="Like this"
-                stops={[
-                  { id: "weight", at: 900 },
-                  { id: "set-1", at: 2000 },
-                  { id: "set-2", at: 3000 },
-                  { id: "set-3", at: 4000 },
-                ]}
+                stops={
+                  timed
+                    ? [
+                        { id: "weight", at: d * 0.36 },
+                        { id: "set-1", at: d * 0.58 },
+                        { id: "set-2", at: d * 0.7 },
+                        { id: "set-3", at: d * 0.8 },
+                      ]
+                    : [
+                        { id: "weight", at: 900 },
+                        { id: "set-1", at: 2000 },
+                        { id: "set-2", at: 3000 },
+                        { id: "set-3", at: 4000 },
+                      ]
+                }
               />
             ) : null}
             <label
@@ -361,13 +408,17 @@ function TicketScene({
   motion,
   playKey,
   onReady,
+  voiceUrl,
 }: {
   motion: "animate" | "still";
   playKey: string | number;
   onReady?: () => void;
+  voiceUrl?: string | null;
 }) {
   const reduce = usePrefersReducedMotion();
-  const tick = useSceneClock(motion, playKey, reduce ? [240] : [2400], onReady);
+  const measured = useVoiceDurationMs(voiceUrl);
+  const pickAt = voiceUrl ? Math.max(2400, (measured ?? 7660) * 0.62) : 2400;
+  const tick = useSceneClock(motion, `${playKey}-${Math.round(pickAt)}`, reduce ? [240] : [pickAt], onReady);
   const selected = tick >= 1 ? "business" : null;
   const showFinger = motion === "animate" && !reduce;
 
@@ -406,10 +457,10 @@ function TicketScene({
         })}
         {showFinger ? (
           <GuideFinger
-            playKey={playKey}
-            duration={2800}
+            playKey={`${playKey}-${Math.round(pickAt)}`}
+            duration={pickAt + 400}
             label="Like this"
-            stops={[{ id: "business", at: 2400 }]}
+            stops={[{ id: "business", at: pickAt }]}
           />
         ) : null}
       </div>
@@ -421,13 +472,17 @@ function ProgramScene({
   motion,
   playKey,
   onReady,
+  voiceUrl,
 }: {
   motion: "animate" | "still";
   playKey: string | number;
   onReady?: () => void;
+  voiceUrl?: string | null;
 }) {
   const reduce = usePrefersReducedMotion();
-  const tick = useSceneClock(motion, playKey, reduce ? [240] : [2200], onReady);
+  const measured = useVoiceDurationMs(voiceUrl);
+  const pickAt = voiceUrl ? Math.max(2200, (measured ?? 8300) * 0.58) : 2200;
+  const tick = useSceneClock(motion, `${playKey}-${Math.round(pickAt)}`, reduce ? [240] : [pickAt], onReady);
   const selected = tick >= 1 ? "adult" : null;
   return (
     <div className="relative w-full overflow-visible rounded-2xl border border-white/15 bg-[#12081f] p-4">
@@ -470,13 +525,19 @@ function GearScene({
   motion,
   playKey,
   onReady,
+  voiceUrl,
 }: {
   motion: "animate" | "still";
   playKey: string | number;
   onReady?: () => void;
+  voiceUrl?: string | null;
 }) {
-  const delays = [400, 650, 900, 1150, 1400, 1650];
-  const tick = useSceneClock(motion, playKey, delays, onReady);
+  const measured = useVoiceDurationMs(voiceUrl);
+  const d = voiceUrl ? Math.max(4000, measured ?? 12567) : 1650;
+  const delays = voiceUrl
+    ? [0.22, 0.32, 0.42, 0.52, 0.62, 0.72].map((f) => d * f)
+    : [400, 650, 900, 1150, 1400, 1650];
+  const tick = useSceneClock(motion, `${playKey}-${Math.round(d)}`, delays, onReady);
   const selectedCount = tick === 99 ? 6 : Math.min(6, tick);
   const selectedIds = [...SELECTED_GEAR].slice(0, selectedCount);
 
@@ -520,12 +581,19 @@ function BookScene({
   motion,
   playKey,
   onReady,
+  voiceUrl,
 }: {
   motion: "animate" | "still";
   playKey: string | number;
   onReady?: () => void;
+  voiceUrl?: string | null;
 }) {
-  const tick = useSceneClock(motion, playKey, [800, 1600, 2400, 3200], onReady);
+  const measured = useVoiceDurationMs(voiceUrl);
+  const d = voiceUrl ? Math.max(6000, measured ?? 20012) : 3200;
+  const delays = voiceUrl
+    ? [d * 0.22, d * 0.4, d * 0.58, d * 0.74]
+    : [800, 1600, 2400, 3200];
+  const tick = useSceneClock(motion, `${playKey}-${Math.round(d)}`, delays, onReady);
   const dayPicked = tick >= 1;
   const timesOpen = tick >= 2;
   const timePicked = tick >= 3;
