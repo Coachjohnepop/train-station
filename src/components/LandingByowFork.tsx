@@ -68,55 +68,56 @@ export default function LandingByowFork({
 
   return createPortal(
     <div
-      className="landing-app-walk force-dark fixed inset-0 z-[100] flex flex-col bg-[#07040f]"
+      className="force-dark fixed inset-0 z-[100] flex items-center justify-center p-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))]"
       data-force-dark
       role="dialog"
       aria-modal="true"
       aria-labelledby="byow-fork-title"
     >
-      <div className="flex shrink-0 items-center justify-between gap-2 px-3 pb-1 pt-[max(0.4rem,env(safe-area-inset-top))] sm:px-5">
-        <div>
+      <button
+        type="button"
+        className="absolute inset-0 bg-black/45"
+        aria-label="Close and see the page"
+        onClick={onClose}
+      />
+      <div className="relative z-10 w-full max-w-md rounded-[1.75rem] border border-white/15 bg-[#12081c]/92 p-5 shadow-[0_24px_80px_rgba(0,0,0,0.55)] backdrop-blur-md sm:p-6">
+        <div className="mb-4 flex items-start justify-between gap-3">
           <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[var(--accent-fg)]">
-            Get started
+            The Train Station
           </p>
-          <h2 id="byow-fork-title" className="text-base font-semibold text-white sm:text-lg">
-            {!path
-              ? "Do you already have a workout?"
-              : path === "own"
-                ? "Your workout · our console"
-                : "Jeremy’s board"}
-          </h2>
+          <button
+            type="button"
+            className="min-h-10 shrink-0 rounded-full border border-white/20 bg-white/5 px-3 text-sm font-semibold text-white/90"
+            onClick={onClose}
+          >
+            Close
+          </button>
         </div>
-        <button
-          type="button"
-          className="min-h-11 rounded-full border border-white/20 bg-white/5 px-3 text-sm font-semibold text-white/90"
-          onClick={onClose}
-        >
-          Close
-        </button>
-      </div>
 
-      <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center gap-4 px-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
         {!path ? (
-          <>
-            <p className="text-center text-sm text-white/70">
-              Same Today, sets, and rest either way. You pick the content.
+          <div className="space-y-4">
+            <h2 id="byow-fork-title" className="text-[1.65rem] font-semibold leading-tight tracking-tight text-white sm:text-3xl">
+              Already working out?
+            </h2>
+            <p className="text-[15px] leading-relaxed text-white/80 sm:text-base">
+              Would you like to track your workout in our app? It&apos;s easy — start by uploading
+              your workout.
             </p>
             <button
               type="button"
               data-analytics-action="b-fork-own"
-              className="inline-flex h-14 items-center justify-center rounded-full bg-[#7c3aed] text-[17px] font-extrabold text-white"
+              className="inline-flex h-14 w-full items-center justify-center rounded-full bg-[#7c3aed] text-[17px] font-extrabold text-white"
               onClick={() => {
                 setPath("own");
                 trackLandingCustom("b-fork-own");
               }}
             >
-              Yes — I’ll paste mine
+              Yes — upload mine
             </button>
             <button
               type="button"
               data-analytics-action="b-fork-jeremy"
-              className="inline-flex h-12 items-center justify-center rounded-full border border-white/25 text-[15px] font-bold text-white/90"
+              className="inline-flex h-12 w-full items-center justify-center rounded-full border border-white/25 text-[15px] font-bold text-white/90"
               onClick={() => {
                 setPath("jeremy");
                 trackLandingCustom("b-fork-jeremy");
@@ -124,7 +125,7 @@ export default function LandingByowFork({
             >
               No — use Jeremy’s Today
             </button>
-          </>
+          </div>
         ) : (
           <form
             className="space-y-3"
@@ -133,6 +134,9 @@ export default function LandingByowFork({
               void start();
             }}
           >
+            <h2 id="byow-fork-title" className="text-xl font-semibold text-white sm:text-2xl">
+              {path === "own" ? "Upload today’s workout" : "Jeremy’s board"}
+            </h2>
             <input
               required
               autoComplete="username"
@@ -165,7 +169,7 @@ export default function LandingByowFork({
               data-analytics-action={path === "own" ? "b-ingest" : "b-jeremy-go"}
               className="inline-flex h-14 w-full items-center justify-center rounded-full bg-[#7c3aed] text-[17px] font-extrabold text-white disabled:opacity-60"
             >
-              {busy ? "Opening…" : path === "own" ? "Ingest" : "Open Today"}
+              {busy ? "Opening…" : path === "own" ? "Upload" : "Open Today"}
             </button>
             <button
               type="button"

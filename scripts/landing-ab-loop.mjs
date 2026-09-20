@@ -127,7 +127,7 @@ async function assertVariant(page, expect, label) {
     else pass(`${label} tour is not B`);
   }
   if (expect === "jeremy") {
-    if (/already have a workout/i.test(body) || /I have a workout/i.test(body)) {
+    if (/already working out/i.test(body) || /I have a workout/i.test(body)) {
       pass(`${label} B fork`);
     } else fail(`${label} B fork`, body.slice(0, 180));
   }
@@ -191,7 +191,7 @@ async function browserCtas(viewportKey) {
   await withBrowser("cta", viewportKey, async (page) => {
     await page.goto(BASE + "/l/jeremy", { waitUntil: "domcontentloaded", timeout: 45000 });
     await page.waitForTimeout(800);
-    const ask = page.getByText("Do you already have a workout?");
+    const ask = page.getByText("Already working out?");
     if ((await ask.count()) > 0) pass(`${viewportKey} B fork visible`);
     else fail(`${viewportKey} B fork visible`, (await page.locator("body").innerText()).slice(0, 180));
 
