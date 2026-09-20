@@ -26,6 +26,7 @@ import LandingAbClip from "@/components/LandingAbClip";
 import type { LandingAbVariant } from "@/lib/landing-ab";
 import { LIVE_CLASS_OFFER } from "@/lib/live-class-offer";
 import {
+  JEREMY_WELCOME_READY_VIDEO_SRC,
   JEREMY_WELCOME_VIDEO_SRC,
   meetJeremyClipSrc,
 } from "@/lib/landing-media";
@@ -435,6 +436,9 @@ function JeremyHeroStack({
         <div className="mt-3 w-full max-w-sm">
           <LandingAbClip
             src={meetSrc}
+            readySrc={
+              meetSrc.includes("jeremy-welcome") ? JEREMY_WELCOME_READY_VIDEO_SRC : null
+            }
             title="Tap to meet Jeremy"
             analyticsAction="hero-meet-jeremy-play"
           />

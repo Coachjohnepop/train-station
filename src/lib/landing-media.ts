@@ -59,8 +59,10 @@ export function resolveLandingVideoUrl(
   return null;
 }
 
-/** Overall Jeremy welcome — site file, not YouTube. */
-export const JEREMY_WELCOME_VIDEO_SRC = "/videos/jeremy-welcome.mp4";
+/** Overall Jeremy welcome — site file, not YouTube. Cache-bust after the 1:40 split. */
+export const JEREMY_WELCOME_VIDEO_SRC = "/videos/jeremy-welcome.mp4?v=20260920a";
+/** 1:41–end of the welcome; play after READY on the landing intro. */
+export const JEREMY_WELCOME_READY_VIDEO_SRC = "/videos/jeremy-welcome-ready.mp4?v=20260920a";
 /** Free Explorer intro after the gag — site file, not YouTube. */
 export const JEREMY_FREE_INTRO_VIDEO_SRC = "/videos/jeremy-free-intro.mp4?v=20260816e";
 

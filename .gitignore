@@ -50,6 +50,7 @@ prisma/dev.db-journal
 prisma/exercises.dev.json
 /public/uploads/chat/
 /public/uploads/site-videos/
+/public/videos/jeremy-welcome-source.mp4
 *.bak.*
 
 # ephemeral test manifests / reports
