@@ -1624,6 +1624,19 @@ body:has([data-admin-chrome]) [data-global-theme-toggle] {
   color: var(--text);
   font-size: 1rem;
   flex-shrink: 0;
+  position: relative;
+  z-index: 2;
+}
+
+/* Same trap as .landing-nav__link: display:inline-flex beats Tailwind md:hidden. */
+@media (min-width: 768px) {
+  .landing-nav__menu-btn.md\:hidden {
+    display: none;
+  }
+}
+
+.landing-nav__menu-panel {
+  display: block;
 }
 
 /* Theme control in landing/member chrome — keep icon-only on narrow phones */

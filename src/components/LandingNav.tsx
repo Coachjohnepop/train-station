@@ -97,6 +97,8 @@ export default function LandingNav({
   const brandHref = purchaseAuth.signedIn ? memberHomeHref : "/";
   /** Guest home: no white Join pill, no extra top CTAs. Hero has the three choices. */
   const guestHome = onHomePage && !purchaseAuth.signedIn && variant === "public";
+  /** Welcome-back and guest home keep the ☰ on desktop; the panel must match. */
+  const menuAlways = guestHome || isWelcome;
 
   return (
     <header
@@ -281,7 +283,7 @@ export default function LandingNav({
           </div>
           <button
             type="button"
-            className={`landing-nav__menu-btn ${guestHome ? "" : "md:hidden"}`}
+            className={`landing-nav__menu-btn ${menuAlways ? "" : "md:hidden"}`}
             aria-expanded={mobileOpen}
             aria-label={mobileOpen ? "Close menu" : "Open menu"}
             data-analytics-action={mobileOpen ? "close-menu" : "open-menu"}
@@ -296,7 +298,11 @@ export default function LandingNav({
       </div>
 
       {mobileOpen && (
-        <div className={`border-t border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-[var(--text)] ${guestHome ? "" : "md:hidden"}`}>
+        <div
+          className={`landing-nav__menu-panel border-t border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-[var(--text)] ${
+            menuAlways ? "" : "md:hidden"
+          }`}
+        >
           <div className="space-y-1">
             {purchaseAuth.signedIn
               ? LANDING_NAV_SECTIONS.map((section) => (
