@@ -618,26 +618,8 @@ export default function BackgroundMusic() {
         void forceAudible(audio);
         return;
       }
-      // Already playing unmuted — don't burn an unlock or re-fire
-      if (!audio.paused && !audio.muted) {
-        return;
-      }
-      // Cold landing: wait for onboarding Play.
-      if (!themeSongOnboardingPlayArmed() && gestureUnlockCountRef.current < 1) {
-        return;
-      }
-      if (
-        !canStartThemeSongFromSilence(
-          gestureUnlockCountRef.current,
-          mixRef.current.clickStarts,
-        )
-      ) {
-        if (!heardLiveRef.current && !speakerMutedRef.current) {
-          void forceAudible(audio);
-        }
-        return;
-      }
-      void forceAudible(audio);
+      // Already playing, or still waiting for onboarding Play — don't start on I workout today / random taps.
+      return;
     };
     ACTIVATION_EVENTS.forEach((e) => window.addEventListener(e, onActivation, opts));
     return () => {

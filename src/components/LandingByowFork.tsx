@@ -4,7 +4,10 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import HowItWorksScreen from "@/components/HowItWorksScreen";
 import { markLandingConverted, trackLandingCustom } from "@/lib/landing-return-visit";
-import { startThemeSongFromOnboardingPlay } from "@/lib/background-music-control";
+import {
+  setBackgroundMusicOverlay,
+  startThemeSongFromOnboardingPlay,
+} from "@/lib/background-music-control";
 import { unlockLandingMix } from "@/lib/landing-mix-audio";
 import {
   defaultHowItWorks,
@@ -70,6 +73,13 @@ export default function LandingByowFork({
   useEffect(() => {
     if (!open) stopHowItWorksVoice();
   }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    if (path === "jeremy" && previewArmed) return;
+    setBackgroundMusicOverlay(true);
+    return () => setBackgroundMusicOverlay(false);
+  }, [open, path, previewArmed]);
 
   if (!open || !mounted) return null;
 

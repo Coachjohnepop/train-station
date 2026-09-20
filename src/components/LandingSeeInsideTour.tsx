@@ -17,7 +17,10 @@ import {
   stopHowItWorksVoice,
 } from "@/lib/play-how-it-works-voice";
 import { warmUrl } from "@/lib/warm-media";
-import { startThemeSongFromOnboardingPlay } from "@/lib/background-music-control";
+import {
+  setBackgroundMusicOverlay,
+  startThemeSongFromOnboardingPlay,
+} from "@/lib/background-music-control";
 import { unlockLandingMix } from "@/lib/landing-mix-audio";
 import {
   FREE_TICKET_GAG_HOST_ID,
@@ -116,6 +119,12 @@ export default function LandingSeeInsideTour({
       delete document.documentElement.dataset.landingTour;
     };
   }, [open]);
+
+  useEffect(() => {
+    if (!open || phase !== "gate") return;
+    setBackgroundMusicOverlay(true);
+    return () => setBackgroundMusicOverlay(false);
+  }, [open, phase]);
 
   /** Close wizard and land in normal join nav (tickets or programs). */
   const exitToSite = useCallback(
@@ -260,7 +269,7 @@ export default function LandingSeeInsideTour({
   return createPortal(
     <>
     <div
-      className="landing-see-inside force-dark fixed inset-0 z-[100] flex flex-col bg-[#07040f]" data-force-dark
+      className="landing-see-inside force-dark relative fixed inset-0 z-[100] flex flex-col bg-[#07040f]" data-force-dark
       role="dialog"
       aria-modal="true"
       aria-labelledby="see-inside-title"
@@ -466,7 +475,18 @@ export default function LandingSeeInsideTour({
 
       {phase === "gate" ? (
         <div
-          className="shrink-0 space-y-2 px-3 pt-1 sm:px-5"
+          className="pointer-events-none absolute inset-x-0 top-[33%] z-30 flex h-[34%] items-end justify-center"
+          aria-hidden
+        >
+          <span className="tour-play-finger text-[3.6rem] leading-none drop-shadow-[0_10px_22px_rgba(0,0,0,0.55)] sm:text-[4.6rem]">
+            {"\u{1F447}\u{1F3FD}"}
+          </span>
+        </div>
+      ) : null}
+
+      {phase === "gate" ? (
+        <div
+          className="relative z-40 shrink-0 space-y-2 px-3 pt-1 sm:px-5"
           style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
         >
           <div className="flex flex-col gap-2">

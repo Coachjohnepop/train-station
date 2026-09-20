@@ -3959,3 +3959,25 @@ input:-webkit-autofill {
   display: block;
   animation: set-log-finger-bob 1.05s ease-in-out infinite;
 }
+
+/* Paused How it Works: nudge toward Play in the middle third of the overlay. */
+@keyframes tour-play-finger-nudge {
+  0%,
+  100% {
+    transform: translate(-16%, 0);
+  }
+  25% {
+    transform: translate(16%, 14%);
+  }
+  50% {
+    transform: translate(-10%, 24%);
+  }
+  75% {
+    transform: translate(14%, 8%);
+  }
+}
+
+.tour-play-finger {
+  display: block;
+  animation: tour-play-finger-nudge 1.25s ease-in-out infinite;
+}
