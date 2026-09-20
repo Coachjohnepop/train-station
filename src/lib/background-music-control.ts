@@ -75,6 +75,34 @@ export function requestBackgroundMusicPlay(): void {
   window.dispatchEvent(new CustomEvent(BG_MUSIC_REQUEST_PLAY_EVENT));
 }
 
+const ONBOARDING_PLAY_KEY = "ts-theme-song-onboarding-play";
+
+/** Play in How it Works / See the program / Meet Jeremy — not a random landing tap. */
+export function markThemeSongOnboardingPlay(): void {
+  if (typeof window === "undefined") return;
+  try {
+    sessionStorage.setItem(ONBOARDING_PLAY_KEY, "1");
+  } catch {
+    /* ignore */
+  }
+}
+
+export function themeSongOnboardingPlayArmed(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    return sessionStorage.getItem(ONBOARDING_PLAY_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+/** Call from onboarding Play in the same tap as the demo. */
+export function startThemeSongFromOnboardingPlay(): void {
+  if (typeof window === "undefined") return;
+  markThemeSongOnboardingPlay();
+  requestBackgroundMusicPlay();
+}
+
 export function isBackgroundMusicUserMuted(): boolean {
   if (typeof window === "undefined") return false;
   try {

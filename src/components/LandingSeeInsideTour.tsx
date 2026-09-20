@@ -17,6 +17,8 @@ import {
   stopHowItWorksVoice,
 } from "@/lib/play-how-it-works-voice";
 import { warmUrl } from "@/lib/warm-media";
+import { startThemeSongFromOnboardingPlay } from "@/lib/background-music-control";
+import { unlockLandingMix } from "@/lib/landing-mix-audio";
 import {
   FREE_TICKET_GAG_HOST_ID,
   preloadFreeTicketGag,
@@ -124,8 +126,7 @@ export default function LandingSeeInsideTour({
     [onClose, router]
   );
 
-  // Reset tour. Theme Song unlock is the global “tap anywhere” handler only
-  // (one mute = corner speaker — no second control, no remute races).
+  // Reset tour. Theme Song starts from Play in this overlay.
   useEffect(() => {
     if (!open) {
       stopHowItWorksVoice();
@@ -184,6 +185,8 @@ export default function LandingSeeInsideTour({
   }, [phase, beat, howItWorks]);
 
   const startTour = useCallback(() => {
+    unlockLandingMix();
+    startThemeSongFromOnboardingPlay();
     setPhase("auto");
     setBeat(0);
     startHowItWorksVoice(howItWorksStepById(howItWorks, TOUR_BEAT_TO_STEP[TOUR_BEATS[0]]));

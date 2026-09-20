@@ -4,7 +4,15 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import HowItWorksScreen from "@/components/HowItWorksScreen";
 import { markLandingConverted, trackLandingCustom } from "@/lib/landing-return-visit";
-import type { HowItWorksStepId } from "@/lib/how-it-works";
+import { startThemeSongFromOnboardingPlay } from "@/lib/background-music-control";
+import { unlockLandingMix } from "@/lib/landing-mix-audio";
+import {
+  defaultHowItWorks,
+  howItWorksStepById,
+  normalizeHowItWorks,
+  type HowItWorksStepId,
+} from "@/lib/how-it-works";
+import { startHowItWorksVoice, stopHowItWorksVoice } from "@/lib/play-how-it-works-voice";
 
 type Path = "today" | "own" | "jeremy" | null;
 
@@ -29,6 +37,7 @@ export default function LandingByowFork({
   const [error, setError] = useState("");
   const [previewBeat, setPreviewBeat] = useState(0);
   const [previewArmed, setPreviewArmed] = useState(false);
+  const [howItWorks, setHowItWorks] = useState(defaultHowItWorks);
 
   useEffect(() => {
     setMounted(true);
@@ -47,6 +56,20 @@ export default function LandingByowFork({
     setPreviewBeat(0);
     setPreviewArmed(false);
   }, [open, initialPath]);
+
+  useEffect(() => {
+    if (!open || initialPath !== "jeremy") return;
+    void fetch("/api/landing-media", { cache: "force-cache" })
+      .then((res) => res.json())
+      .then((body: { howItWorks?: unknown }) => {
+        if (body.howItWorks) setHowItWorks(normalizeHowItWorks(body.howItWorks));
+      })
+      .catch(() => undefined);
+  }, [open, initialPath]);
+
+  useEffect(() => {
+    if (!open) stopHowItWorksVoice();
+  }, [open]);
 
   if (!open || !mounted) return null;
 
@@ -100,7 +123,7 @@ export default function LandingByowFork({
               {showingJeremyName
                 ? "Like what you see?"
                 : previewStep === "workout"
-                  ? "Today on Jeremy’s board"
+                  ? "Today on Your Board"
                   : "Adult is the home base"}
             </h2>
           </div>
@@ -119,6 +142,7 @@ export default function LandingByowFork({
                 stepId={previewStep}
                 motion={previewArmed ? "animate" : "still"}
                 playKey={`program-${previewBeat}-${previewArmed ? "go" : "wait"}`}
+                voiceUrl={howItWorksStepById(howItWorks, previewStep).voice.audioUrl}
               />
               <button
                 type="button"
@@ -126,10 +150,17 @@ export default function LandingByowFork({
                 className="inline-flex h-14 w-full items-center justify-center rounded-full bg-[#7c3aed] text-[17px] font-extrabold text-white"
                 onClick={() => {
                   if (!previewArmed) {
+                    unlockLandingMix();
+                    startThemeSongFromOnboardingPlay();
+                    startHowItWorksVoice(howItWorksStepById(howItWorks, previewStep));
                     setPreviewArmed(true);
                     return;
                   }
-                  setPreviewBeat((n) => n + 1);
+                  const nextBeat = previewBeat + 1;
+                  setPreviewBeat(nextBeat);
+                  const nextStep = PROGRAM_PREVIEW[nextBeat];
+                  if (nextStep) startHowItWorksVoice(howItWorksStepById(howItWorks, nextStep));
+                  else stopHowItWorksVoice();
                 }}
               >
                 {previewArmed ? "Next" : "Play"}

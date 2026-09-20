@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { warmUrl } from "@/lib/warm-media";
+import { startThemeSongFromOnboardingPlay } from "@/lib/background-music-control";
+import { unlockLandingMix } from "@/lib/landing-mix-audio";
 
 type Phase = "idle" | "intro" | "ready" | "part2";
 
@@ -37,6 +39,8 @@ export default function LandingAbClip({
     }
     setClip(url);
     setPhase(next);
+    unlockLandingMix();
+    startThemeSongFromOnboardingPlay();
     try {
       el.muted = false;
       await el.play();

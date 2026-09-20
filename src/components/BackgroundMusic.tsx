@@ -16,6 +16,7 @@ import {
   persistBackgroundMusicUnlockCount,
   persistBackgroundMusicPlayed,
   registerBackgroundMusicMediaDucking,
+  themeSongOnboardingPlayArmed,
 } from "@/lib/background-music-control";
 import {
   applyMixVolume,
@@ -32,7 +33,7 @@ import {
   preferAmbientAudioSession,
   preferPlaybackAudioSession,
 } from "@/lib/audio-session";
-import { allowThemeSong, isGuestThemeSongPath } from "@/lib/theme-song";
+import { allowThemeSong } from "@/lib/theme-song";
 
 /**
  * Guest-only Theme Song + pointing-finger mute guide.
@@ -580,7 +581,8 @@ export default function BackgroundMusic() {
     autoPlayAllowed,
   ]);
 
-  // Guest funnel: one “tap anywhere” starts Theme Song. After login: nothing.
+  // Theme Song starts on onboarding Play, not a random landing tap.
+  // After first mute, tap-anywhere may start it once more. Second mute: speaker only.
   useEffect(() => {
     const opts: AddEventListenerOptions = { capture: true, passive: true };
     const onActivation = (e: Event) => {
@@ -595,14 +597,6 @@ export default function BackgroundMusic() {
       ) {
         return;
       }
-      const path = window.location.pathname || "";
-      if (
-        isGuestThemeSongPath(path) &&
-        !signedInRef.current &&
-        !adminRouteRef.current
-      ) {
-        unlockLandingMix();
-      }
       const audio = audioRef.current;
       if (!audio || adminRouteRef.current) {
         if (audio && adminRouteRef.current) stopAdminMusic(audio);
@@ -615,8 +609,9 @@ export default function BackgroundMusic() {
         // Second mute: only the speaker button may start the song again
         return;
       }
-      // First mute: tap anywhere plays once more
+      // First mute: tap anywhere plays once more — only after Play already started it.
       if (speakerMutedRef.current) {
+        if (!themeSongOnboardingPlayArmed() && gestureUnlockCountRef.current < 1) return;
         speakerMutedRef.current = false;
         persistBackgroundMusicSoftMute(false);
         setOff(false);
@@ -627,19 +622,21 @@ export default function BackgroundMusic() {
       if (!audio.paused && !audio.muted) {
         return;
       }
+      // Cold landing: wait for onboarding Play.
+      if (!themeSongOnboardingPlayArmed() && gestureUnlockCountRef.current < 1) {
+        return;
+      }
       if (
         !canStartThemeSongFromSilence(
           gestureUnlockCountRef.current,
           mixRef.current.clickStarts,
         )
       ) {
-        // Earlier tap counted before sound started (How it Works duck). Let them retry.
         if (!heardLiveRef.current && !speakerMutedRef.current) {
           void forceAudible(audio);
         }
         return;
       }
-      // Count is stored only after sound is actually live (confirmSoundLive).
       void forceAudible(audio);
     };
     ACTIVATION_EVENTS.forEach((e) => window.addEventListener(e, onActivation, opts));
@@ -687,11 +684,12 @@ export default function BackgroundMusic() {
     const onRequestPlay = () => {
       const audio = audioRef.current;
       if (!audio || adminRouteRef.current) return;
-      // FreeTicketModal / intro close may request play — only on funnel routes
+      // Onboarding Play / intro — only on funnel routes
       if (!autoPlayAllowedRef.current) return;
       if (speakerMutedRef.current) return;
       if (stickyMuteRef.current && (audio.paused || audio.muted)) return;
-      if (!unlockedRef.current) return;
+      unlockLandingMix();
+      unlockedRef.current = true;
       if (
         !canStartThemeSongFromSilence(
           gestureUnlockCountRef.current,
@@ -734,6 +732,10 @@ export default function BackgroundMusic() {
       return;
     }
     if (gestureUnlockCountRef.current > 0) {
+      return;
+    }
+    // Don't start on landing until they hit Play in an onboarding path.
+    if (!themeSongOnboardingPlayArmed()) {
       return;
     }
     void startMusicWithFinger(audio);
@@ -792,7 +794,7 @@ export default function BackgroundMusic() {
     mix.clickStarts > 1 && remainingStarts > 0 && remainingStarts < mix.clickStarts
       ? `tap to play again (${remainingStarts} left)`
       : remainingStarts > 0
-        ? "tap anywhere to play"
+        ? "hit Play to start"
         : mix.clickStarts === 1
           ? "one play"
           : `${mix.clickStarts} plays used`;
