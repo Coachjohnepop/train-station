@@ -67,6 +67,7 @@ function emptyProfile(userId: string, email: string, plan: SignupPlan): MemberPr
     paidAt: null,
     paymentMethod: null,
     paymentNote: null,
+    byowTrialEndsAt: null,
     staffGrantExpiresAt: null,
     staffGrantedAt: null,
     staffGrantedBy: null,
@@ -145,6 +146,7 @@ function normalizeProfile(raw: unknown, userId: string): MemberProfile | null {
     paidAt: data.paidAt ?? null,
     paymentMethod: normalizePaymentMethod(data.paymentMethod),
     paymentNote: typeof data.paymentNote === "string" ? data.paymentNote : null,
+    byowTrialEndsAt: typeof data.byowTrialEndsAt === "string" ? data.byowTrialEndsAt : null,
     staffGrantExpiresAt:
       typeof data.staffGrantExpiresAt === "string" ? data.staffGrantExpiresAt : null,
     staffGrantedAt: typeof data.staffGrantedAt === "string" ? data.staffGrantedAt : null,

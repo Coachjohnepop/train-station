@@ -11,7 +11,7 @@ describe("landing A/B letters", () => {
     assert.deepEqual([...LANDING_AB_LIVE], ["tour", "jeremy"]);
     assert.equal(LANDING_AB_META.tour.status, "live");
     assert.equal(LANDING_AB_META.jeremy.status, "live");
-    assert.equal(LANDING_AB_META.jeremy.name, "Get started · real app walk");
+    assert.equal(LANDING_AB_META.jeremy.name, "Get started · BYOW or Jeremy Today");
     assert.ok(LANDING_AB_TEST.mission.length > 20);
     assert.ok(LANDING_AB_TEST.goal.toLowerCase().includes("today"));
     assert.equal(LANDING_AB_META.class.status, "preview");

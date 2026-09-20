@@ -3,7 +3,7 @@
 import Link from "next/link";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import LandingSeeInsideTour from "@/components/LandingSeeInsideTour";
-import LandingAppWalkthrough from "@/components/LandingAppWalkthrough";
+import LandingByowFork from "@/components/LandingByowFork";
 import { FREE_QUICK_TOUR_EVENT } from "@/lib/free-quick-tour";
 import HeroSlideMedia from "@/components/HeroSlideMedia";
 import {
@@ -132,11 +132,11 @@ export default function LandingHero({
     return () => window.removeEventListener(FREE_QUICK_TOUR_EVENT, open);
   }, []);
 
-  // B: don't wait — open the real-app walk (not the ticket caricature).
+  // B: user-chosen fork — own workout vs Jeremy's Today.
   useEffect(() => {
     if (variant !== "jeremy" || returnMode) return;
     setTourOpen(true);
-    trackLandingCustom("hero-b-auto-walk");
+    trackLandingCustom("hero-b-auto-fork");
   }, [variant, returnMode]);
 
   const imageIndex = images.length ? imageTick % images.length : 0;
@@ -361,7 +361,7 @@ export default function LandingHero({
       </div>
 
       {variant === "jeremy" ? (
-        <LandingAppWalkthrough open={tourOpen} onClose={() => setTourOpen(false)} />
+        <LandingByowFork open={tourOpen} onClose={() => setTourOpen(false)} />
       ) : (
         <LandingSeeInsideTour open={tourOpen} onClose={() => setTourOpen(false)} />
       )}
@@ -394,27 +394,24 @@ function JeremyHeroStack({
       <div className="w-full max-w-sm">
         <EasyPathChoices
           kicker=""
-          hint="We'll ask about your own workout, then show the real Today screen"
+          hint="Your notes or Jeremy’s board — same Today console"
         >
           <button
             type="button"
-            data-analytics-action="hero-b-see-the-app"
+            data-analytics-action="hero-b-have-workout"
             onClick={onTour}
             className={primaryCta}
           >
-            See how to use it
+            I have a workout
           </button>
-          <Link
-            href={START_FREE_HREF}
-            data-analytics-action="hero-b-train-station-style"
-            onClick={(e) => {
-              markLandingConverted();
-              fireLandingJoinHook(e.currentTarget);
-            }}
+          <button
+            type="button"
+            data-analytics-action="hero-b-want-jeremy"
+            onClick={onTour}
             className={secondaryCta}
           >
-            Train Station Style
-          </Link>
+            I want Jeremy’s
+          </button>
           <Link
             href={JOIN_TICKETS_HREF}
             data-analytics-action={returnMode ? "hero-start-membership-return" : "hero-start-membership"}
@@ -429,12 +426,12 @@ function JeremyHeroStack({
         </EasyPathChoices>
       </div>
       <h1 className="landing-hero-headline mt-8 mb-3 text-[clamp(2.4rem,11vw,3.4rem)] font-semibold leading-[0.9] tracking-[-0.04em] text-white sm:mt-10 sm:text-6xl">
-        See how it
+        Your workout
         <br />
-        <span className="landing-hero-accent">works.</span>
+        <span className="landing-hero-accent">or ours.</span>
       </h1>
       <p className="landing-hero-subhead max-w-[20.5rem] text-[15px] font-semibold leading-snug text-white sm:max-w-sm sm:text-xl">
-        Real Today, real set, real rest. Bring-your-own isn&apos;t open yet — we&apos;ll ask if you&apos;d use it.
+        Paste today&apos;s notes or jump on Jeremy&apos;s board. Username only — 7 days.
       </p>
       <div className="mt-5 w-full max-w-sm">
         <LandingAbClip

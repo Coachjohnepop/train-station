@@ -75,6 +75,9 @@ function rowToMemberProfile(
     paidAt: toIso(row.paidAt),
     paymentMethod: normalizePaymentMethod(row.paymentMethod),
     paymentNote: row.paymentNote,
+    byowTrialEndsAt: toIso(
+      (row as DbMemberProfile & { byowTrialEndsAt?: Date | null }).byowTrialEndsAt,
+    ),
     staffGrantExpiresAt: toIso(
       (row as DbMemberProfile & { staffGrantExpiresAt?: Date | null }).staffGrantExpiresAt,
     ),

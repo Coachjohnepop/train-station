@@ -300,6 +300,7 @@ function normalizeImportedProfile(raw: unknown, userId: string): MemberProfile |
         ? data.paymentMethod
         : null,
     paymentNote: typeof data.paymentNote === "string" ? data.paymentNote : null,
+    byowTrialEndsAt: typeof data.byowTrialEndsAt === "string" ? data.byowTrialEndsAt : null,
     staffGrantExpiresAt:
       typeof data.staffGrantExpiresAt === "string" ? data.staffGrantExpiresAt : null,
     staffGrantedAt: typeof data.staffGrantedAt === "string" ? data.staffGrantedAt : null,

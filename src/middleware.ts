@@ -55,6 +55,7 @@ const PUBLIC_API_PREFIXES = [
   "/api/signup",
   "/api/join",
   "/api/measurements",
+  "/api/byow/guest-start",
   "/api/payments/public",
   "/api/pricing/public",
   "/api/stripe/webhook",

@@ -33,6 +33,7 @@ export type MemberProfile = {
   paymentNote: string | null;
   /** ISO — staff grant must be reapproved by this time (usually 1st of next month). */
   staffGrantExpiresAt: string | null;
+  byowTrialEndsAt: string | null;
   staffGrantedAt: string | null;
   staffGrantedBy: string | null;
   stripeCustomerId: string | null;

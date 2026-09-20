@@ -72,6 +72,8 @@ export function memberNeedsPayment(
     | "paymentMethod"
     | "staffGrantExpiresAt"
     | "staffGrantedAt"
+    | "paymentNote"
+    | "byowTrialEndsAt"
   > | null,
   userId: string,
 ): boolean {
@@ -89,6 +91,14 @@ export function memberNeedsPayment(
   // Developer + Stephanie: never send to checkout, even if a Stripe webhook
   // flipped paymentStatus after we canceled their test subscription.
   if (isStandingStaffGrantEmail(profile?.email)) return false;
+  if (
+    profile &&
+    (profile.paymentNote || "").toLowerCase() === "byow" &&
+    profile.byowTrialEndsAt &&
+    new Date(profile.byowTrialEndsAt).getTime() <= Date.now()
+  ) {
+    return true;
+  }
   if ((profile?.paymentStatus ?? "pending") !== "paid") return true;
 
   // Manual staff grants expire monthly (1st) until reapproved.
@@ -176,6 +186,8 @@ export async function memberNeedsPaymentAsync(
     | "paymentMethod"
     | "staffGrantExpiresAt"
     | "staffGrantedAt"
+    | "paymentNote"
+    | "byowTrialEndsAt"
   > | null,
   userId: string,
 ): Promise<boolean> {

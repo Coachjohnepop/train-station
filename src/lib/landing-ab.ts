@@ -5,8 +5,7 @@
  * If a challenger fails, set LANDING_AB_ENABLED to false (or LIVE to ["tour"] only).
  * Preview URLs /l/jeremy, /l/floor, /l/class still work without rotating traffic.
  *
- * Live split (this pass): A (tour / tickets) vs B (get started — How it Works + Try it now).
- * 6:30am class and floor stay preview at /l/class and /l/floor.
+ * Live split: A (tour / tickets) vs B (user-chosen: BYOW ingest or Jeremy's Today).
  */
 
 export const LANDING_AB_COOKIE = "ts_landing";
@@ -34,7 +33,7 @@ export const LANDING_AB_META: Record<
   { letter: string; name: string; status: LandingAbArmStatus }
 > = {
   tour: { letter: "A", name: "Tour (homepage)", status: "live" },
-  jeremy: { letter: "B", name: "Get started · real app walk", status: "live" },
+  jeremy: { letter: "B", name: "Get started · BYOW or Jeremy Today", status: "live" },
   floor: { letter: "C", name: "Floor", status: "preview" },
   class: { letter: "D", name: "6:30am Zoom class", status: "preview" },
 };
@@ -46,7 +45,7 @@ export const LANDING_AB_TEST = {
     "Find the first ask that gets a stranger using the Train Station — not just watching a video.",
   goal: "More people start Today (Free / Train Station Style or a paid seat) without bouncing on a ticket pick.",
   a: "A (control): tickets first. Start membership is the main tap. How it Works is the caricature tour.",
-  b: "B (challenger): teach the real Today / log-set / rest walk, ask if they’d bring their own workout later, then Train Station Style. No BYOW signup yet.",
+  b: "B (challenger): user chooses — paste your workout (username + ingest) or Jeremy’s Today. Email later. 7-day console.",
 } as const;
 
 /** Old live D — keep /l/class sticky; do not assign it on `/`. */

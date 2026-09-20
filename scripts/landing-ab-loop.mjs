@@ -122,9 +122,9 @@ async function assertVariant(page, expect, label) {
     else pass(`${label} tour is not B`);
   }
   if (expect === "jeremy") {
-    if (/Would you use the Train Station/i.test(body) || /See how to use it/i.test(body)) {
-      pass(`${label} B walk`);
-    } else fail(`${label} B walk`, body.slice(0, 180));
+    if (/already have a workout/i.test(body) || /I have a workout/i.test(body)) {
+      pass(`${label} B fork`);
+    } else fail(`${label} B fork`, body.slice(0, 180));
   }
   if (expect === "floor") {
     if (/This is/i.test(body) && /Start Free/i.test(body)) pass(`${label} C CTAs`);
@@ -182,80 +182,32 @@ async function browserStickiness(viewportKey) {
 }
 
 async function browserCtas(viewportKey) {
-  console.log(`\n=== B walk + D CTA (${viewportKey}) ===`);
+  console.log(`\n=== B fork + D CTA (${viewportKey}) ===`);
   await withBrowser("cta", viewportKey, async (page) => {
-    const audioHits = [];
-    page.on("response", (res) => {
-      const u = res.url();
-      if (u.includes("/audio/walk-") && (res.status() === 200 || res.status() === 206)) {
-        audioHits.push(u);
-      }
-    });
     await page.goto(BASE + "/l/jeremy", { waitUntil: "domcontentloaded", timeout: 45000 });
     await page.waitForTimeout(800);
-    const ask = page.getByText("Would you use the Train Station");
-    if ((await ask.count()) > 0) pass(`${viewportKey} B ask visible`);
-    else fail(`${viewportKey} B ask visible`, (await page.locator("body").innerText()).slice(0, 160));
+    const ask = page.getByText("Do you already have a workout?");
+    if ((await ask.count()) > 0) pass(`${viewportKey} B fork visible`);
+    else fail(`${viewportKey} B fork visible`, (await page.locator("body").innerText()).slice(0, 180));
 
-    const yes = page.locator('[data-analytics-action="hero-b-byow-interest-yes"]');
-    if ((await yes.count()) === 0) {
-      fail(`${viewportKey} B yes missing`);
+    const own = page.locator('[data-analytics-action="b-fork-own"]');
+    if ((await own.count()) === 0) {
+      fail(`${viewportKey} B yes-own missing`);
       return;
     }
-    await yes.first().click();
+    await own.first().click();
     await page.waitForTimeout(400);
-    const email = page.locator('[data-analytics-action="walk-byow-email"]');
-    if ((await email.count()) === 0) {
-      fail(`${viewportKey} B BYOW email missing`);
-      return;
-    }
-    await email.first().fill(`byow-loop-${Date.now()}@example.com`);
-    await page.locator('[data-analytics-action="walk-byow-submit"]').first().click();
-    await page.waitForTimeout(800);
-    const today = page.getByText("Air Squats");
-    if ((await today.count()) > 0) pass(`${viewportKey} B today list`);
-    else fail(`${viewportKey} B today list`);
-
-    const openEx = page.locator('[data-analytics-action="walk-next-today"]');
-    if ((await openEx.count()) === 0) {
-      fail(`${viewportKey} B open exercise missing`);
-      return;
-    }
-    await openEx.first().click();
+    if ((await page.getByPlaceholder("Username").count()) > 0) pass(`${viewportKey} B username`);
+    else fail(`${viewportKey} B username`);
+    if ((await page.locator("textarea").count()) > 0) pass(`${viewportKey} B paste`);
+    else fail(`${viewportKey} B paste`);
+    await page.getByText("Back").first().click();
+    await page.waitForTimeout(300);
+    const jer = page.locator('[data-analytics-action="b-fork-jeremy"]');
+    await jer.first().click();
     await page.waitForTimeout(400);
-    const log = page.locator('[data-analytics-action="walk-log-set"]');
-    if ((await log.count()) === 0) {
-      fail(`${viewportKey} B log set missing`);
-      return;
-    }
-    if (/135/i.test(await page.locator("body").innerText())) {
-      fail(`${viewportKey} B air squats must not show 135 lb`);
-    } else pass(`${viewportKey} B air squats bodyweight`);
-    await log.first().click();
-    await page.waitForTimeout(400);
-    if ((await page.getByText("Rest").count()) > 0) pass(`${viewportKey} B rest`);
-    else fail(`${viewportKey} B rest`);
-
-    await page.locator('[data-analytics-action="walk-next-rest"]').first().click();
-    await page.waitForTimeout(400);
-    const style = page.locator('[data-analytics-action="walk-train-station-style"]');
-    if ((await style.count()) === 0) {
-      fail(`${viewportKey} B Train Station Style missing`);
-      return;
-    }
-    await style.first().click();
-    await page.waitForTimeout(800);
-    const url = page.url();
-    if (url.includes("signup") && url.includes("explorer")) pass(`${viewportKey} B exits to explorer`, url.replace(BASE, ""));
-    else fail(`${viewportKey} B exits to explorer`, url);
-
-    const audioOk = [];
-    for (const name of ["walk-today", "walk-set", "walk-rest", "walk-done"]) {
-      const res = await fetch(`${BASE}/audio/${name}.mp3`);
-      if (res.ok) audioOk.push(name);
-    }
-    if (audioOk.length === 4) pass(`${viewportKey} B walk audio 200`, audioOk.join(","));
-    else fail(`${viewportKey} B walk audio 200`, `ok=${audioOk.join(",") || "none"} hits=${audioHits.length}`);
+    if ((await page.getByText("Jeremy").count()) > 0) pass(`${viewportKey} B jeremy path`);
+    else fail(`${viewportKey} B jeremy path`);
   });
   await withBrowser("cta-class", viewportKey, async (page) => {
     await page.goto(BASE + "/l/class", { waitUntil: "domcontentloaded", timeout: 45000 });
