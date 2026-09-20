@@ -197,11 +197,11 @@ async function browserCtas(viewportKey) {
     if ((await start.count()) > 0 && (await see.count()) > 0 && (await own.count()) > 0) {
       pass(`${viewportKey} B choices`);
     } else fail(`${viewportKey} B choices`, (await page.locator("body").innerText()).slice(0, 180));
-    if ((await page.getByText("Tap to meet Jeremy").count()) === 0) {
+    if ((await page.getByText("Play").count()) === 0) {
       pass(`${viewportKey} meet Jeremy hidden at start`);
     } else fail(`${viewportKey} meet Jeremy hidden at start`);
     await page.waitForTimeout(2500);
-    if ((await page.getByText("Tap to meet Jeremy").count()) > 0) pass(`${viewportKey} meet Jeremy after 3s`);
+    if ((await page.getByText("Play").count()) > 0) pass(`${viewportKey} meet Jeremy after 3s`);
     else fail(`${viewportKey} meet Jeremy after 3s`);
 
     await own.first().click();
@@ -222,8 +222,8 @@ async function browserCtas(viewportKey) {
     await page.waitForTimeout(300);
     await learn.first().click();
     await page.waitForTimeout(500);
-    if ((await page.getByRole("button", { name: "Start" }).count()) > 0) pass(`${viewportKey} B learn Start`);
-    else fail(`${viewportKey} B learn Start`);
+    if ((await page.getByRole("button", { name: "Play" }).count()) > 0) pass(`${viewportKey} B learn Play`);
+    else fail(`${viewportKey} B learn Play`);
     if ((await page.getByRole("button", { name: "Memberships" }).count()) > 0) pass(`${viewportKey} B learn Memberships`);
     else fail(`${viewportKey} B learn Memberships`);
     const closeTour = page.getByRole("button", { name: "Close tour" });
@@ -236,9 +236,14 @@ async function browserCtas(viewportKey) {
     if ((await page.getByText("Today").count()) > 0 || (await page.getByText("Live session").count()) > 0) {
       pass(`${viewportKey} B program preview`);
     } else fail(`${viewportKey} B program preview`);
+    const playProg = page.locator('[data-analytics-action="b-program-play"]');
+    if ((await playProg.count()) > 0) await playProg.first().click();
+    await page.waitForTimeout(400);
     const next = page.locator('[data-analytics-action="b-program-next"]');
     if ((await next.count()) > 0) await next.first().click();
     await page.waitForTimeout(400);
+    if ((await playProg.count()) > 0) await playProg.first().click();
+    await page.waitForTimeout(300);
     if ((await next.count()) > 0) await next.first().click();
     await page.waitForTimeout(400);
     if ((await page.getByText("Like what you see").count()) > 0) pass(`${viewportKey} B program username last`);

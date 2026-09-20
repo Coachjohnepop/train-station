@@ -12,6 +12,8 @@ import { useFormAutofillSync } from "@/hooks/useFormAutofillSync";
 import MembershipSeatArt from "@/components/MembershipSeatArt";
 import { NextStepButton } from "@/components/NextStepButton";
 import { TICKET_TIERS } from "@/lib/landing-tickets";
+import { warmUrl } from "@/lib/warm-media";
+import { FREE_TICKET_FULL_SRC } from "@/lib/landing-media";
 
 /** Ticket signup UI. Account creation is completeMemberSignup (shared with /byow). */
 function SignupForm() {
@@ -57,6 +59,10 @@ function SignupForm() {
     if (values.password) setPassword(values.password);
     if (values["password-confirm"]) setConfirmPassword(values["password-confirm"]);
   });
+
+  useEffect(() => {
+    if (ticketPlan === "explorer") warmUrl(FREE_TICKET_FULL_SRC, "video");
+  }, [ticketPlan]);
 
   useEffect(() => {
     try {
@@ -248,6 +254,9 @@ function SignupForm() {
                     key={tier.id}
                     type="button"
                     onClick={() => {
+                      if (tier.signupPlan === "explorer") {
+                        warmUrl(FREE_TICKET_FULL_SRC, "video");
+                      }
                       const next = new URLSearchParams(searchParams.toString());
                       next.set("plan", tier.signupPlan);
                       router.replace(`/signup?${next.toString()}`);

@@ -28,6 +28,7 @@ export default function LandingByowFork({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [previewBeat, setPreviewBeat] = useState(0);
+  const [previewArmed, setPreviewArmed] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -38,11 +39,13 @@ export default function LandingByowFork({
       setPath(null);
       setError("");
       setPreviewBeat(0);
+      setPreviewArmed(false);
       return;
     }
     setPath(initialPath);
     setError("");
     setPreviewBeat(0);
+    setPreviewArmed(false);
   }, [open, initialPath]);
 
   if (!open || !mounted) return null;
@@ -114,16 +117,22 @@ export default function LandingByowFork({
             <div className="flex w-full max-w-lg flex-1 flex-col justify-center gap-4 py-3">
               <HowItWorksScreen
                 stepId={previewStep}
-                motion="animate"
-                playKey={`program-${previewBeat}`}
+                motion={previewArmed ? "animate" : "still"}
+                playKey={`program-${previewBeat}-${previewArmed ? "go" : "wait"}`}
               />
               <button
                 type="button"
-                data-analytics-action="b-program-next"
+                data-analytics-action={previewArmed ? "b-program-next" : "b-program-play"}
                 className="inline-flex h-14 w-full items-center justify-center rounded-full bg-[#7c3aed] text-[17px] font-extrabold text-white"
-                onClick={() => setPreviewBeat((n) => n + 1)}
+                onClick={() => {
+                  if (!previewArmed) {
+                    setPreviewArmed(true);
+                    return;
+                  }
+                  setPreviewBeat((n) => n + 1);
+                }}
               >
-                Next
+                {previewArmed ? "Next" : "Play"}
               </button>
             </div>
           ) : null}

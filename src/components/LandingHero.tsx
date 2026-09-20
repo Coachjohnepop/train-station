@@ -385,7 +385,11 @@ export default function LandingHero({
           />
         </>
       ) : (
-        <LandingSeeInsideTour open={tourOpen} onClose={() => setTourOpen(false)} />
+        <LandingSeeInsideTour
+          open={tourOpen}
+          pausedStart
+          onClose={() => setTourOpen(false)}
+        />
       )}
     </section>
   );
@@ -459,7 +463,7 @@ function JeremyHeroStack({
             readySrc={
               meetSrc.includes("jeremy-welcome") ? JEREMY_WELCOME_READY_VIDEO_SRC : null
             }
-            title="Tap to meet Jeremy"
+            title="Play"
             analyticsAction="hero-meet-jeremy-play"
           />
         </div>
@@ -493,7 +497,7 @@ function FloorHeroStack({
     <>
       <LandingAbClip
         src={floorSrc}
-        title="This is Today — tap to watch"
+        title="Play"
         analyticsAction="hero-floor-play"
       />
       <div className="mt-5 w-full max-w-sm">

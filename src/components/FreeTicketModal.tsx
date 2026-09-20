@@ -76,6 +76,7 @@ export default function FreeTicketModal({
 }) {
   void _gagConfig;
   const [showJeremy, setShowJeremy] = useState(false);
+  const [jeremyPlay, setJeremyPlay] = useState(false);
   const timersRef = useRef<number[]>([]);
   const jeremyVideoRef = useRef<HTMLVideoElement>(null);
   const gagHostRef = useRef<HTMLDivElement>(null);
@@ -122,6 +123,7 @@ export default function FreeTicketModal({
     if (!open) {
       stopFreeTicketGag();
       setShowJeremy(false);
+      setJeremyPlay(false);
       setBackgroundMusicOverlay(false);
       return;
     }
@@ -158,15 +160,15 @@ export default function FreeTicketModal({
   }, [open]);
 
   useEffect(() => {
-    if (gag.enabled || !open || !hasJeremy) return;
+    if (!jeremyPlay || !open || !hasJeremy) return;
     const el = jeremyVideoRef.current;
     if (!el) return;
     el.muted = false;
     applyMediaVolumeDb(el, jeremyVolumeDb);
     void el.play().catch(() => {
-      /* may need another tap */
+      /* wait for Play tap */
     });
-  }, [gag.enabled, open, hasJeremy, jeremyVolumeDb]);
+  }, [jeremyPlay, open, hasJeremy, jeremyVolumeDb]);
 
   if (!open) return null;
 
@@ -258,28 +260,41 @@ export default function FreeTicketModal({
               />
             </div>
           ) : hasJeremy && jeremyVideoUrl ? (
-            <video
-              ref={jeremyVideoRef}
-              key="jeremy-file"
-              className="ts-inapp-video absolute inset-0 h-full w-full object-cover bg-black"
-              src={jeremyVideoUrl}
-              title="Coach Jeremy"
-              playsInline
-              muted={false}
-              autoPlay
-              preload="auto"
-              disablePictureInPicture
-              controlsList="nodownload nofullscreen noremoteplayback noplaybackrate"
-              onLoadedMetadata={(e) => {
-                stripNativeVideoChrome(e.currentTarget);
-                e.currentTarget.muted = false;
-                applyMediaVolumeDb(e.currentTarget, jeremyVolumeDb);
-              }}
-              onPlay={(e) => {
-                e.currentTarget.muted = false;
-                applyMediaVolumeDb(e.currentTarget, jeremyVolumeDb);
-              }}
-            />
+            <>
+              <video
+                ref={jeremyVideoRef}
+                key="jeremy-file"
+                className="ts-inapp-video absolute inset-0 h-full w-full object-cover bg-black"
+                src={jeremyVideoUrl}
+                title="Coach Jeremy"
+                playsInline
+                muted={false}
+                autoPlay={false}
+                preload="auto"
+                disablePictureInPicture
+                controlsList="nodownload nofullscreen noremoteplayback noplaybackrate"
+                onLoadedMetadata={(e) => {
+                  stripNativeVideoChrome(e.currentTarget);
+                  e.currentTarget.muted = false;
+                  applyMediaVolumeDb(e.currentTarget, jeremyVolumeDb);
+                }}
+                onPlay={(e) => {
+                  e.currentTarget.muted = false;
+                  applyMediaVolumeDb(e.currentTarget, jeremyVolumeDb);
+                }}
+              />
+              {jeremyPlay ? null : (
+                <button
+                  type="button"
+                  className="absolute inset-0 z-10 flex items-center justify-center bg-black/40"
+                  onClick={() => setJeremyPlay(true)}
+                >
+                  <span className="inline-flex min-h-14 min-w-[8rem] items-center justify-center rounded-full bg-[#7c3aed] px-8 text-xl font-extrabold text-white">
+                    Play
+                  </span>
+                </button>
+              )}
+            </>
           ) : (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/90 p-4 text-center text-sm text-[var(--muted)]">
               <p className="text-base font-medium text-white">Coach intro coming soon</p>

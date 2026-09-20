@@ -483,11 +483,11 @@ export default function LandingSeeInsideTour({
           <div className="flex flex-col gap-2">
             <button
               type="button"
-              data-analytics-action="tour-start"
+              data-analytics-action="tour-play"
               onClick={startTour}
               className="landing-hero-early-signup inline-flex min-h-14 w-full items-center justify-center rounded-full px-8 text-[19px] font-extrabold tracking-tight transition-transform active:scale-[0.98]"
             >
-              Start
+              Play
             </button>
             <button
               type="button"
