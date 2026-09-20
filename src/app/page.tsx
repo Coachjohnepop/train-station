@@ -106,7 +106,7 @@ export default async function HomePage() {
           rememberReturn={false}
           purchaseAuth={{ signedIn: true, role: session.role }}
           variant={landingVariant}
-          meetVideoUrl={landingVideos.freeTicketFullUrl}
+          meetVideoUrl={landingVideos.welcomeVideoUrl}
         />
       </>
     );
@@ -190,7 +190,7 @@ export default async function HomePage() {
       heroSlides={landingVideos.heroSlides}
       returning={returning}
       variant={landingVariant}
-      meetVideoUrl={landingVideos.freeTicketFullUrl}
+      meetVideoUrl={landingVideos.welcomeVideoUrl}
     />
   );
 }

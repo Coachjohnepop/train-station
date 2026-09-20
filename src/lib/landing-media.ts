@@ -229,8 +229,23 @@ export function isRickrollVideoUrl(url: string | null | undefined): boolean {
   return (
     /dQw4w9WgXcQ/i.test(url) ||
     /rick.?roll/i.test(url) ||
-    /free-ticket-chorus/i.test(url)
+    /free-ticket-chorus/i.test(url) ||
+    /free-ticket-full/i.test(url)
   );
+}
+
+/** B “meet Jeremy” clip — overall welcome, never the Free gag. */
+export function meetJeremyClipSrc(
+  meet?: string | null,
+  welcome?: string | null,
+): string {
+  for (const raw of [meet, welcome]) {
+    const u = raw?.trim();
+    if (!u) continue;
+    if (isRickrollVideoUrl(u) || isYoutubeUrl(u) || !isDirectVideoUrl(u)) continue;
+    return u;
+  }
+  return JEREMY_WELCOME_VIDEO_SRC;
 }
 
 /**

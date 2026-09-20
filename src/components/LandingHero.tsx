@@ -26,9 +26,8 @@ import LandingAbClip from "@/components/LandingAbClip";
 import type { LandingAbVariant } from "@/lib/landing-ab";
 import { LIVE_CLASS_OFFER } from "@/lib/live-class-offer";
 import {
-  FREE_TICKET_FULL_SRC,
-  FREE_TICKET_GAG_POSTER,
   JEREMY_WELCOME_VIDEO_SRC,
+  meetJeremyClipSrc,
 } from "@/lib/landing-media";
 
 /** Locked first headline so SMS open doesn’t fight a rotating word. */
@@ -250,7 +249,7 @@ export default function LandingHero({
 
             {variant === "jeremy" ? (
               <JeremyHeroStack
-                meetSrc={meetVideoUrl?.trim() || FREE_TICKET_FULL_SRC}
+                meetSrc={meetJeremyClipSrc(meetVideoUrl, welcomeVideoUrl)}
                 returnMode={returnMode}
                 exploreOpen={exploreOpen}
                 onExplore={onExplore}
@@ -447,7 +446,6 @@ function JeremyHeroStack({
       <div className="mt-5 w-full max-w-sm">
         <LandingAbClip
           src={meetSrc}
-          poster={FREE_TICKET_GAG_POSTER}
           title="Or tap to meet Jeremy"
           analyticsAction="hero-meet-jeremy-play"
         />
