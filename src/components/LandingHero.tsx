@@ -457,12 +457,10 @@ function JeremyHeroStack({
         </EasyPathChoices>
       </div>
       {showMeet ? (
-        <div className="mt-3 w-full max-w-sm sm:max-w-xl">
+        <div className="mt-3 w-full max-w-xl">
           <LandingAbClip
             src={meetSrc}
-            readySrc={
-              meetSrc.includes("jeremy-welcome") ? JEREMY_WELCOME_READY_VIDEO_SRC : null
-            }
+            readySrc={JEREMY_WELCOME_READY_VIDEO_SRC}
             title="Play"
             analyticsAction="hero-meet-jeremy-play"
           />
