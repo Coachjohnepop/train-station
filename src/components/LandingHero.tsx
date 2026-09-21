@@ -242,7 +242,7 @@ export default function LandingHero({
             ? "pb-[max(5.5rem,calc(env(safe-area-inset-bottom)+6.25rem))]"
             : "pb-[max(2.75rem,calc(env(safe-area-inset-bottom)+4.5rem))]"
         }`}>
-          <div className="landing-hero-stack flex w-full max-w-md flex-col items-center sm:max-w-lg">
+          <div className="landing-hero-stack flex w-full max-w-md flex-col items-center sm:max-w-xl">
             <p className="mb-2.5 text-[10px] font-extrabold uppercase tracking-[0.4em] text-[#e9d5ff] drop-shadow-[0_2px_14px_rgba(0,0,0,0.95)] sm:mb-3 sm:text-[11px] sm:tracking-[0.45em]">
               The Train Station
             </p>
@@ -457,7 +457,7 @@ function JeremyHeroStack({
         </EasyPathChoices>
       </div>
       {showMeet ? (
-        <div className="mt-3 w-full max-w-sm">
+        <div className="mt-3 w-full max-w-sm sm:max-w-xl">
           <LandingAbClip
             src={meetSrc}
             readySrc={

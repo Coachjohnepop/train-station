@@ -5,8 +5,6 @@ import { warmUrl } from "@/lib/warm-media";
 import { startThemeSongFromOnboardingPlay } from "@/lib/background-music-control";
 import { unlockLandingMix } from "@/lib/landing-mix-audio";
 
-type Phase = "idle" | "intro" | "ready" | "part2";
-
 export default function LandingAbClip({
   src,
   readySrc,
@@ -15,30 +13,26 @@ export default function LandingAbClip({
   analyticsAction,
 }: {
   src: string;
-  /** If set, first clip stops and a READY button plays this second clip. */
+  /** Second half of the intro — shown beside / under part 1 with READY. */
   readySrc?: string | null;
   poster?: string | null;
   title: string;
   analyticsAction: string;
 }) {
-  const ref = useRef<HTMLVideoElement>(null);
-  const [phase, setPhase] = useState<Phase>("idle");
-  const [clip, setClip] = useState(src);
+  const part1Ref = useRef<HTMLVideoElement>(null);
+  const part2Ref = useRef<HTMLVideoElement>(null);
+  const part2WrapRef = useRef<HTMLDivElement>(null);
+  const [part1On, setPart1On] = useState(false);
+  const [part2On, setPart2On] = useState(false);
+  const [part2Armed, setPart2Armed] = useState(false);
 
   useEffect(() => {
     warmUrl(src, "video");
     if (readySrc) warmUrl(readySrc, "video");
   }, [src, readySrc]);
 
-  async function playFrom(url: string, next: Phase) {
-    const el = ref.current;
+  async function playEl(el: HTMLVideoElement | null) {
     if (!el) return;
-    if (el.getAttribute("src") !== url) {
-      el.src = url;
-      el.load();
-    }
-    setClip(url);
-    setPhase(next);
     unlockLandingMix();
     startThemeSongFromOnboardingPlay();
     try {
@@ -54,55 +48,128 @@ export default function LandingAbClip({
     }
   }
 
-  const showPoster = phase === "idle";
-  const showReady = phase === "ready";
-  const showControls = phase === "intro" || phase === "part2";
+  function snapPart2ToTop() {
+    const node = part2WrapRef.current;
+    if (!node) return;
+    const mobile = typeof window !== "undefined" && window.matchMedia("(max-width: 639px)").matches;
+    if (!mobile) return;
+    node.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  async function playPart1() {
+    part2Ref.current?.pause();
+    setPart1On(true);
+    await playEl(part1Ref.current);
+  }
+
+  async function playPart2() {
+    part1Ref.current?.pause();
+    setPart2Armed(true);
+    setPart2On(true);
+    snapPart2ToTop();
+    await playEl(part2Ref.current);
+  }
+
+  if (!readySrc) {
+    return (
+      <SingleTile
+        src={src}
+        poster={poster}
+        title={title}
+        analyticsAction={analyticsAction}
+        playing={part1On}
+        videoRef={part1Ref}
+        onPlay={() => void playPart1()}
+        onEnded={() => setPart1On(false)}
+      />
+    );
+  }
 
   return (
-    <div className="relative w-full max-w-sm overflow-hidden rounded-2xl bg-black ring-1 ring-white/20">
+    <div className="grid w-full grid-cols-1 gap-3 sm:grid-cols-2">
+      <SingleTile
+        src={src}
+        poster={poster}
+        title={title}
+        analyticsAction={analyticsAction}
+        playing={part1On}
+        videoRef={part1Ref}
+        onPlay={() => void playPart1()}
+        onEnded={() => {
+          setPart1On(false);
+          setPart2Armed(true);
+          snapPart2ToTop();
+        }}
+      />
+      <div ref={part2WrapRef} className="scroll-mt-[4.5rem] sm:scroll-mt-0">
+        <SingleTile
+          src={readySrc}
+          title="READY"
+          analyticsAction="hero-meet-jeremy-ready"
+          playing={part2On}
+          videoRef={part2Ref}
+          cta="READY"
+          hint={part2Armed ? "Part 2" : "Part 2 · after Play"}
+          onPlay={() => void playPart2()}
+          onEnded={() => setPart2On(false)}
+        />
+      </div>
+    </div>
+  );
+}
+
+function SingleTile({
+  src,
+  poster,
+  title,
+  analyticsAction,
+  playing,
+  videoRef,
+  onPlay,
+  onEnded,
+  cta,
+  hint,
+}: {
+  src: string;
+  poster?: string | null;
+  title: string;
+  analyticsAction: string;
+  playing: boolean;
+  videoRef: React.RefObject<HTMLVideoElement | null>;
+  onPlay: () => void;
+  onEnded: () => void;
+  cta?: string;
+  hint?: string;
+}) {
+  return (
+    <div className="relative w-full overflow-hidden rounded-2xl bg-black ring-1 ring-white/20">
       <video
-        ref={ref}
+        ref={videoRef}
         className="aspect-video w-full object-cover"
-        src={clip}
+        src={src}
         poster={poster || undefined}
         playsInline
         preload="auto"
-        controls={showControls}
+        controls={playing}
         onPlay={() => {
-          setPhase((p) => (p === "idle" ? "intro" : p));
+          /* parent owns phase */
         }}
-        onEnded={() => {
-          const current = ref.current?.currentSrc || ref.current?.getAttribute("src") || "";
-          if (readySrc && !current.includes("jeremy-welcome-ready")) setPhase("ready");
-          else setPhase("idle");
-        }}
+        onEnded={onEnded}
         aria-label={title}
       />
-      {showPoster ? (
+      {playing ? null : (
         <button
           type="button"
           data-analytics-action={analyticsAction}
-          onClick={() => void playFrom(src, "intro")}
-          className="absolute inset-0 flex flex-col items-center justify-center bg-black/35 px-4 text-center"
+          onClick={onPlay}
+          className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 px-3 text-center"
         >
-          <span className="flex h-14 w-14 items-center justify-center rounded-full bg-[#7c3aed] text-2xl text-white shadow-lg shadow-[#7c3aed]/40">
-            ▶
+          <span className="inline-flex min-h-12 min-w-[7.5rem] items-center justify-center rounded-full bg-[#7c3aed] px-6 text-base font-extrabold tracking-wide text-white shadow-lg shadow-[#7c3aed]/40">
+            {cta || title}
           </span>
-          <span className="mt-3 text-sm font-bold text-white">{title}</span>
+          {hint ? <span className="mt-2 text-[11px] font-semibold text-white/80">{hint}</span> : null}
         </button>
-      ) : null}
-      {showReady && readySrc ? (
-        <button
-          type="button"
-          data-analytics-action="hero-meet-jeremy-ready"
-          onClick={() => void playFrom(readySrc, "part2")}
-          className="absolute inset-0 flex flex-col items-center justify-center bg-black/55 px-4 text-center"
-        >
-          <span className="inline-flex min-h-14 min-w-[10rem] items-center justify-center rounded-full bg-[#7c3aed] px-10 text-xl font-extrabold tracking-wide text-white shadow-lg shadow-[#7c3aed]/40">
-            READY
-          </span>
-        </button>
-      ) : null}
+      )}
     </div>
   );
 }
