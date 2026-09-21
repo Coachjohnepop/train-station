@@ -21,6 +21,7 @@ import {
 } from "@/lib/demo-enrollments";
 import {
   enrollUserInProgramDb,
+  renewExpiredProgramBlocksDb,
   getEnrollmentsMapForUser,
   resolveStorageUserId,
   setUserProgramPositionDb,
@@ -68,6 +69,11 @@ export async function getUserEnrollments(userId?: string): Promise<EnrollmentsMa
  * Enroll a user in a program (idempotent).
  * Preview: writes to enrollments.dev.json.
  */
+export async function renewExpiredProgramBlocks(userId: string) {
+  if (isDemoMode()) return { renewed: 0, todayIso: null };
+  return renewExpiredProgramBlocksDb(userId);
+}
+
 export async function enrollUserInProgram(
   slug: string,
   userId?: string,

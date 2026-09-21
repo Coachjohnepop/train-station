@@ -120,6 +120,39 @@ export async function enrollUserInProgramDb(
   });
 }
 
+/** After a paid renewal, roll expired 28-day blocks to start today. */
+export async function renewExpiredProgramBlocksDb(
+  userId: string,
+  opts?: { todayIso?: string; blockDays?: number },
+) {
+  const storageUserId = await resolveStorageUserId(userId);
+  const todayIso = opts?.todayIso?.trim() || localTodayIso();
+  const rows = await prisma.programEnrollment.findMany({
+    where: { userId: storageUserId },
+  });
+  let renewed = 0;
+  for (const row of rows) {
+    const start = isoDateFromDb(row.programStartDate);
+    const end =
+      isoDateFromDb(row.blockEndsAt) ||
+      (start ? blockEndDateFromStart(start, opts?.blockDays) : null);
+    if (end && end >= todayIso) continue;
+    await prisma.programEnrollment.update({
+      where: { id: row.id },
+      data: {
+        currentWeek: 1,
+        currentDay: 1,
+        programStartDate: parseProgramStartDate(todayIso),
+        blockEndsAt: parseProgramStartDate(
+          blockEndDateFromStart(todayIso, opts?.blockDays),
+        ),
+      },
+    });
+    renewed += 1;
+  }
+  return { renewed, todayIso };
+}
+
 export async function unenrollUserFromProgramDb(slug: string, userId: string) {
   const storageUserId = await resolveStorageUserId(userId);
   const program = await prisma.program.findUnique({ where: { slug } });

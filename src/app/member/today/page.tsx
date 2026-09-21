@@ -312,7 +312,7 @@ export default async function MemberTodayPage({ searchParams }: Props) {
     : programBlock?.status === "pending"
       ? `Your 28-day program starts ${formatProgramStartOption(programBlock.programStartDate)}`
       : programBlock?.status === "expired"
-        ? "Your 28-day block has ended — renew to continue"
+        ? "Your 28-day block has ended — start the next one"
         : source === "program"
           ? `Program schedule — ${scheduleLabel}`
           : schedulePreview

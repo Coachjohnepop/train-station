@@ -21,7 +21,6 @@ import type { ResolvedDayPart } from "@/lib/program-day-sessions";
 import FreeContentLockCard from "@/components/FreeContentLockCard";
 import SaveGuestUsernamePrompt from "@/components/SaveGuestUsernamePrompt";
 import type { ContentAccessResult } from "@/lib/gamification-content-access";
-
 import MemberMaintainConsoleStage, {
   notifyMaintainWorkoutEngage,
 } from "@/components/MemberMaintainConsoleStage";
@@ -31,6 +30,58 @@ import type {
   MaintainAccess,
   MaintainWorkoutCard,
 } from "@/lib/member-maintain-workouts";
+
+function ExpiredProgramBlockCard({ blockEndsAt }: { blockEndsAt: string }) {
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  async function startNextBlock() {
+    setBusy(true);
+    setError("");
+    try {
+      const res = await fetch("/api/member/program-block/renew", { method: "POST" });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(
+          typeof body.error === "string"
+            ? body.error
+            : "Could not start the next block.",
+        );
+        return;
+      }
+      router.refresh();
+    } catch {
+      setError("Could not start the next block.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm">
+      <p className="font-semibold text-amber-200">28-day block complete</p>
+      <p className="mt-1 text-[var(--muted)]">
+        Your last block ended {formatProgramStartOption(blockEndsAt)}. If your membership is
+        current, start the next 28 days.
+      </p>
+      <div className="mt-2 flex flex-wrap items-center gap-3">
+        <button
+          type="button"
+          className="btn-primary text-xs px-3 py-1.5"
+          disabled={busy}
+          onClick={() => void startNextBlock()}
+        >
+          {busy ? "Starting…" : "Start next 28-day block"}
+        </button>
+        <Link href="/member/account" className="text-xs text-accent hover:underline">
+          Account & billing →
+        </Link>
+      </div>
+      {error ? <p className="mt-2 text-xs text-rose-300">{error}</p> : null}
+    </div>
+  );
+}
 
 type Props = {
   todayIso: string;
@@ -437,16 +488,7 @@ export default function MemberTodayShell({
       )}
 
       {programBlock?.status === "expired" && (
-        <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm">
-          <p className="font-semibold text-amber-200">28-day block complete</p>
-          <p className="mt-1 text-[var(--muted)]">
-            Your access ended {formatProgramStartOption(programBlock.blockEndsAt)}. Renew your
-            membership to start the next block.
-          </p>
-          <Link href="/member/account" className="mt-2 inline-block text-xs text-accent hover:underline">
-            Account & billing →
-          </Link>
-        </div>
+        <ExpiredProgramBlockCard blockEndsAt={programBlock.blockEndsAt} />
       )}
 
       <div className="member-today-heading">

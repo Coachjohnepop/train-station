@@ -12,6 +12,7 @@ import {
   type PaymentMethod,
 } from "@/lib/member-profiles-store";
 import { sendWelcomeSignupIfNeeded } from "@/lib/member-welcome";
+import { renewExpiredProgramBlocks } from "@/lib/data/user-data";
 import { normalizeSignupPlan } from "@/lib/signup-plans";
 import type { NextResponse } from "next/server";
 
@@ -62,6 +63,15 @@ export async function markMemberPaid(input: {
 
   let updated = await updateMemberProfile(input.userId, patch);
   updated = await applyOfferBenefitsAfterPayment(input.userId, plan, updated);
+  try {
+    await renewExpiredProgramBlocks(input.userId);
+  } catch (e) {
+    console.warn(
+      "[mark-member-paid] program block renew failed",
+      input.userId,
+      e instanceof Error ? e.message : e,
+    );
+  }
 
   if (input.customOfferId) {
     try {
