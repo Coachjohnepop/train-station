@@ -3,6 +3,7 @@ import "server-only";
 import { listSelfRegisteredAccounts } from "@/lib/member-accounts-store";
 import { listMemberProfiles } from "@/lib/member-profiles-store";
 import { signupPlanLabel } from "@/lib/signup-plans";
+import { isCoachQueueNoise } from "@/lib/coach-queue-noise";
 import { isDemoMode } from "@/lib/demo-enrollments";
 import { isDatabaseConfigured } from "@/lib/database-config";
 
@@ -140,6 +141,7 @@ export async function listCoachNeedsDone(opts?: {
   for (const { email, account } of accounts) {
     const profile = profileByUserId.get(account.userId);
     if (!profile) continue;
+    if (isCoachQueueNoise({ email, name: account.name })) continue;
 
     const plan = profile.plan;
     const paidOk =

@@ -3,6 +3,9 @@ import "server-only";
 import { listSelfRegisteredAccounts } from "@/lib/member-accounts-store";
 import { listMemberProfiles } from "@/lib/member-profiles-store";
 import { signupPlanLabel } from "@/lib/signup-plans";
+import { isCoachQueueNoise } from "@/lib/coach-queue-noise";
+
+export { isCoachQueueNoise };
 
 export type QueueAction = "approve" | "mark_paid" | "intake" | "meeting" | "message";
 
@@ -33,6 +36,15 @@ export async function listCoachQueueItems(): Promise<CoachQueueItem[]> {
   for (const { email, account } of accounts) {
     const profile = profileByUserId.get(account.userId);
     if (!profile) continue;
+    if (
+      isCoachQueueNoise({
+        email,
+        name: account.name,
+        hidden: Boolean((account as { hidden?: boolean }).hidden),
+      })
+    ) {
+      continue;
+    }
 
     const base = {
       userId: account.userId,
