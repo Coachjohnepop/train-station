@@ -1982,3 +1982,142 @@ model ByowWorkoutLog {
   @@index([userId, completedAt])
   @@index([workoutId])
 }
+
+// ---------------------------------------------------------------------------
+// Analytics warehouse (star / snowflake) — OLAP copy. OLTP stays source of truth.
+// Loaded by mart-rollup. Never write member checkout here.
+// ---------------------------------------------------------------------------
+
+model WhDimDate {
+  dateKey        Int      @id
+  isoDate        DateTime @db.Date
+  year           Int
+  quarter        Int
+  month          Int
+  monthName      String
+  day            Int
+  dow            Int
+  dowName        String
+  isoWeek        Int
+  isFirstOfMonth Boolean  @default(false)
+  isWeekend      Boolean  @default(false)
+  landingSessions WhFactLandingSession[]
+  signups         WhFactSignup[]
+  payments        WhFactPayment[]
+  upgradeRequests WhFactUpgradeRequest[]
+}
+
+model WhDimPlan {
+  planKey    Int    @id
+  slug       String @unique
+  label      String
+  family     String
+  billing    String
+  priceCents Int    @default(0)
+  members    WhDimMember[]
+  signups    WhFactSignup[]
+  payments   WhFactPayment[]
+}
+
+model WhDimLanding {
+  landingKey Int    @id
+  letter     String
+  variant    String
+  path       String
+  name       String
+  sessions   WhFactLandingSession[]
+}
+
+model WhDimChannel {
+  channelKey Int    @id @default(autoincrement())
+  source     String @default("(none)")
+  medium     String @default("(none)")
+  campaign   String @default("(none)")
+  sessions   WhFactLandingSession[]
+
+  @@unique([source, medium, campaign])
+}
+
+model WhDimMember {
+  memberKey Int     @id @default(autoincrement())
+  userId    String  @unique
+  email     String
+  name      String
+  role      String
+  planKey   Int?
+  city      String?
+  state     String?
+  plan      WhDimPlan? @relation(fields: [planKey], references: [planKey])
+  sessions  WhFactLandingSession[]
+  signups   WhFactSignup[]
+  payments  WhFactPayment[]
+  upgrades  WhFactUpgradeRequest[]
+
+  @@index([planKey])
+  @@index([email])
+}
+
+model WhFactLandingSession {
+  factId            String   @id @default(cuid())
+  dateKey           Int
+  landingKey        Int
+  channelKey        Int?
+  memberKey         Int?
+  deviceType        String?
+  eventCount        Int      @default(0)
+  convertedSignup   Boolean  @default(false)
+  convertedPaid     Boolean  @default(false)
+  sourceSessionId   String   @unique
+  startedAt         DateTime
+  date              WhDimDate     @relation(fields: [dateKey], references: [dateKey])
+  landing           WhDimLanding  @relation(fields: [landingKey], references: [landingKey])
+  channel           WhDimChannel? @relation(fields: [channelKey], references: [channelKey])
+  member            WhDimMember?  @relation(fields: [memberKey], references: [memberKey])
+
+  @@index([dateKey, landingKey])
+  @@index([memberKey])
+}
+
+model WhFactSignup {
+  factId    String @id @default(cuid())
+  dateKey   Int
+  planKey   Int
+  memberKey Int
+  path      String?
+  date      WhDimDate   @relation(fields: [dateKey], references: [dateKey])
+  plan      WhDimPlan   @relation(fields: [planKey], references: [planKey])
+  member    WhDimMember @relation(fields: [memberKey], references: [memberKey])
+
+  @@unique([memberKey])
+  @@index([dateKey, planKey])
+}
+
+model WhFactPayment {
+  factId          String @id @default(cuid())
+  dateKey         Int
+  planKey         Int?
+  memberKey       Int?
+  amountCents     Int
+  status          String
+  method          String
+  sourcePaymentId String @unique
+  date            WhDimDate    @relation(fields: [dateKey], references: [dateKey])
+  plan            WhDimPlan?   @relation(fields: [planKey], references: [planKey])
+  member          WhDimMember? @relation(fields: [memberKey], references: [memberKey])
+
+  @@index([dateKey, status])
+  @@index([memberKey])
+}
+
+model WhFactUpgradeRequest {
+  factId       String   @id @default(cuid())
+  dateKey      Int
+  memberKey    Int
+  status       String
+  requestedAt  DateTime
+  sourceUserId String   @unique
+  date         WhDimDate   @relation(fields: [dateKey], references: [dateKey])
+  member       WhDimMember @relation(fields: [memberKey], references: [memberKey])
+
+  @@index([dateKey, status])
+}

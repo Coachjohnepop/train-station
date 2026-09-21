@@ -226,6 +226,8 @@ export async function runMartRollup(opts?: {
   };
 
   if (!opts?.dryRun) {
+    const { loadWarehouse } = await import("@/lib/warehouse-load");
+    await loadWarehouse();
     await prisma.$transaction([
       prisma.martDailyMetrics.upsert({
         where: { metricDate: dateOnly },
