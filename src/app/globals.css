@@ -1763,15 +1763,16 @@ body:has([data-admin-chrome]) [data-global-theme-toggle] {
 /* Hero primary CTA — fixed lavender; never inherits theme link colors */
 .landing-hero-early-signup {
   background: linear-gradient(180deg, #f5f3ff 0%, #ddd6fe 45%, #c4b5fd 100%) !important;
-  border: 2px solid #e8c547 !important;
+  border: 4px solid #e8c547 !important;
   color: #1e1b4b !important;
   -webkit-text-fill-color: #1e1b4b !important;
   box-shadow:
-    0 1px 0 #fff6c4,
-    0 3px 0 #b8860b,
-    0 7px 0 #6b4f08,
-    0 0 0 1px rgba(255, 255, 255, 0.35) inset,
-    0 12px 28px rgba(0, 0, 0, 0.4);
+    0 2px 0 #fff8d0,
+    0 5px 0 #d4af37,
+    0 8px 0 #b8860b,
+    0 12px 0 #6b4f08,
+    0 1px 0 rgba(255, 255, 255, 0.55) inset,
+    0 14px 28px rgba(0, 0, 0, 0.45);
 }
 
 .landing-hero-early-signup:hover {
@@ -1784,14 +1785,15 @@ body:has([data-admin-chrome]) [data-global-theme-toggle] {
 /* Same size as Join — outlined so both reads as a real button */
 .landing-hero-secondary-cta {
   background: rgba(0, 0, 0, 0.35) !important;
-  border: 2px solid #e8c547 !important;
+  border: 4px solid #e8c547 !important;
   color: #fff !important;
   -webkit-text-fill-color: #fff !important;
   box-shadow:
-    0 1px 0 #fff6c4,
-    0 3px 0 #b8860b,
-    0 7px 0 #6b4f08,
-    0 12px 28px rgba(0, 0, 0, 0.4);
+    0 2px 0 #fff8d0,
+    0 5px 0 #d4af37,
+    0 8px 0 #b8860b,
+    0 12px 0 #6b4f08,
+    0 14px 28px rgba(0, 0, 0, 0.45);
 }
 
 .landing-hero-secondary-cta:hover {
@@ -1822,14 +1824,15 @@ body:has([data-admin-chrome]) [data-global-theme-toggle] {
 
 .landing-hero-explore-cta {
   background: transparent !important;
-  border: 2px solid #e8c547 !important;
+  border: 4px solid #e8c547 !important;
   color: #fff !important;
   -webkit-text-fill-color: #fff !important;
   box-shadow:
-    0 1px 0 #fff6c4,
-    0 3px 0 #b8860b,
-    0 6px 0 #6b4f08,
-    0 10px 22px rgba(0, 0, 0, 0.35);
+    0 2px 0 #fff8d0,
+    0 5px 0 #d4af37,
+    0 8px 0 #b8860b,
+    0 11px 0 #6b4f08,
+    0 12px 24px rgba(0, 0, 0, 0.4);
 }
 
 .landing-hero-explore-cta:hover {
@@ -1838,12 +1841,13 @@ body:has([data-admin-chrome]) [data-global-theme-toggle] {
 }
 
 .landing-hero-clip-cta {
-  border: 2px solid #e8c547 !important;
+  border: 4px solid #e8c547 !important;
   box-shadow:
-    0 1px 0 #fff6c4,
-    0 3px 0 #b8860b,
-    0 6px 0 #6b4f08,
-    0 10px 22px rgba(0, 0, 0, 0.45);
+    0 2px 0 #fff8d0,
+    0 5px 0 #d4af37,
+    0 8px 0 #b8860b,
+    0 11px 0 #6b4f08,
+    0 12px 24px rgba(0, 0, 0, 0.45);
 }
 
 .landing-b-start-btns {
