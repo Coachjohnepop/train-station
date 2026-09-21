@@ -3,7 +3,6 @@
 export const STANDING_STAFF_GRANT_EMAILS = [
   // House / testers / developers — Business Class, never billed.
   "sprealty9@gmail.com", // Stephanie — developer + tester
-  "fletcherboys@att.net", // Ali — we train at her house
   "john@lemonvoice.com", // Lemon John — developer + tester
   "coachjohnepop@yahoo.com", // John's yahoo soak
   "john@thetrainstation.co",
