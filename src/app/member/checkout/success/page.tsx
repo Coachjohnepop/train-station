@@ -3,10 +3,13 @@
 import Link from "next/link";
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import BusinessUpgradeRequestCard from "@/components/BusinessUpgradeRequestCard";
 import PaymentReceiptCard, {
   type PaymentReceiptView,
 } from "@/components/PaymentReceiptCard";
 import YoutubeAutoplayFrame from "@/components/YoutubeAutoplayFrame";
+import type { BusinessUpgradeStatus } from "@/lib/business-upgrade";
+import { canRequestBusinessClassUpgrade } from "@/lib/business-upgrade";
 import { isYoutubeUrl } from "@/lib/youtube";
 
 type Phase = "confirming" | "ready" | "error";
@@ -20,6 +23,9 @@ function CheckoutSuccessInner() {
   const [continueHref, setContinueHref] = useState("/member/onboard");
   const [step, setStep] = useState<1 | 2>(1);
   const [thankYouVideo, setThankYouVideo] = useState<string | null>(null);
+  const [paidPlan, setPaidPlan] = useState<string | null>(null);
+  const [upgradeStatus, setUpgradeStatus] = useState<BusinessUpgradeStatus | null>(null);
+  const [upgradeRequestedAt, setUpgradeRequestedAt] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -83,6 +89,7 @@ function CheckoutSuccessInner() {
             paymentStatus: "paid",
             receiptUrl: null,
           });
+          if (typeof gatesData.plan === "string") setPaidPlan(gatesData.plan);
           setPhase("ready");
           return;
         }
@@ -97,6 +104,9 @@ function CheckoutSuccessInner() {
       if (typeof confirmData.redirectTo === "string" && confirmData.redirectTo) {
         setContinueHref(confirmData.redirectTo);
       }
+      if (typeof confirmData.plan === "string" && confirmData.plan) {
+        setPaidPlan(confirmData.plan);
+      }
 
       // 2) Load receipt details for a real confirmation screen.
       const receiptRes = await fetch(
@@ -110,6 +120,9 @@ function CheckoutSuccessInner() {
         setReceipt(receiptData.receipt);
         if (receiptData.receipt.nextPath) {
           setContinueHref(receiptData.receipt.nextPath);
+        }
+        if (typeof receiptData.receipt.plan === "string" && receiptData.receipt.plan) {
+          setPaidPlan(receiptData.receipt.plan);
         }
       } else {
         // Confirm worked; still show a minimal success without full receipt.
@@ -127,6 +140,19 @@ function CheckoutSuccessInner() {
         });
       }
       setPhase("ready");
+
+      const membershipRes = await fetch("/api/member/membership", { cache: "no-store" });
+      const membership = await membershipRes.json().catch(() => ({}));
+      if (cancelled) return;
+      if (typeof membership.plan === "string" && membership.plan) {
+        setPaidPlan(membership.plan);
+      }
+      if (membership.businessUpgradeStatus === "pending" || membership.businessUpgradeStatus === "declined") {
+        setUpgradeStatus(membership.businessUpgradeStatus);
+      }
+      if (typeof membership.businessUpgradeRequestedAt === "string") {
+        setUpgradeRequestedAt(membership.businessUpgradeRequestedAt);
+      }
     })();
 
     return () => {
@@ -192,6 +218,27 @@ function CheckoutSuccessInner() {
             </div>
           ) : null}
           <PaymentReceiptCard receipt={receipt} />
+          {canRequestBusinessClassUpgrade({
+            plan: paidPlan || receipt.plan,
+            paymentStatus: "paid",
+            businessUpgradeStatus: upgradeStatus,
+          }) ||
+          upgradeStatus === "pending" ||
+          upgradeStatus === "declined" ? (
+            <BusinessUpgradeRequestCard
+              canRequest={canRequestBusinessClassUpgrade({
+                plan: paidPlan || receipt.plan,
+                paymentStatus: "paid",
+                businessUpgradeStatus: upgradeStatus,
+              })}
+              status={upgradeStatus}
+              requestedAt={upgradeRequestedAt}
+              onStatus={(next) => {
+                setUpgradeStatus(next);
+                setUpgradeRequestedAt(new Date().toISOString());
+              }}
+            />
+          ) : null}
           <button
             type="button"
             className="btn-primary w-full text-sm"
@@ -217,6 +264,29 @@ function CheckoutSuccessInner() {
             Your payment is recorded. Continue to onboarding so we can line up your program and
             coach access. You can always return to Account for this receipt.
           </p>
+          <div className="text-left">
+            {canRequestBusinessClassUpgrade({
+              plan: paidPlan,
+              paymentStatus: "paid",
+              businessUpgradeStatus: upgradeStatus,
+            }) ||
+            upgradeStatus === "pending" ||
+            upgradeStatus === "declined" ? (
+              <BusinessUpgradeRequestCard
+                canRequest={canRequestBusinessClassUpgrade({
+                  plan: paidPlan,
+                  paymentStatus: "paid",
+                  businessUpgradeStatus: upgradeStatus,
+                })}
+                status={upgradeStatus}
+                requestedAt={upgradeRequestedAt}
+                onStatus={(next) => {
+                  setUpgradeStatus(next);
+                  setUpgradeRequestedAt(new Date().toISOString());
+                }}
+              />
+            ) : null}
+          </div>
           <div className="flex flex-col gap-2">
             <Link href={continueHref} className="btn-primary w-full text-sm">
               Continue to onboarding

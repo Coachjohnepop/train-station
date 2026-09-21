@@ -798,6 +798,11 @@ model MemberProfile {
   coachMeetingRequestedBy     String?
   coachMeetingRequestNote     String?   @db.Text
   rampStartedAt               DateTime?
+  /// Airline-style Coach → Business request. pending | approved | declined
+  businessUpgradeRequestedAt  DateTime?
+  businessUpgradeStatus       String?
+  businessUpgradeReviewedAt   DateTime?
+  businessUpgradeReviewedBy   String?
   createdAt                   DateTime  @default(now())
   updatedAt                   DateTime  @updatedAt
 
@@ -806,6 +811,7 @@ model MemberProfile {
   @@index([email])
   @@index([paymentStatus])
   @@index([stripeCustomerId])
+  @@index([businessUpgradeStatus])
 }
 
 model OAuthIdentity {

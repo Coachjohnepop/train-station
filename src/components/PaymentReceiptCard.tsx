@@ -5,6 +5,7 @@ import Link from "next/link";
 export type PaymentReceiptView = {
   sessionId: string;
   amountTotalLabel: string | null;
+  plan?: string | null;
   planLabel: string | null;
   productName: string | null;
   paidAt: string | null;

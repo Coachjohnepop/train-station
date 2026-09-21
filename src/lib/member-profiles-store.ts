@@ -92,6 +92,10 @@ function emptyProfile(userId: string, email: string, plan: SignupPlan): MemberPr
     coachMeetingRequestedBy: null,
     coachMeetingRequestNote: null,
     rampStartedAt: null,
+    businessUpgradeRequestedAt: null,
+    businessUpgradeStatus: null,
+    businessUpgradeReviewedAt: null,
+    businessUpgradeReviewedBy: null,
     updatedAt: new Date().toISOString(),
   };
 }
@@ -190,6 +194,23 @@ function normalizeProfile(raw: unknown, userId: string): MemberProfile | null {
     coachMeetingRequestNote:
       typeof data.coachMeetingRequestNote === "string" ? data.coachMeetingRequestNote : null,
     rampStartedAt: data.rampStartedAt ?? null,
+    businessUpgradeRequestedAt:
+      typeof data.businessUpgradeRequestedAt === "string"
+        ? data.businessUpgradeRequestedAt
+        : null,
+    businessUpgradeStatus:
+      typeof data.businessUpgradeStatus === "string" && data.businessUpgradeStatus.trim()
+        ? data.businessUpgradeStatus.trim().toLowerCase()
+        : null,
+    businessUpgradeReviewedAt:
+      typeof data.businessUpgradeReviewedAt === "string"
+        ? data.businessUpgradeReviewedAt
+        : null,
+    businessUpgradeReviewedBy:
+      typeof data.businessUpgradeReviewedBy === "string" &&
+      data.businessUpgradeReviewedBy.trim()
+        ? data.businessUpgradeReviewedBy.trim()
+        : null,
     updatedAt: data.updatedAt || new Date().toISOString(),
   };
 }

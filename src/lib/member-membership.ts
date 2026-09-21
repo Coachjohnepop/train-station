@@ -11,6 +11,11 @@ import {
 } from "@/lib/stripe-customer";
 import { promoteCustomerPaymentMethodsForCheckout } from "@/lib/stripe-payment-method-persist";
 import {
+  canRequestBusinessClassUpgrade,
+  normalizeBusinessUpgradeStatus,
+  type BusinessUpgradeStatus,
+} from "@/lib/business-upgrade";
+import {
   downgradeMembershipPlansFrom,
   signupPlanLabel,
   upgradeMembershipPlansFrom,
@@ -51,6 +56,10 @@ export type MemberMembershipSnapshot = {
   upgradePlans: SignupPlan[];
   /** Paid tiers below current — Account membership only + confirm. */
   downgradePlans: SignupPlan[];
+  /** Airline-style Coach → Business request (everyone who paid Coach Class). */
+  canRequestBusinessUpgrade: boolean;
+  businessUpgradeStatus: BusinessUpgradeStatus | null;
+  businessUpgradeRequestedAt: string | null;
   intensive: {
     sessionsTotal: number | null;
     sessionsRemaining: number | null;
@@ -230,6 +239,9 @@ export async function getMemberMembershipSnapshot(
     switchablePlans: finalUpgrades,
     upgradePlans: finalUpgrades,
     downgradePlans,
+    canRequestBusinessUpgrade: canRequestBusinessClassUpgrade(profile),
+    businessUpgradeStatus: normalizeBusinessUpgradeStatus(profile.businessUpgradeStatus),
+    businessUpgradeRequestedAt: profile.businessUpgradeRequestedAt,
     intensive:
       plan === "pro" && profile.intensiveSessionsTotal
         ? {

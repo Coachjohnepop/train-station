@@ -107,6 +107,20 @@ function rowToMemberProfile(
     coachMeetingRequestedBy: row.coachMeetingRequestedBy,
     coachMeetingRequestNote: row.coachMeetingRequestNote,
     rampStartedAt: toIso(row.rampStartedAt),
+    businessUpgradeRequestedAt: toIso(
+      (row as DbMemberProfile & { businessUpgradeRequestedAt?: Date | null })
+        .businessUpgradeRequestedAt,
+    ),
+    businessUpgradeStatus:
+      (row as DbMemberProfile & { businessUpgradeStatus?: string | null })
+        .businessUpgradeStatus ?? null,
+    businessUpgradeReviewedAt: toIso(
+      (row as DbMemberProfile & { businessUpgradeReviewedAt?: Date | null })
+        .businessUpgradeReviewedAt,
+    ),
+    businessUpgradeReviewedBy:
+      (row as DbMemberProfile & { businessUpgradeReviewedBy?: string | null })
+        .businessUpgradeReviewedBy ?? null,
     updatedAt: row.updatedAt.toISOString(),
   };
 }
@@ -157,6 +171,12 @@ function profileToDbFields(profile: MemberProfile) {
     coachMeetingRequestedBy: profile.coachMeetingRequestedBy,
     coachMeetingRequestNote: profile.coachMeetingRequestNote,
     rampStartedAt: parseOptionalDate(profile.rampStartedAt) ?? null,
+    businessUpgradeRequestedAt:
+      parseOptionalDate(profile.businessUpgradeRequestedAt) ?? null,
+    businessUpgradeStatus: profile.businessUpgradeStatus,
+    businessUpgradeReviewedAt:
+      parseOptionalDate(profile.businessUpgradeReviewedAt) ?? null,
+    businessUpgradeReviewedBy: profile.businessUpgradeReviewedBy,
     updatedAt: new Date(profile.updatedAt),
   };
 }

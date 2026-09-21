@@ -57,6 +57,12 @@ export type MemberProfile = {
   coachMeetingRequestedBy: string | null;
   coachMeetingRequestNote: string | null;
   rampStartedAt: string | null;
+  /** ISO — member requested Coach → Business (airline-style). */
+  businessUpgradeRequestedAt: string | null;
+  /** pending | approved | declined */
+  businessUpgradeStatus: string | null;
+  businessUpgradeReviewedAt: string | null;
+  businessUpgradeReviewedBy: string | null;
   updatedAt: string;
 };
 
@@ -90,6 +96,10 @@ export type MemberProfilePatch = Partial<
     | "coachMeetingRequestedBy"
     | "coachMeetingRequestNote"
     | "rampStartedAt"
+    | "businessUpgradeRequestedAt"
+    | "businessUpgradeStatus"
+    | "businessUpgradeReviewedAt"
+    | "businessUpgradeReviewedBy"
     | "approvalStatus"
     | "approvedAt"
     | "paymentStatus"

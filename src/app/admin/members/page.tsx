@@ -14,7 +14,14 @@ import { memberCardPath } from "@/lib/member-card-path";
 import { signupPlanLabel } from "@/lib/signup-plans";
 import { formatPhoneDisplay } from "@/lib/sms-phone";
 
-type MemberFilter = "all" | "pending" | "unpaid" | "intake" | "meeting" | "staff_grants";
+type MemberFilter =
+  | "all"
+  | "pending"
+  | "unpaid"
+  | "intake"
+  | "meeting"
+  | "staff_grants"
+  | "upgrades";
 
 type MemberRow = {
   userId: string;
@@ -48,6 +55,11 @@ type MemberRow = {
   coachMeetingRequestedAt: string | null;
   coachMeetingRequestNote: string | null;
   rampStartedAt: string | null;
+  businessUpgradeRequestedAt: string | null;
+  businessUpgradeStatus: string | null;
+  businessUpgradeReviewedAt: string | null;
+  businessUpgradeReviewedBy: string | null;
+  hasStripeSubscription: boolean;
   coachingMode: MemberCoachingMode;
 };
 
@@ -134,6 +146,7 @@ export default function AdminMembersPage() {
   const [staffGrantPlan, setStaffGrantPlan] = useState<"member" | "business" | "pro">("member");
   const [staffGrantNote, setStaffGrantNote] = useState("");
   const [staffGranting, setStaffGranting] = useState<string | null>(null);
+  const [upgradeActing, setUpgradeActing] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [filter, setFilter] = useState<MemberFilter>("all");
   const listRef = useRef<HTMLDivElement | null>(null);
@@ -304,6 +317,37 @@ export default function AdminMembersPage() {
     setStaffGranting(null);
   }
 
+  async function reviewBusinessUpgrade(member: MemberRow, action: "approve" | "decline") {
+    const verb = action === "approve" ? "Approve" : "Decline";
+    const stripeBit = member.hasStripeSubscription
+      ? "This switches their Stripe subscription to Business Class ($50/mo, prorated)."
+      : "No Stripe subscription on file — this stamps Business Class without a price change.";
+    if (
+      !window.confirm(
+        `${verb} Business Class upgrade for ${member.name} (${member.email})?\n\n${stripeBit}`,
+      )
+    ) {
+      return;
+    }
+    setUpgradeActing(`${member.userId}:${action}`);
+    setError("");
+    const res = await fetch(
+      `/api/admin/members/${encodeURIComponent(member.userId)}/business-upgrade`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action }),
+      },
+    );
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setError(data.error || `Could not ${action} the upgrade.`);
+    } else {
+      await loadMembers();
+    }
+    setUpgradeActing(null);
+  }
+
   function matchesFilter(member: MemberRow): boolean {
     switch (filter) {
       case "pending":
@@ -316,6 +360,8 @@ export default function AdminMembersPage() {
         return Boolean(member.coachMeetingRequestedAt);
       case "staff_grants":
         return isStaffGrantRow(member);
+      case "upgrades":
+        return member.businessUpgradeStatus === "pending";
       default:
         return true;
     }
@@ -376,6 +422,7 @@ export default function AdminMembersPage() {
   const meetingCount = members.filter((m) => m.coachMeetingRequestedAt).length;
   const staffGrantCount = members.filter(isStaffGrantRow).length;
   const staffReapproveCount = members.filter(staffGrantNeedsReapprove).length;
+  const upgradeRequestCount = members.filter((m) => m.businessUpgradeStatus === "pending").length;
   const visibleMembers = members.filter(matchesFilter);
 
   const filterButtons: { id: MemberFilter; label: string; count?: number }[] = [
@@ -383,6 +430,7 @@ export default function AdminMembersPage() {
     { id: "pending", label: "Pending", count: pendingCount },
     { id: "unpaid", label: "Unpaid", count: unpaidCount },
     { id: "staff_grants", label: "Staff grants", count: staffGrantCount },
+    { id: "upgrades", label: "Upgrades", count: upgradeRequestCount },
     { id: "intake", label: "Intake", count: intakePendingCount },
     { id: "meeting", label: "Meetings", count: meetingCount },
   ];
@@ -428,6 +476,12 @@ export default function AdminMembersPage() {
                 count: intakePendingCount,
                 label: "Needs intake",
                 countClass: "text-sky-300",
+              },
+              {
+                id: "upgrades" as const,
+                count: upgradeRequestCount,
+                label: "Upgrade requests",
+                countClass: "text-amber-200",
               },
             ] as const
           ).map((card) => {
@@ -545,7 +599,15 @@ export default function AdminMembersPage() {
                     )}
                   </td>
                   <td className="px-4 py-3 text-[var(--muted)]">
-                    {member.planLabel || signupPlanLabel(member.plan as "explorer")}
+                    <div>{member.planLabel || signupPlanLabel(member.plan as "explorer")}</div>
+                    {member.businessUpgradeStatus === "pending" ? (
+                      <div className="mt-1 text-[10px] font-semibold uppercase tracking-wide text-amber-300">
+                        Business upgrade requested
+                        {member.businessUpgradeRequestedAt
+                          ? ` · ${formatWhen(member.businessUpgradeRequestedAt)}`
+                          : ""}
+                      </div>
+                    ) : null}
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex flex-col gap-1">
@@ -729,6 +791,30 @@ export default function AdminMembersPage() {
                               ? "Re-request meeting"
                               : "Request meeting"}
                         </button>
+                      ) : null}
+                      {member.businessUpgradeStatus === "pending" ? (
+                        <div className="flex flex-col items-end gap-1">
+                          <button
+                            type="button"
+                            onClick={() => void reviewBusinessUpgrade(member, "approve")}
+                            disabled={upgradeActing === `${member.userId}:approve`}
+                            className="btn-primary text-xs px-3 py-1.5"
+                          >
+                            {upgradeActing === `${member.userId}:approve`
+                              ? "…"
+                              : member.hasStripeSubscription
+                                ? "Approve upgrade ($50/mo)"
+                                : "Approve upgrade"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => void reviewBusinessUpgrade(member, "decline")}
+                            disabled={upgradeActing === `${member.userId}:decline`}
+                            className="btn-ghost text-xs px-3 py-1.5 ring-1 ring-rose-500/30 text-rose-300"
+                          >
+                            {upgradeActing === `${member.userId}:decline` ? "…" : "Decline upgrade"}
+                          </button>
+                        </div>
                       ) : null}
                       {member.approvalStatus === "pending" && member.onboardingComplete ? (
                         <button

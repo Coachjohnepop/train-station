@@ -10,9 +10,11 @@ import type { SignupPlan } from "@/lib/signup-plans";
 import { signupPlanLabel } from "@/lib/signup-plans";
 import QuickAuthSettings from "@/components/QuickAuthSettings";
 import PushAlertSettings from "@/components/PushAlertSettings";
+import BusinessUpgradeRequestCard from "@/components/BusinessUpgradeRequestCard";
 import PaymentReceiptCard, {
   type PaymentReceiptView,
 } from "@/components/PaymentReceiptCard";
+import type { BusinessUpgradeStatus } from "@/lib/business-upgrade";
 
 type MembershipData = {
   plan: string;
@@ -35,6 +37,9 @@ type MembershipData = {
   switchablePlans: SignupPlan[];
   upgradePlans?: SignupPlan[];
   downgradePlans?: SignupPlan[];
+  canRequestBusinessUpgrade?: boolean;
+  businessUpgradeStatus?: BusinessUpgradeStatus | null;
+  businessUpgradeRequestedAt?: string | null;
   intensive: {
     sessionsTotal: number | null;
     sessionsRemaining: number | null;
@@ -277,6 +282,16 @@ export default function MemberAccountClient({
           )}
         </div>
       </div>
+
+      {(membership.canRequestBusinessUpgrade ||
+        membership.businessUpgradeStatus === "pending" ||
+        membership.businessUpgradeStatus === "declined") && (
+        <BusinessUpgradeRequestCard
+          canRequest={Boolean(membership.canRequestBusinessUpgrade)}
+          status={membership.businessUpgradeStatus ?? null}
+          requestedAt={membership.businessUpgradeRequestedAt}
+        />
+      )}
 
       {/* Tip coach — evergreen primary home (not mid-workout) */}
       <CoachTipPanel justTipped={justTipped} />

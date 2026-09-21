@@ -135,6 +135,7 @@ export default function AdminMemberCard({ userId }: { userId: string }) {
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [equipmentOpen, setEquipmentOpen] = useState(false);
   const [measurementsOpen, setMeasurementsOpen] = useState(false);
+  const [upgradeActing, setUpgradeActing] = useState<"approve" | "decline" | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -220,6 +221,34 @@ export default function AdminMemberCard({ userId }: { userId: string }) {
     setIntakeSigning(false);
   }
 
+  async function reviewBusinessUpgrade(action: "approve" | "decline") {
+    const hasSub = Boolean(card?.profile.stripeSubscriptionId);
+    const stripeBit = hasSub
+      ? "This switches their Stripe subscription to Business Class ($50/mo, prorated)."
+      : "No Stripe subscription on file — this stamps Business Class without a price change.";
+    if (
+      !window.confirm(
+        `${action === "approve" ? "Approve" : "Decline"} Business Class upgrade for ${card?.name}?\n\n${stripeBit}`,
+      )
+    ) {
+      return;
+    }
+    setUpgradeActing(action);
+    setError("");
+    const res = await fetch(`/api/admin/members/${encodeURIComponent(userId)}/business-upgrade`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setError(data.error || `Could not ${action} the upgrade.`);
+    } else {
+      await load();
+    }
+    setUpgradeActing(null);
+  }
+
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s") {
@@ -279,6 +308,44 @@ export default function AdminMemberCard({ userId }: { userId: string }) {
         </div>
       </div>
 
+      {profile.businessUpgradeStatus === "pending" ? (
+        <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-amber-200">
+            Airline-style upgrade request
+          </p>
+          <p className="mt-1 text-sm text-[var(--text)]">
+            {card.name} asked to upgrade Coach Class → Business Class
+            {profile.businessUpgradeRequestedAt
+              ? ` · ${formatWhen(profile.businessUpgradeRequestedAt)}`
+              : ""}
+            .
+          </p>
+          <p className="mt-1 text-xs text-[var(--muted)]">
+            {profile.stripeSubscriptionId
+              ? "Stripe subscription on file — approve switches them to Business $50/mo."
+              : "No Stripe subscription on file — approve stamps Business without a price change."}
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              className="btn-primary text-xs px-3 py-1.5"
+              disabled={upgradeActing !== null}
+              onClick={() => void reviewBusinessUpgrade("approve")}
+            >
+              {upgradeActing === "approve" ? "…" : "Approve upgrade"}
+            </button>
+            <button
+              type="button"
+              className="btn-ghost text-xs px-3 py-1.5 ring-1 ring-rose-500/30 text-rose-300"
+              disabled={upgradeActing !== null}
+              onClick={() => void reviewBusinessUpgrade("decline")}
+            >
+              {upgradeActing === "decline" ? "…" : "Decline"}
+            </button>
+          </div>
+        </div>
+      ) : null}
+
       <section className="relative overflow-hidden rounded-[28px] border-2 border-[color-mix(in_srgb,var(--ramp-gold)_42%,var(--border))] bg-[var(--surface)] shadow-[0_24px_60px_rgba(0,0,0,0.28)]">
         <div className="pointer-events-none absolute left-3 top-3 h-4 w-4 border-l-2 border-t-2 border-[color-mix(in_srgb,var(--ramp-gold)_70%,transparent)]" />
         <div className="pointer-events-none absolute right-3 top-3 h-4 w-4 border-r-2 border-t-2 border-[color-mix(in_srgb,var(--ramp-gold)_70%,transparent)]" />
@@ -325,6 +392,11 @@ export default function AdminMemberCard({ userId }: { userId: string }) {
             <span className="rounded-full bg-[var(--bg)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">
               {profile.paymentStatus === "none" ? "free" : profile.paymentStatus}
             </span>
+            {profile.businessUpgradeStatus === "pending" ? (
+              <span className="rounded-full bg-amber-500/15 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-amber-200">
+                Upgrade requested
+              </span>
+            ) : null}
           </div>
         </header>
 

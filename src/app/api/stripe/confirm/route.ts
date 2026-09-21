@@ -125,6 +125,7 @@ export async function POST(request: Request) {
 
   const res = NextResponse.json({
     ok: true,
+    plan,
     redirectTo: `/member/onboard?plan=${encodeURIComponent(plan)}`,
     amountCents: amountCents > 0 ? amountCents : null,
     currency: checkout.currency ?? "usd",

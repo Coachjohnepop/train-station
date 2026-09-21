@@ -84,6 +84,11 @@ export async function GET() {
       coachMeetingRequestedAt: profile?.coachMeetingRequestedAt ?? null,
       coachMeetingRequestNote: profile?.coachMeetingRequestNote ?? null,
       rampStartedAt: profile?.rampStartedAt ?? null,
+      businessUpgradeRequestedAt: profile?.businessUpgradeRequestedAt ?? null,
+      businessUpgradeStatus: profile?.businessUpgradeStatus ?? null,
+      businessUpgradeReviewedAt: profile?.businessUpgradeReviewedAt ?? null,
+      businessUpgradeReviewedBy: profile?.businessUpgradeReviewedBy ?? null,
+      hasStripeSubscription: Boolean(profile?.stripeSubscriptionId),
       coachingMode: coachingModeFromPrefs(prefsMap.get(account.userId), account.userId),
     };
   });
