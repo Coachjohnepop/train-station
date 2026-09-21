@@ -473,8 +473,8 @@ function JeremyHeroStack({
         <br />
         <span className="landing-hero-accent">or ours.</span>
       </h1>
-      <p className="landing-hero-subhead max-w-[20.5rem] text-[15px] font-semibold leading-snug text-white sm:max-w-sm sm:text-xl">
-        The Train Station app on your phone. See your board, or log the session you already have.
+      <p className="landing-hero-subhead max-w-[22rem] text-[15px] font-semibold leading-snug text-white sm:max-w-sm sm:text-xl">
+        One day on us. Bring your session, or train the Train Station way.
       </p>
     </>
   );
