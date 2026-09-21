@@ -11,6 +11,7 @@ export default function LandingAbClip({
   poster,
   title,
   analyticsAction,
+  onPart2Ended,
 }: {
   src: string;
   /** Second half of the intro — shown beside / under part 1 with READY. */
@@ -18,6 +19,8 @@ export default function LandingAbClip({
   poster?: string | null;
   title: string;
   analyticsAction: string;
+  /** After Let’s Go! clip finishes — open See the program. */
+  onPart2Ended?: () => void;
 }) {
   const part1Ref = useRef<HTMLVideoElement>(null);
   const part2Ref = useRef<HTMLVideoElement>(null);
@@ -111,7 +114,11 @@ export default function LandingAbClip({
           cta="Let’s Go!"
           hint={part2Armed ? "Part 2" : "After Intro"}
           onPlay={() => void playPart2()}
-          onEnded={() => setPart2On(false)}
+          onEnded={() => {
+            setPart2On(false);
+            part2Ref.current?.pause();
+            onPart2Ended?.();
+          }}
         />
       </div>
     </div>

@@ -474,6 +474,7 @@ function JeremyHeroStack({
             readySrc={JEREMY_WELCOME_READY_VIDEO_SRC}
             title="Intro"
             analyticsAction="hero-meet-jeremy-play"
+            onPart2Ended={() => onTour("jeremy")}
           />
         </div>
       ) : null}
