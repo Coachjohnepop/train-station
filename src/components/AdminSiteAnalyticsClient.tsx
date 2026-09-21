@@ -99,7 +99,7 @@ function LandingAbBoard({ report }: { report: NonNullable<Overview["landingAb"]>
     { key: "sessions", label: "Sessions" },
     { key: "clicks", label: "Clicks" },
     { key: "howItWorksHits", label: "How it Works / walk" },
-    { key: "membershipHits", label: "Start membership" },
+    { key: "membershipHits", label: "Grab Your Ticket" },
     { key: "styleHits", label: "Train Station Style" },
     { key: "signupHits", label: "Signup hits" },
   ] as const;
@@ -604,7 +604,7 @@ export default function AdminSiteAnalyticsClient() {
               <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
                 <FunnelStep label="Home" value={funnel.homepageViews} />
                 <FunnelStep
-                  label="Start membership"
+                  label="Grab Your Ticket"
                   value={funnel.startMembership}
                   rate={formatPct(funnel.startMembership, funnel.homepageViews)}
                 />

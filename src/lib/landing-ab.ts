@@ -44,8 +44,8 @@ export const LANDING_AB_TEST = {
   mission:
     "Find the first ask that gets a stranger using the Train Station — not just watching a video.",
   goal: "More people start Today (Free / Train Station Style or a paid seat) without bouncing on a ticket pick.",
-  a: "A (control): tickets first. Start membership is the main tap. How it Works is the caricature tour.",
-  b: "B (challenger): Track your current workout (upload or learn the Train Station Way) or Jeremy’s Today. One day on the console — email later.",
+  a: "A (control): tickets first. Grab Your Ticket is the main tap. How it Works is the caricature tour.",
+  b: "B (challenger): Grab Your Ticket, See the program, or Track Your Current Workout. One day on the console — email later.",
 } as const;
 
 /** Old live D — keep /l/class sticky; do not assign it on `/`. */

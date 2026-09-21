@@ -121,13 +121,13 @@ async function assertVariant(page, expect, label) {
   }
   pass(`${label} variant attr`, expect);
   if (expect === "tour") {
-    if (/Start membership/i.test(body) && /How it Works/i.test(body)) pass(`${label} tour CTAs`);
+    if (/Grab Your Ticket/i.test(body) && /How it Works/i.test(body)) pass(`${label} tour CTAs`);
     else fail(`${label} tour CTAs`, body.slice(0, 120));
     if (/Meet your\s+coach/i.test(body)) fail(`${label} tour must not be B headline`);
     else pass(`${label} tour is not B`);
   }
   if (expect === "jeremy") {
-    if (/Start membership/i.test(body) && /See the program/i.test(body) && /Track Your Current Workout/i.test(body)) {
+    if (/Grab Your Ticket/i.test(body) && /See the program/i.test(body) && /Track Your Current Workout/i.test(body)) {
       pass(`${label} B fork`);
     } else fail(`${label} B fork`, body.slice(0, 180));
   }
@@ -191,7 +191,7 @@ async function browserCtas(viewportKey) {
   await withBrowser("cta", viewportKey, async (page) => {
     await page.goto(BASE + "/l/jeremy", { waitUntil: "domcontentloaded", timeout: 45000 });
     await page.waitForTimeout(800);
-    const start = page.getByRole("link", { name: "Start membership" });
+    const start = page.getByRole("link", { name: "Grab Your Ticket" });
     const see = page.locator('[data-analytics-action="hero-b-want-jeremy"]');
     const own = page.locator('[data-analytics-action="hero-b-have-workout"]');
     if ((await start.count()) > 0 && (await see.count()) > 0 && (await own.count()) > 0) {

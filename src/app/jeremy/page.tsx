@@ -122,7 +122,7 @@ export default function JeremyByrdPage() {
 
         <div className="mt-10 flex flex-wrap gap-3">
           <Link href={JOIN_TICKETS_HREF} className="btn-primary px-5 py-2.5 text-sm font-semibold">
-            Start membership
+            Grab Your Ticket
           </Link>
           <Link href="/?tour=1" className="btn-ghost px-5 py-2.5 text-sm">
             How it Works

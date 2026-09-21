@@ -373,7 +373,7 @@ export default function LandingAppWalkthrough({
                     }}
                     className="inline-flex h-11 items-center justify-center rounded-full border border-white/20 text-sm font-bold text-white/85"
                   >
-                    Start membership
+                    Grab Your Ticket
                   </button>
                 </>
               ) : null}

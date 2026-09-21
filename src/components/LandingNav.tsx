@@ -198,7 +198,7 @@ export default function LandingNav({
                   closeMenus();
                 }}
               >
-                Start membership
+                Grab Your Ticket
               </Link>
             ) : null}
             {!isWelcome && purchaseAuth.signedIn ? (
@@ -272,7 +272,7 @@ export default function LandingNav({
                   }}
                   className="landing-nav__join btn-primary inline-flex h-8 items-center rounded-full px-3 text-[11px] font-extrabold sm:h-9 sm:px-4 sm:text-xs"
                 >
-                  Start membership
+                  Grab Your Ticket
                 </Link>
               </>
             )
@@ -375,7 +375,7 @@ export default function LandingNav({
                     closeMenus();
                   }}
                 >
-                  Start membership
+                  Grab Your Ticket
                 </Link>
                 <button
                   type="button"

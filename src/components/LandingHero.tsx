@@ -304,7 +304,7 @@ export default function LandingHero({
                   }}
                   className="landing-hero-early-signup inline-flex h-[3.5rem] w-full items-center justify-center rounded-full px-8 text-[17px] font-extrabold tracking-tight transition-transform active:scale-[0.98] sm:h-14 sm:text-lg"
                 >
-                  Start membership
+                  Grab Your Ticket
                 </Link>
                 <button
                   type="button"
@@ -447,7 +447,7 @@ function JeremyHeroStack({
             }}
             className={primaryCta}
           >
-            Start membership
+            Grab Your Ticket
           </Link>
           <button
             type="button"
@@ -531,7 +531,7 @@ function FloorHeroStack({
             }}
             className={secondaryCta}
           >
-            Start membership
+            Grab Your Ticket
           </Link>
           <button
             type="button"
