@@ -164,7 +164,7 @@ function SingleTile({
           onClick={onPlay}
           className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 px-3 text-center"
         >
-          <span className="inline-flex min-h-12 min-w-[7.5rem] items-center justify-center rounded-full bg-[#7c3aed] px-6 text-base font-extrabold tracking-wide text-white shadow-lg shadow-[#7c3aed]/40">
+          <span className="landing-hero-clip-cta inline-flex min-h-12 min-w-[7.5rem] items-center justify-center rounded-full bg-[#7c3aed] px-6 text-base font-extrabold tracking-wide text-white">
             {cta || title}
           </span>
           {hint ? <span className="mt-2 text-[11px] font-semibold text-white/80">{hint}</span> : null}

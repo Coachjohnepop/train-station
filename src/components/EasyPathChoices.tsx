@@ -20,7 +20,7 @@ export default function EasyPathChoices({
           {kicker}
         </p>
       ) : null}
-      <div className="flex w-full flex-col gap-2">{children}</div>
+      <div className="flex w-full flex-col gap-3 overflow-visible py-1">{children}</div>
       {hint ? (
         <p className="text-center text-xs font-medium text-[var(--muted)]">{hint}</p>
       ) : null}
