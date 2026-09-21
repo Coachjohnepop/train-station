@@ -25,15 +25,15 @@ Update **WHERE WE LEFT OFF** at the end of a session. Don’t put secrets/passwo
 | **Twilio** (carrier SMS) | **`john@thetrainstation.co`** · account phone = **John’s personal cell** | **PARKED (Jul 19)** — Jeremy weighing cost vs **Messages + email hub** already built. Account started under John; address wait is optional until un-parked. Do **not** put tokens here. Cost sheet: **`VENDOR_COSTS.md`**. |
 | **Zoom** (live class) | Coach Connect as **`jeremy@thetrainstation.co`** · Marketplace app credentials on Vercel (John) | Host / recordings = Jeremy’s Zoom when he Connects. |
 | **Stripe** | **Master / merchant = Jeremy’s Train Station business Stripe** · Live keys on Vercel Production (John wires) | Full money-flow below. **Card Live is ON prod** (`pk_live_51SuLDr…`). John = Connect partner for fee pool later — not the card merchant. |
-| **Venmo** | **Jeremy’s business Venmo** (`@JeremyByrdCSCS`) · QR on Landing store | **LIVE on prod (Jul 19)** as real-money backup. **Same Train Station business bank story as Stripe** — not a second company. Coach **Mark paid** unlocks access. |
+| **Venmo** | Retired 2026-09-21 | **Off.** Not PCI-scoped and too messy to manage. Memberships collect on **Stripe only**. Historical `paymentMethod: venmo` rows stay on the books. |
 | **Vercel / GitHub / Postgres** | **John · `john@bcxvoice.com`** (Vercel user `john-9066` · team johnepop's projects) | Deploys, env, DB. Project `train-station` → thetrainstation.co. |
 
 **Jeremy-facing tech map:** → **`JEREMY_ADMIN_MANUAL.md`**  
-**Payments training:** → **`JEREMY_VENMO_SCRIPT.md`** (2‑min see Venmo) · **`JEREMY_S5_PAYMENTS_TEST.md`** · **`STRIPE_COMMISSION_SETUP.md`** · **`STRIPE_DEMO_SCRIPT.md`** · **`PAYMENT_ADMIN_DEMO_SCRIPT.md`** · **`STRIPE_PRODUCT_CATALOG.md`**
+**Payments training:** → **`JEREMY_S5_PAYMENTS_TEST.md`** · **`STRIPE_COMMISSION_SETUP.md`** · **`STRIPE_DEMO_SCRIPT.md`** · **`PAYMENT_ADMIN_DEMO_SCRIPT.md`** · **`STRIPE_PRODUCT_CATALOG.md`**
 
 ### Money flow (durable — train every agent/human)
 
-**One business.** Stripe card deposits and Venmo membership payments both fund the **Train Station business** (Jeremy’s merchant / bank story). Venmo is a **rail**, not a second merchant.
+**One business.** Jeremy is **CEO**; John is **CFO**. Stripe card deposits fund the **Train Station business** (Jeremy’s merchant / bank story). **Venmo is retired** — not a membership rail.
 
 #### A. Stripe (card)
 
@@ -49,24 +49,13 @@ Update **WHERE WE LEFT OFF** at the end of a session. Don’t put secrets/passwo
 | 5b. **Payout minimum** | Fee pool must reach **$400** before **Run payout**. Env: `STRIPE_COMMISSION_PAYOUT_MIN_DOLLARS` (default 400). Preview always OK. |
 | 6. Test vs Live | **`sk_test_`** = fake money. Real cards only after Live keys + live `price_…` |
 
-#### B. Venmo (backup — **live on prod**)
+#### B. Venmo — **retired**
 
-| Step | What happens |
-|------|----------------|
-| 1. Member pays | Checkout **Or pay with Venmo** — scan QR / use `@JeremyByrdCSCS` |
-| 2. Money lands | **Jeremy’s Venmo** → **same business bank account story as Stripe** |
-| 3. Access unlock | **Not automatic.** Coach **Admin → Members** (or Queue) → **Mark paid** → method **Venmo** |
-| 4. App state | Same `paymentStatus: paid` path as Stripe (no Stripe webhook for Venmo) |
-
-**Prod Venmo config (Landing Blob `demo/landing-media.json`):**
-- QR: `https://www.thetrainstation.co/images/venmo-jeremy-qr.png` (also `public/images/venmo-jeremy-qr.png`)
-- Handle: `@JeremyByrdCSCS`
-- Re-seed: `npx tsx scripts/set-venmo-landing-prod.mjs`
-- Verify: `/api/payments/public` → `venmo.hasQr: true`
+Do not offer Venmo on checkout, landing, or Mark paid. It is not PCI-scoped and is too messy for the company to manage. Historical Venmo rows stay in Accounting (account 1010). Members pay on **Jeremy’s Stripe**.
 
 **Fee types (product):** every paid package is **monthly subscription** or **one-time fee** (amounts can vary). See `STRIPE_PRODUCT_CATALOG.md`.
 
-**Do not:** put a second merchant secret on Vercel for John; do not assume checkout auto-splits to John’s bank; do not treat Venmo as a different company entity.
+**Do not:** put a second merchant secret on Vercel for John; do not assume checkout auto-splits to John’s bank.
 
 ---
 
@@ -461,7 +450,7 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 
 **Coach email:** Key alerts only — **new member, paid, intro booked**. Workout / warmup / equipment / messages-opened stay in-app Messages. Duplicate signup lead emails skipped (`signup-register`, `byow-signup`, `signup`, `quote:*`).
 
-**Money (durable):** One business. Jeremy Live **`acct_1TmKSWQWnajU9uyk`** (one W). Payouts **manual**. FA `fa_65V54Y9…` `transfer_all` cleared. Visible cash 25% × 4: Platform Fees · John Pay · Reinvest · Jeremy Pay. Savings floor = bills × 4 ($85 → **$340**). Platform Fees + John Pay hold on John’s Stripe until his Mercury. Reinvest holds until Train Station Mercury. Jeremy Pay → mapped Stripe. Never a second merchant secret on Vercel. Venmo is a rail (`@JeremyByrdCSCS`). Staff grants (never billed): Lemon John, Stephanie, Ali, yahoo soak Coach Ed. Admin `john@thetrainstation.co` is not a member. Todd stays paying Coach Class unless John says otherwise.
+**Money (durable):** One business. **Jeremy = CEO**, **John = CFO**. Jeremy Live **`acct_1TmKSWQWnajU9uyk`** (one W). Payouts **manual**. FA `fa_65V54Y9…` `transfer_all` cleared. Visible cash 25% × 4: Platform Fees · John Pay (CFO) · Reinvest · Jeremy Pay (CEO). Savings floor = bills × 4 ($85 → **$340**). Platform Fees + John Pay hold on John’s Stripe until his Mercury. Reinvest holds until Train Station Mercury. Jeremy Pay → mapped Stripe. Never a second merchant secret on Vercel. **Venmo retired 2026-09-21** — Stripe only. Staff grants (never billed): Lemon John, Stephanie, Ali, yahoo soak Coach Ed. Admin `john@thetrainstation.co` is not a member. Todd stays paying Coach Class unless John says otherwise.
 
 **DB / backups:** Indexes on enrollments + GIN on class `userIds`. RLS ENABLE + deny anon/authenticated. **Do not FORCE RLS** this weekend. Monday cron `/api/cron/postgres-backup` 15:00 UTC — Vercel Blob store is **public-only**, so do not upload the gzip there until a private store exists. Desktop snapshot **2026-09-19** at `Stuff/Lemon Voice/The Train Station/backups/weekly-2026-09-19T15-52-23.json.gz`. Weekday snapshot cron Mon 15:10 UTC. Never hot-poll Postgres faster than 5s.
 

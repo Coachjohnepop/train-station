@@ -32,7 +32,7 @@ export const FUNNEL_ALERT_CHANNELS: AlertChannels = {
 export function defaultCoachAlertPrefs(): CoachAlertPrefs {
   return {
     newMember: { ...FUNNEL_ALERT_CHANNELS },
-    /** First paid (Stripe / Venmo mark-paid) — same urgency as signup. */
+    /** First paid (Stripe / Mark paid) — same urgency as signup. */
     memberPaid: { ...FUNNEL_ALERT_CHANNELS },
     equipmentSelected: { inApp: true, sms: false, email: false },
     programStartChosen: { inApp: true, sms: false, email: false },

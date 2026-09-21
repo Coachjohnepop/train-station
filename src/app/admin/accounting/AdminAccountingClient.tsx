@@ -337,7 +337,7 @@ export default function AdminAccountingClient() {
             hint={
               data.members.unpaidButOnboarded
                 ? `${data.members.unpaidButOnboarded} finished setup unpaid`
-                : "Awaiting card / Venmo mark-paid"
+                : "Awaiting Stripe checkout"
             }
             tone={data.members.pendingPayment > 0 ? "warn" : "muted"}
           />
@@ -478,7 +478,7 @@ export default function AdminAccountingClient() {
         </ul>
       </section>
 
-      {/* App books — Postgres ledger (membership + Venmo mark-paid + tips) */}
+      {/* App books — Postgres ledger (membership + mark-paid + tips) */}
       <section className="space-y-3" id="books">
         <div className="flex flex-wrap items-end justify-between gap-2">
           <div>
@@ -486,7 +486,7 @@ export default function AdminAccountingClient() {
               Books (app ledger)
             </h2>
             <p className="mt-0.5 text-xs text-[var(--muted)]">
-              Postgres payment rows — Stripe checkouts, Venmo mark-paid, tips. Stays even if Stripe
+              Postgres payment rows — Stripe checkouts, mark-paid, tips. Stays even if Stripe
               keys change.
             </p>
           </div>

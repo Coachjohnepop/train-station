@@ -448,7 +448,7 @@ export default function MemberAccountClient({
           ) : (
             <p className="text-xs text-[var(--muted)]">
               {receiptError ||
-                "Card payment confirmations show here after Stripe checkout. Venmo members are marked paid by coach."}
+                "Card payment confirmations show here after Stripe checkout."}
             </p>
           )}
         </div>

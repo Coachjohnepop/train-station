@@ -105,8 +105,8 @@ const CARDS = [
   },
   {
     href: "/admin/landing",
-    title: "Landing & Venmo",
-    description: "Public media, Venmo QR, ticket presentation.",
+    title: "Landing",
+    description: "Public media, ticket presentation.",
     cta: "Edit landing →",
   },
 ];

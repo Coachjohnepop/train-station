@@ -3,6 +3,8 @@
  * Pure — no I/O. Wallets (where cash sits) vs buckets (where it should go).
  */
 
+import { jeremyPayLabel, johnPayLabel } from "@/lib/company-officers";
+
 export type MoneyDeskPercents = {
   platformFeesPercent: number;
   johnPayPercent: number;
@@ -185,7 +187,7 @@ export function splitVisibleCash(input: MoneyDeskSplitInput): MoneyDeskSplit {
     },
     {
       id: "john_pay",
-      label: "John Pay",
+      label: johnPayLabel(),
       amountCents: parts.johnPayCents,
       percent: percents.johnPayPercent,
       rail: BUCKET_RAILS.john_pay,
@@ -201,7 +203,7 @@ export function splitVisibleCash(input: MoneyDeskSplitInput): MoneyDeskSplit {
     },
     {
       id: "jeremy_pay",
-      label: "Jeremy Pay",
+      label: jeremyPayLabel(),
       amountCents: parts.jeremyPayCents,
       percent: percents.jeremyPayPercent,
       rail: BUCKET_RAILS.jeremy_pay,

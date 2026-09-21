@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { listMerchandiseSkus } from "@/lib/merchandise-store";
-import { getLandingMedia } from "@/lib/landing-media-store";
 import { isStripePaymentsEnabled } from "@/lib/member-gates";
 import { getEffectiveMembershipOffers, resolveStripePriceId } from "@/lib/pricing-catalog";
 import { diagnoseMembershipStripePrices } from "@/lib/stripe-price-diagnostics";
@@ -17,7 +16,6 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-  const config = await getLandingMedia();
   const stripeEnabled = isStripePaymentsEnabled();
   const merchandise = await listMerchandiseSkus();
   const tips = publicTipConfig();
@@ -82,10 +80,10 @@ export async function GET() {
       { id: "one_time", label: "One-time fee" },
     ],
     venmo: {
-      qrUrl: config.venmoQrUrl,
-      handle: config.venmoHandle,
-      instructions: config.venmoInstructions,
-      hasQr: Boolean(config.venmoQrUrl?.trim()),
+      qrUrl: null,
+      handle: null,
+      instructions: null,
+      hasQr: false,
     },
     /** Optional coach tips (membership Checkout optional_items + Account tip card). */
     tips: {

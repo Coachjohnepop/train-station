@@ -493,7 +493,7 @@ export async function notifyCoachNewSignup(params: {
   });
 }
 
-/** First time paymentStatus becomes paid (Stripe webhook / Venmo Mark paid). */
+/** First time paymentStatus becomes paid (Stripe webhook / Mark paid). */
 export async function notifyCoachMemberPaid(params: {
   userId: string;
   name: string;
@@ -594,7 +594,7 @@ export async function notifyCoachIntakeReady(params: {
     isPaidPlan(params.plan) && params.paymentStatus !== "paid" && params.paymentStatus !== "none";
 
   const paymentNote = paymentPending
-    ? "\n\nPayment is still pending — use Queue to mark paid (Venmo/cash) when you accept them."
+    ? "\n\nPayment is still pending — they need to finish Stripe checkout."
     : "";
 
   const when = formatCoachMeetingWhen(params.scheduledAt);

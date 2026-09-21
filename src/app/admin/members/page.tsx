@@ -138,7 +138,7 @@ export default function AdminMembersPage() {
   const [meetingRequesting, setMeetingRequesting] = useState<string | null>(null);
   const [markingPaid, setMarkingPaid] = useState<string | null>(null);
   const [markPaidTarget, setMarkPaidTarget] = useState<MemberRow | null>(null);
-  const [markPaidMethod, setMarkPaidMethod] = useState<"venmo" | "manual" | "other">("venmo");
+  const [markPaidMethod, setMarkPaidMethod] = useState<"manual" | "other">("manual");
   const [markPaidNote, setMarkPaidNote] = useState("");
   const [markPaidAmount, setMarkPaidAmount] = useState("25");
   const [paymentsTarget, setPaymentsTarget] = useState<MemberRow | null>(null);
@@ -865,7 +865,7 @@ export default function AdminMembersPage() {
                           type="button"
                           onClick={() => {
                             setMarkPaidTarget(member);
-                            setMarkPaidMethod("venmo");
+                            setMarkPaidMethod("manual");
                             setMarkPaidNote("");
                           }}
                           disabled={markingPaid === member.userId}
@@ -980,7 +980,7 @@ export default function AdminMembersPage() {
               {markPaidTarget.name} · {markPaidTarget.planLabel}
             </p>
             <p className="text-xs text-[var(--muted)]">
-              Amount is required so Accounting books stay complete (Venmo / cash / other).
+              Amount is required so Accounting books stay complete (cash / other). Memberships collect on Stripe.
             </p>
             <div>
               <label htmlFor="pay-amount" className="text-xs font-medium text-[var(--muted)]">
@@ -1012,10 +1012,9 @@ export default function AdminMembersPage() {
                 className="input mt-1 w-full"
                 value={markPaidMethod}
                 onChange={(e) =>
-                  setMarkPaidMethod(e.target.value as "venmo" | "manual" | "other")
+                  setMarkPaidMethod(e.target.value as "manual" | "other")
                 }
               >
-                <option value="venmo">Venmo</option>
                 <option value="manual">Manual / cash</option>
                 <option value="other">Other</option>
               </select>
@@ -1027,7 +1026,7 @@ export default function AdminMembersPage() {
               <input
                 id="pay-note"
                 className="input mt-1 w-full"
-                placeholder="e.g. Venmo @JeremyByrdCSCS — June signup"
+                placeholder="e.g. cash at the gym — June signup"
                 value={markPaidNote}
                 onChange={(e) => setMarkPaidNote(e.target.value)}
               />

@@ -124,7 +124,7 @@ export function businessUpgradeQueueDetail(place: BusinessUpgradeQueuePlace): st
 export const MONTHLY_UPGRADE_PROMO_COPY =
   "This month, one paying Coach Class member who requests an upgrade gets a complimentary Business Class seat.";
 
-/** Stripe or Venmo paid Coach — not staff grants / manual stamps. */
+/** Stripe-paid Coach — not staff grants, cash stamps, or retired Venmo. */
 export function isPayingCoachUpgradeEntrant(profile: {
   plan?: string | null;
   paymentStatus?: string | null;
@@ -136,7 +136,7 @@ export function isPayingCoachUpgradeEntrant(profile: {
   if (normalizeBusinessUpgradeStatus(profile.businessUpgradeStatus) !== "pending") {
     return false;
   }
-  return profile.paymentMethod === "stripe" || profile.paymentMethod === "venmo";
+  return profile.paymentMethod === "stripe";
 }
 
 export function pickMonthlyPromoWinner<T>(

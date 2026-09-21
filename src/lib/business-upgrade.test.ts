@@ -140,7 +140,7 @@ describe("business class upgrade request", () => {
         paymentMethod: "venmo",
         businessUpgradeStatus: "pending",
       }),
-      true,
+      false,
     );
     assert.equal(
       isPayingCoachUpgradeEntrant({

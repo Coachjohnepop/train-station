@@ -133,7 +133,7 @@ export async function POST(request: Request) {
         });
         return res;
       }
-      // Paid via Venmo / one-time / missing sub id: fall through to a real Checkout
+      // Paid via one-time / missing sub id: fall through to a real Checkout
       // session for the new plan (plan stamped only after payment confirms).
     }
 

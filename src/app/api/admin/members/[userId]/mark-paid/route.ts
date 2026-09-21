@@ -11,7 +11,7 @@ type RouteContext = { params: Promise<{ userId: string }> };
 const schema = z.object({
   method: z.enum(["venmo", "manual", "other"]).optional(),
   note: z.string().max(500).optional(),
-  /** Dollars received (Venmo / cash). Required so books stay complete for net-new. */
+  /** Dollars received (cash / other). Required so books stay complete for net-new. */
   amountDollars: z.number().positive().max(50_000).optional(),
   /** Prefer cents when UI already converted. */
   amountCents: z.number().int().positive().max(5_000_000).optional(),
@@ -36,7 +36,7 @@ export async function POST(request: Request, context: RouteContext) {
   const parsed = schema.safeParse(await request.json().catch(() => ({})));
   if (!parsed.success) {
     return NextResponse.json(
-      { error: "Invalid request. Enter a payment amount (dollars) for Venmo/manual." },
+      { error: "Invalid request. Enter a payment amount (dollars) for manual mark-paid." },
       { status: 400 },
     );
   }
@@ -50,7 +50,7 @@ export async function POST(request: Request, context: RouteContext) {
     return NextResponse.json(
       {
         error:
-          "Amount is required for Mark paid (e.g. 25 for $25 Venmo). Keeps Accounting books accurate.",
+          "Amount is required for Mark paid (e.g. 25 for $25). Keeps Accounting books accurate.",
       },
       { status: 400 },
     );

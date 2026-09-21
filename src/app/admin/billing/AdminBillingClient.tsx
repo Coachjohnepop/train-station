@@ -568,7 +568,7 @@ function MoneyMapBoard({
             />
           </label>
           <label className="text-xs text-[var(--muted)]">
-            John Pay %
+            John Pay (CFO) %
             <input
               className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5 text-sm text-[var(--text)]"
               inputMode="numeric"
@@ -586,7 +586,7 @@ function MoneyMapBoard({
             />
           </label>
           <label className="text-xs text-[var(--muted)]">
-            Jeremy Pay %
+            Jeremy Pay (CEO) %
             <input
               className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5 text-sm text-[var(--text)]"
               inputMode="numeric"
@@ -1024,8 +1024,9 @@ export default function AdminBillingClient() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Stripe money</h1>
           <p className="mt-1 max-w-2xl text-sm text-[var(--muted)]">
-            Where cash sits, then 25% each to Platform Fees + John Pay (John&apos;s Stripe, hold),
-            Reinvest (TS Mercury, hold), Jeremy Pay (mapped Stripe).
+            Where cash sits, then 25% each to Platform Fees + John Pay / CFO (John&apos;s Stripe,
+            hold), Reinvest (TS Mercury, hold), Jeremy Pay / CEO (mapped Stripe). Stripe is the
+            membership rail.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -1059,7 +1060,7 @@ export default function AdminBillingClient() {
           </p>
         </div>
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-wide text-accent">John Pay</p>
+          <p className="text-[10px] font-bold uppercase tracking-wide text-accent">John Pay (CFO)</p>
           <p className="mt-1 text-[var(--muted)]">
             Same: John&apos;s Stripe, hold. No bank payout until his Mercury is ready.
           </p>
@@ -1071,7 +1072,7 @@ export default function AdminBillingClient() {
           </p>
         </div>
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-wide text-accent">Jeremy Pay</p>
+          <p className="text-[10px] font-bold uppercase tracking-wide text-accent">Jeremy Pay (CEO)</p>
           <p className="mt-1 text-[var(--muted)]">
             Jeremy&apos;s currently mapped Stripe payout destination.
           </p>
@@ -1294,7 +1295,7 @@ export default function AdminBillingClient() {
               </li>
               <li>
                 <Link href="/admin/members" className="text-accent hover:underline">
-                  Mark Venmo paid (Members)
+                  Mark paid (Members)
                 </Link>
               </li>
             </ul>

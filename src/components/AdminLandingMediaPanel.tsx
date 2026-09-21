@@ -11,23 +11,14 @@ export default function AdminLandingMediaPanel({
   initialWelcomeUrl = "",
   initialWelcomeVideosByPlan = {},
   initialFreeUrl = "",
-  initialVenmoQrUrl = "",
-  initialVenmoHandle = "",
-  initialVenmoInstructions = "",
 }: {
   initialWelcomeUrl?: string;
   initialWelcomeVideosByPlan?: WelcomeVideosByPlan;
   initialFreeUrl?: string;
-  initialVenmoQrUrl?: string;
-  initialVenmoHandle?: string;
-  initialVenmoInstructions?: string;
 }) {
   const [welcomeUrl, setWelcomeUrl] = useState(initialWelcomeUrl);
   const [welcomeByPlan, setWelcomeByPlan] = useState<WelcomeVideosByPlan>(initialWelcomeVideosByPlan);
   const [freeUrl, setFreeUrl] = useState(initialFreeUrl);
-  const [venmoQrUrl, setVenmoQrUrl] = useState(initialVenmoQrUrl);
-  const [venmoHandle, setVenmoHandle] = useState(initialVenmoHandle);
-  const [venmoInstructions, setVenmoInstructions] = useState(initialVenmoInstructions);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState(false);
@@ -39,7 +30,6 @@ export default function AdminLandingMediaPanel({
 
     const welcome = welcomeUrl.trim();
     const free = freeUrl.trim();
-    const qr = venmoQrUrl.trim();
 
     if (welcome && !isAllowedCoachIntroVideoUrl(welcome)) {
       setError(true);
@@ -62,27 +52,13 @@ export default function AdminLandingMediaPanel({
       setSaving(false);
       return;
     }
-    if (qr) {
-      try {
-        const parsed = new URL(qr);
-        if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
-          throw new Error("invalid");
-        }
-      } catch {
-        setError(true);
-        setMessage("Venmo QR must be a full image URL (https://…).");
-        setSaving(false);
-        return;
-      }
-    }
-
     const result = await saveLandingMediaAction({
       welcomeVideoUrl: welcome || null,
       welcomeVideosByPlan: welcomeByPlan,
       freeChastiseVideoUrl: free || null,
-      venmoQrUrl: qr || null,
-      venmoHandle: venmoHandle.trim() || null,
-      venmoInstructions: venmoInstructions.trim() || null,
+      venmoQrUrl: null,
+      venmoHandle: null,
+      venmoInstructions: null,
     });
 
     if ("error" in result && result.error) {
@@ -92,9 +68,6 @@ export default function AdminLandingMediaPanel({
       setWelcomeUrl(result.storedWelcomeVideoUrl || "");
       if (result.storedWelcomeVideosByPlan) setWelcomeByPlan(result.storedWelcomeVideosByPlan);
       setFreeUrl(result.storedFreeChastiseVideoUrl || "");
-      setVenmoQrUrl(result.storedVenmoQrUrl || "");
-      setVenmoHandle(result.storedVenmoHandle || "");
-      setVenmoInstructions(result.storedVenmoInstructions || "");
       setMessage("Saved — live on the site now.");
       setError(false);
     } else {
@@ -120,24 +93,14 @@ export default function AdminLandingMediaPanel({
             <span className="text-[var(--accent-fg)]">Free</span>. Site music
             mutes automatically.
           </li>
-          <li>
-            <strong className="text-[var(--text)]">Venmo QR</strong> — member checkout backup when Stripe is
-            still Test or the member prefers Venmo. Funds go to the{" "}
-            <strong className="text-[var(--text)]">same business bank account</strong> as Stripe payouts
-            (Jeremy’s Train Station business). After they pay,{" "}
-            <strong className="text-[var(--text)]">Admin → Members → Mark paid (Venmo)</strong>.
-          </li>
         </ul>
         <p className="mt-3 text-xs text-[var(--muted)]">
           Upload coach intros under{" "}
           <a href="/admin/videos" className="text-[var(--accent-fg)] underline">
             Admin → Videos
           </a>{" "}
-          — they are stored on this site like the Free ticket clip, not YouTube. Venmo QR can be{" "}
-          <code className="text-[10px] text-[var(--accent-fg)]">
-            https://www.thetrainstation.co/images/venmo-jeremy-qr.png
-          </code>{" "}
-          or any https image URL of your QR.
+          — they are stored on this site like the Free ticket clip, not YouTube. Memberships
+          collect on Stripe only.
         </p>
       </div>
 
@@ -191,66 +154,6 @@ export default function AdminLandingMediaPanel({
         previewUrl={freeUrl}
         where="Home → Free ticket"
       />
-
-      <div className="card space-y-3">
-        <div>
-          <label htmlFor="venmo-qr" className="text-sm font-semibold text-[var(--text)]">
-            Venmo QR image
-          </label>
-          <p className="mt-1 text-xs text-[var(--muted)]">
-            Paste a direct link to your Venmo QR image. Members see this on checkout if Stripe is
-            slow or they prefer Venmo.
-          </p>
-          <p className="mt-1 text-[10px] uppercase tracking-wider text-[#7c3aed]">
-            Member checkout → Pay with Venmo
-          </p>
-        </div>
-        <input
-          id="venmo-qr"
-          className="input w-full"
-          placeholder="https://…/venmo-qr.png"
-          value={venmoQrUrl}
-          onChange={(e) => setVenmoQrUrl(e.target.value)}
-        />
-        {venmoQrUrl.trim() ? (
-          <div className="mx-auto max-w-[220px] overflow-hidden rounded-xl bg-white p-3 ring-1 ring-[var(--border)]">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={venmoQrUrl.trim()}
-              alt="Venmo QR preview"
-              className="h-auto w-full"
-            />
-          </div>
-        ) : (
-          <p className="text-xs text-[var(--muted)] italic">Paste an image URL to preview.</p>
-        )}
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div>
-            <label htmlFor="venmo-handle" className="text-xs font-medium text-[var(--muted)]">
-              Venmo handle (optional)
-            </label>
-            <input
-              id="venmo-handle"
-              className="input mt-1 w-full"
-              placeholder="@Jeremy-…"
-              value={venmoHandle}
-              onChange={(e) => setVenmoHandle(e.target.value)}
-            />
-          </div>
-          <div className="sm:col-span-2">
-            <label htmlFor="venmo-instructions" className="text-xs font-medium text-[var(--muted)]">
-              Instructions (optional)
-            </label>
-            <textarea
-              id="venmo-instructions"
-              className="input mt-1 min-h-[72px] w-full"
-              placeholder="Include your name in the note. Jeremy will confirm within 24 hours."
-              value={venmoInstructions}
-              onChange={(e) => setVenmoInstructions(e.target.value)}
-            />
-          </div>
-        </div>
-      </div>
 
       <div className="flex flex-wrap items-center gap-3">
         <button

@@ -151,8 +151,7 @@ export default function CoachTipPanel({
       <div id="tip-coach" className={`card space-y-2 ${className}`}>
         <h3 className="font-semibold">Tip your coach</h3>
         <p className="text-sm text-[var(--muted)]">
-          Card tips are being set up. Prefer Venmo? Ask Jeremy in Messages — same Train Station
-          business account.
+          Card tips are being set up. Message Jeremy if you want to tip another way.
         </p>
       </div>
     );

@@ -44,12 +44,6 @@ type PaymentsPublic = {
     priceLabel: string;
     stripeReady: boolean;
   }>;
-  venmo: {
-    qrUrl: string | null;
-    handle: string | null;
-    instructions: string | null;
-    hasQr: boolean;
-  };
   tips?: {
     enabled: boolean;
     presets: number[];
@@ -195,7 +189,6 @@ function MemberCheckoutInner() {
         ? Boolean(merchOffer?.stripeReady)
         : Boolean(membershipOffer?.stripeReady));
 
-  const venmoReady = Boolean(payments?.venmo?.hasQr);
   const priceLabel = planPriceLabel(plan, payments);
   const feeLabel = planFeeLabel(plan, payments);
 
@@ -338,7 +331,7 @@ function MemberCheckoutInner() {
             ) : null}
             {canceled && (
               <p className="text-sm text-amber-300">
-                Checkout was canceled. You can try Stripe again or use Venmo below.
+                Checkout was canceled. You can try Stripe again.
               </p>
             )}
 
@@ -420,33 +413,12 @@ function MemberCheckoutInner() {
                 </p>
               </div>
             )}
-            {!paymentsLoading && !stripeReady && !venmoReady && (
+            {!paymentsLoading && !stripeReady && (
               <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-200">
                 {payments?.stripeEnabled
                   ? "This plan is not ready for card checkout yet. Contact Jeremy to complete signup."
                   : "Online checkout is not configured yet. Contact Jeremy to complete signup."}
               </p>
-            )}
-            {venmoReady && payments?.venmo && !coverageMatchesThisTicket && (
-              <div className="space-y-3 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-4">
-                <p className="text-center text-xs font-semibold uppercase tracking-[2px] text-accent">
-                  Or pay with Venmo
-                </p>
-                <p className="text-center text-[11px] text-[var(--muted)]">
-                  Same Train Station business bank account as Stripe deposits — pick card or Venmo.
-                </p>
-                {payments.venmo.handle && (
-                  <p className="text-center text-sm font-medium">{payments.venmo.handle}</p>
-                )}
-                <div className="mx-auto max-w-[200px] overflow-hidden rounded-lg bg-white p-2">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={payments.venmo.qrUrl!} alt="Venmo QR code" className="h-auto w-full" />
-                </div>
-                <p className="text-center text-xs text-[var(--muted)]">
-                  {payments.venmo.instructions ||
-                    "Scan to pay and include your full name in the note. Coach marks you paid in Admin → Members after the payment posts."}
-                </p>
-              </div>
             )}
             {isSignupCheckout && isMembershipPlan(plan) && upgradePlans.length > 0 && (
               <CheckoutUpgradeOptions

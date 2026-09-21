@@ -32,7 +32,7 @@ const MODULES = [
   },
   {
     title: "Memberships & money",
-    body: "Ticket tiers, Stripe checkout, Venmo backup, tips, upgrades/downgrades — rails a real gym can collect on.",
+    body: "Ticket tiers, Stripe checkout, tips, upgrades/downgrades — rails a real gym can collect on.",
   },
   {
     title: "Gamification & access",
@@ -95,7 +95,7 @@ export default function PoweredByPage() {
             {BRAND_NAME} started as Coach Jeremy’s need for a system that actually fits how
             training businesses run: program days that change, members who need “what do I do
             today?”, live classes that shouldn’t lie about “Join”, and money that can clear on
-            card <em>or</em> Venmo without a second set of books.
+            card without a second set of books.
           </p>
 
           {/* Effort band — no hourly rate. Hours/days include Jake’s prior cycle (abandoned code, kept lessons)

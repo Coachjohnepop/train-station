@@ -8,7 +8,7 @@ const MODULES = [
   { id: "maintain", label: "Quick maintain / muscle-group sessions" },
   { id: "live-class", label: "Live class (Zoom) + coach floor" },
   { id: "messages", label: "Coach–member Messages + alerts" },
-  { id: "payments", label: "Memberships, Venmo, Stripe, tips" },
+  { id: "payments", label: "Memberships, Stripe, tips" },
   { id: "gamification", label: "Points, leaderboard, free-pool access" },
   { id: "admin", label: "Admin / coach back office" },
 ] as const;

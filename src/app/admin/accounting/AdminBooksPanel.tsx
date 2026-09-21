@@ -605,7 +605,7 @@ export default function AdminBooksPanel() {
           </div>
           <p className="text-[11px] text-[var(--muted)]">
             Trial balance from posted journals only. Debits must equal credits. Cash lives in Stripe
-            today (1000); Venmo/manual land in 1010 until deposited.
+            today (1000); manual/cash land in 1010 until deposited.
           </p>
         </div>
       )}

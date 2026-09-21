@@ -64,7 +64,6 @@ export const ADMIN_APP_SEARCH_INDEX: AdminSearchItem[] = [
       "students",
       "athletes",
       "paid",
-      "venmo",
       "member card",
       "intake",
       "ingestion",
@@ -237,11 +236,11 @@ export const ADMIN_APP_SEARCH_INDEX: AdminSearchItem[] = [
   {
     id: "coach-landing",
     title: "Landing",
-    description: "Public landing media, videos, Venmo QR",
+    description: "Public landing media, videos",
     href: "/admin/landing",
     workspace: "coach",
     group: "Site",
-    keywords: ["welcome", "free ticket", "videos", "brand", "media", "venmo qr"],
+    keywords: ["welcome", "free ticket", "videos", "brand", "media"],
   },
   {
     id: "coach-sponsorship",
@@ -372,7 +371,6 @@ export const ADMIN_APP_SEARCH_INDEX: AdminSearchItem[] = [
       "double entry",
       "quickbooks",
       "payments",
-      "venmo",
       "mark paid",
       "revenue",
       "books",
@@ -556,7 +554,7 @@ export const ADMIN_APP_SEARCH_INDEX: AdminSearchItem[] = [
     href: "/member/checkout",
     workspace: "public",
     group: "Member app",
-    keywords: ["pay", "promo field", "venmo checkout", "stripe checkout"],
+    keywords: ["pay", "promo field", "stripe checkout"],
   },
   {
     id: "member-account",

@@ -22,7 +22,7 @@ export default async function AdminLandingPage() {
     <div className="max-w-3xl">
       <h1 className="text-2xl font-bold">Site brand & landing media</h1>
       <p className="mt-2 text-[var(--muted)]">
-        Hero carousel photos or videos (play order, crop, slow-mo, audio mix), logo, name, tagline, and Venmo.
+        Hero carousel photos or videos (play order, crop, slow-mo, audio mix), logo, name, and tagline.
       </p>
       <div className="mt-4 rounded-xl border border-violet-500/30 bg-violet-500/5 px-4 py-3 text-xs text-[var(--muted)]">
         <p className="font-semibold text-violet-100">Where things live</p>
@@ -45,7 +45,7 @@ export default async function AdminLandingPage() {
             <strong className="text-violet-50">Hero images &amp; videos</strong> — full-screen
             landing carousel, play order, crop, slow-mo, Theme Song mix (below)
           </li>
-          <li>Logo / brand + Venmo QR (below)</li>
+          <li>Logo / brand (below)</li>
           <li>
             All site <strong className="text-violet-50">videos</strong> →{" "}
             <a href="/admin/videos" className="text-accent hover:underline">
@@ -82,9 +82,6 @@ export default async function AdminLandingPage() {
           initialWelcomeUrl={config.welcomeVideoUrl ?? ""}
           initialWelcomeVideosByPlan={config.welcomeVideosByPlan}
           initialFreeUrl={config.freeChastiseVideoUrl ?? ""}
-          initialVenmoQrUrl={config.venmoQrUrl ?? ""}
-          initialVenmoHandle={config.venmoHandle ?? ""}
-          initialVenmoInstructions={config.venmoInstructions ?? ""}
         />
         <AdminMemberContentPanel
           initialWeeklyUrl={memberContent.weeklyVideoUrl ?? ""}

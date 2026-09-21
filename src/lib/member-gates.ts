@@ -118,7 +118,7 @@ export function freeMemberHasCardOnFile(
 ): boolean {
   if (!profile) return false;
   if (profile.paymentMethod === "card_on_file") return true;
-  // Paid stripe/venmo also implies a rail exists (upgrade path).
+  // Paid stripe also implies a rail exists (upgrade path).
   if (profile.paymentStatus === "paid" && profile.paymentMethod === "stripe") return true;
   return false;
 }
@@ -174,7 +174,7 @@ export async function memberNeedsFreePaymentMethodAsync(
 
 /**
  * Same as memberNeedsPayment, but claimed free-week promos grant access without a
- * paid Stripe/Venmo stamp (product access only — not money).
+ * paid Stripe stamp (product access only — not money).
  */
 export async function memberNeedsPaymentAsync(
   profile: Pick<

@@ -29,9 +29,7 @@ export default function AdminQueuePanel() {
   const [dismissing, setDismissing] = useState<string | null>(null);
   const [markingPaid, setMarkingPaid] = useState<string | null>(null);
   const [markPaidTarget, setMarkPaidTarget] = useState<QueueItem | null>(null);
-  const [markPaidMethod, setMarkPaidMethod] = useState<"venmo" | "manual" | "stripe" | "other">(
-    "venmo",
-  );
+  const [markPaidMethod, setMarkPaidMethod] = useState<"manual" | "stripe" | "other">("manual");
   const [markPaidNote, setMarkPaidNote] = useState("");
 
   const loadQueue = useCallback(async () => {
@@ -143,7 +141,7 @@ export default function AdminQueuePanel() {
             type="button"
             onClick={() => {
               setMarkPaidTarget(item);
-              setMarkPaidMethod("venmo");
+              setMarkPaidMethod("manual");
               setMarkPaidNote("");
             }}
             disabled={markingPaid === item.userId}
@@ -174,7 +172,7 @@ export default function AdminQueuePanel() {
                 type="button"
                 onClick={() => {
                   setMarkPaidTarget(item);
-                  setMarkPaidMethod("venmo");
+                  setMarkPaidMethod("manual");
                   setMarkPaidNote("");
                 }}
                 disabled={markingPaid === item.userId}
@@ -288,10 +286,9 @@ export default function AdminQueuePanel() {
                 className="input mt-1 w-full"
                 value={markPaidMethod}
                 onChange={(e) =>
-                  setMarkPaidMethod(e.target.value as "venmo" | "manual" | "stripe" | "other")
+                  setMarkPaidMethod(e.target.value as "manual" | "stripe" | "other")
                 }
               >
-                <option value="venmo">Venmo</option>
                 <option value="manual">Manual / cash</option>
                 <option value="stripe">Stripe (manual confirm)</option>
                 <option value="other">Other</option>
@@ -304,7 +301,7 @@ export default function AdminQueuePanel() {
               <input
                 id="queue-pay-note"
                 className="input mt-1 w-full"
-                placeholder="e.g. Venmo @john — June signup"
+                placeholder="e.g. cash at the gym — June signup"
                 value={markPaidNote}
                 onChange={(e) => setMarkPaidNote(e.target.value)}
               />
