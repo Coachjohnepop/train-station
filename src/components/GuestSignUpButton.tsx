@@ -44,13 +44,13 @@ export default function GuestSignUpButton({
       <button
         type="button"
         className={[
-          "inline-flex min-h-11 items-center justify-center rounded-md px-2 py-1 text-xs font-semibold",
+          "inline-flex min-h-11 max-w-[11.5rem] items-center justify-center rounded-md px-2 py-1 text-left text-[11px] font-semibold leading-tight sm:max-w-none sm:text-xs",
           "text-emerald-200 transition hover:bg-emerald-500/20 hover:text-emerald-50",
           className,
         ].join(" ")}
         onClick={() => setOpen((v) => !v)}
       >
-        Sign Up
+        I Love the App, Let’s get Started
       </button>
       {open ? (
         <form
@@ -60,8 +60,8 @@ export default function GuestSignUpButton({
             void save();
           }}
         >
-          <p className="text-xs font-semibold text-white">Get started with your email</p>
-          <p className="mt-0.5 text-[11px] text-white/60">Username can wait.</p>
+          <p className="text-xs font-semibold text-white">I Love the App, Let’s get Started</p>
+          <p className="mt-0.5 text-[11px] text-white/60">Your email — username can wait.</p>
           <input
             type="email"
             required
