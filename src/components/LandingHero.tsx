@@ -461,7 +461,7 @@ function JeremyHeroStack({
           <LandingAbClip
             src={meetSrc}
             readySrc={JEREMY_WELCOME_READY_VIDEO_SRC}
-            title="Play"
+            title="Intro"
             analyticsAction="hero-meet-jeremy-play"
           />
         </div>

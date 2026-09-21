@@ -104,12 +104,12 @@ export default function LandingAbClip({
       <div ref={part2WrapRef} className="scroll-mt-[4.5rem] sm:scroll-mt-0">
         <SingleTile
           src={readySrc}
-          title="READY"
+          title="Let’s Go!"
           analyticsAction="hero-meet-jeremy-ready"
           playing={part2On}
           videoRef={part2Ref}
-          cta="READY"
-          hint={part2Armed ? "Part 2" : "Part 2 · after Play"}
+          cta="Let’s Go!"
+          hint={part2Armed ? "Part 2" : "After Intro"}
           onPlay={() => void playPart2()}
           onEnded={() => setPart2On(false)}
         />

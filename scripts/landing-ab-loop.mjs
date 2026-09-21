@@ -197,11 +197,11 @@ async function browserCtas(viewportKey) {
     if ((await start.count()) > 0 && (await see.count()) > 0 && (await own.count()) > 0) {
       pass(`${viewportKey} B choices`);
     } else fail(`${viewportKey} B choices`, (await page.locator("body").innerText()).slice(0, 180));
-    if ((await page.getByText("Play").count()) === 0) {
+    if ((await page.getByText("Intro").count()) === 0) {
       pass(`${viewportKey} meet Jeremy hidden at start`);
     } else fail(`${viewportKey} meet Jeremy hidden at start`);
     await page.waitForTimeout(2500);
-    if ((await page.getByText("Play").count()) > 0) pass(`${viewportKey} meet Jeremy after 3s`);
+    if ((await page.getByText("Intro").count()) > 0) pass(`${viewportKey} meet Jeremy after 3s`);
     else fail(`${viewportKey} meet Jeremy after 3s`);
 
     await own.first().click();
