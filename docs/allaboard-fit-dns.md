@@ -24,4 +24,28 @@ curl -sI https://allaboard.fit
 # expect 308  Location: https://www.thetrainstation.co/l/class
 ```
 
-Do **not** point www at parking. Leave nameservers on Namecheap unless you switch the whole domain to Vercel DNS.
+Do **not** point www at parking. Leave nameservers on **Namecheap BasicDNS** (do not switch the domain to Vercel DNS).
+
+Delete Namecheap **Redirect Domain** `allaboard.fit → http://www.allaboard.fit/` — that is parking, not mail.
+
+## Mail (Namecheap Private Email, no Google)
+
+Site A/CNAME and mail MX live together on BasicDNS.
+
+**Mail Settings:** Custom MX.
+
+| Type | Host | Value | Priority |
+|------|------|--------|----------|
+| A | `@` | `10.0.1.2` | |
+| CNAME | `www` | `cname.vercel-dns.com` | |
+| MX | `@` | `mx1.privateemail.com` | 10 |
+| MX | `@` | `mx2.privateemail.com` | 10 |
+| TXT | `@` | `v=spf1 include:spf.privateemail.com ~all` | |
+| TXT | `_dmarc` | `v=DMARC1; p=none; rua=mailto:hello@allaboard.fit` | |
+| CNAME | `mail` | `privateemail.com` | |
+| CNAME | `autodiscover` | `privateemail.com` | |
+| CNAME | `autoconfig` | `privateemail.com` | |
+
+DKIM TXT comes from the Private Email panel after a mailbox exists (`privateemail._domainkey` or `default._domainkey`). One SPF on `@` only.
+
+Catch-all: Private Email → unknown `@allaboard.fit` → the mailbox you read. Webmail: https://privateemail.com
