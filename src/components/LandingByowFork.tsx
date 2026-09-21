@@ -176,7 +176,7 @@ export default function LandingByowFork({
                 }}
                 disabled={busy}
               >
-                {busy ? "Opening…" : !previewArmed ? "Play" : lastPreview ? "Let’s begin" : "Next"}
+                {busy ? "Opening…" : !previewArmed ? "How It Works" : lastPreview ? "Let’s begin" : "Next"}
               </button>
               {error ? <p className="text-center text-sm text-red-300">{error}</p> : null}
             </div>
