@@ -120,3 +120,31 @@ export function businessUpgradeQueueDetail(place: BusinessUpgradeQueuePlace): st
   }
   return `${place.ahead} requests ahead of you · ${place.size} on the list.`;
 }
+
+export const MONTHLY_UPGRADE_PROMO_COPY =
+  "This month, one paying Coach Class member who requests an upgrade gets a complimentary Business Class seat.";
+
+/** Stripe or Venmo paid Coach — not staff grants / manual stamps. */
+export function isPayingCoachUpgradeEntrant(profile: {
+  plan?: string | null;
+  paymentStatus?: string | null;
+  paymentMethod?: string | null;
+  businessUpgradeStatus?: string | null;
+}): boolean {
+  if (profile.plan !== "member") return false;
+  if (profile.paymentStatus !== "paid") return false;
+  if (normalizeBusinessUpgradeStatus(profile.businessUpgradeStatus) !== "pending") {
+    return false;
+  }
+  return profile.paymentMethod === "stripe" || profile.paymentMethod === "venmo";
+}
+
+export function pickMonthlyPromoWinner<T>(
+  eligible: T[],
+  randomIndex: (count: number) => number,
+): T | null {
+  if (eligible.length === 0) return null;
+  const idx = randomIndex(eligible.length);
+  if (!Number.isInteger(idx) || idx < 0 || idx >= eligible.length) return null;
+  return eligible[idx] ?? null;
+}

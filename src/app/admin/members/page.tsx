@@ -150,6 +150,23 @@ export default function AdminMembersPage() {
   const [staffGrantNote, setStaffGrantNote] = useState("");
   const [staffGranting, setStaffGranting] = useState<string | null>(null);
   const [upgradeActing, setUpgradeActing] = useState<string | null>(null);
+  const [promoDrawing, setPromoDrawing] = useState(false);
+  const [promo, setPromo] = useState<{
+    current: {
+      monthKey: string;
+      monthLabel: string;
+      eligibleCount: number;
+      drawn: boolean;
+      winnerEmail: string | null;
+    };
+    previous: {
+      monthKey: string;
+      monthLabel: string;
+      eligibleCount: number;
+      drawn: boolean;
+      winnerEmail: string | null;
+    };
+  } | null>(null);
   const [error, setError] = useState("");
   const [filter, setFilter] = useState<MemberFilter>("all");
   const listRef = useRef<HTMLDivElement | null>(null);
@@ -168,15 +185,46 @@ export default function AdminMembersPage() {
   async function loadMembers() {
     setLoading(true);
     setError("");
-    const res = await fetch("/api/admin/members");
+    const [res, promoRes] = await Promise.all([
+      fetch("/api/admin/members"),
+      fetch("/api/admin/members/business-upgrade-promo"),
+    ]);
     const data = await res.json().catch(() => ({}));
+    const promoData = await promoRes.json().catch(() => ({}));
     if (!res.ok) {
       setError(data.error || "Could not load members.");
       setMembers([]);
     } else {
       setMembers(data.members || []);
     }
+    if (promoRes.ok && promoData.current && promoData.previous) {
+      setPromo({ current: promoData.current, previous: promoData.previous });
+    }
     setLoading(false);
+  }
+
+  async function drawMonthlyPromo(monthKey: string) {
+    if (
+      !window.confirm(
+        `Draw one lucky paying Coach Class upgrade request for ${monthKey}? They get complimentary Business Class (Coach billing stays).`,
+      )
+    ) {
+      return;
+    }
+    setPromoDrawing(true);
+    setError("");
+    const res = await fetch("/api/admin/members/business-upgrade-promo", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ monthKey }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      setError(data.error || "Could not draw the monthly promo.");
+    } else {
+      await loadMembers();
+    }
+    setPromoDrawing(false);
   }
 
   useEffect(() => {
@@ -536,6 +584,51 @@ export default function AdminMembersPage() {
           </button>
         ))}
       </div>
+
+      {promo ? (
+        <div className="rounded-xl border border-accent/30 bg-[color-mix(in_srgb,var(--accent)_8%,var(--surface))] px-4 py-3">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-accent">
+            Monthly upgrade promo
+          </p>
+          <p className="mt-1 text-sm text-[var(--text)]">
+            {promo.current.monthLabel}: {promo.current.eligibleCount} paying Coach Class request
+            {promo.current.eligibleCount === 1 ? "" : "s"} in the drawing
+            {promo.current.drawn
+              ? promo.current.winnerEmail
+                ? ` · winner ${promo.current.winnerEmail}`
+                : " · drawn, no paying requests"
+              : " · one complimentary Business Class seat at month end"}
+            .
+          </p>
+          {promo.previous.drawn && promo.previous.winnerEmail ? (
+            <p className="mt-1 text-xs text-[var(--muted)]">
+              {promo.previous.monthLabel} winner: {promo.previous.winnerEmail}
+            </p>
+          ) : null}
+          <div className="mt-3 flex flex-wrap gap-2">
+            {!promo.current.drawn ? (
+              <button
+                type="button"
+                className="btn-primary text-xs px-3 py-1.5"
+                disabled={promoDrawing}
+                onClick={() => void drawMonthlyPromo(promo.current.monthKey)}
+              >
+                {promoDrawing ? "Drawing…" : `Draw ${promo.current.monthLabel} winner`}
+              </button>
+            ) : null}
+            {!promo.previous.drawn && promo.previous.eligibleCount > 0 ? (
+              <button
+                type="button"
+                className="btn-ghost text-xs px-3 py-1.5 ring-1 ring-accent/30"
+                disabled={promoDrawing}
+                onClick={() => void drawMonthlyPromo(promo.previous.monthKey)}
+              >
+                {promoDrawing ? "Drawing…" : `Draw ${promo.previous.monthLabel} winner`}
+              </button>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
 
       {error && <p className="text-sm text-amber-400">{error}</p>}
 

@@ -814,6 +814,23 @@ model MemberProfile {
   @@index([businessUpgradeStatus])
 }
 
+/// One lucky paying Coach Class upgrade request per Pacific month.
+model BusinessUpgradeMonthlyPromo {
+  id            String    @id @default(cuid())
+  /// YYYY-MM in America/Los_Angeles
+  monthKey      String    @unique
+  winnerUserId  String?
+  winnerEmail   String?
+  eligibleCount Int       @default(0)
+  drawnAt       DateTime?
+  drawnBy       String?
+  note          String?   @db.Text
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([winnerUserId])
+}
+
 model OAuthIdentity {
   id             String   @id @default(cuid())
   provider       String

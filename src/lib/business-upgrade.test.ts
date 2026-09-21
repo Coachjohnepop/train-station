@@ -3,13 +3,16 @@ import { describe, it } from "node:test";
 import {
   appendPaymentNote,
   BUSINESS_UPGRADE_REQUEST_COPY,
+  MONTHLY_UPGRADE_PROMO_COPY,
   businessUpgradeQueueDetail,
   businessUpgradeQueueHeadline,
   canRequestBusinessClassUpgrade,
   isBusinessUpgradePending,
+  isPayingCoachUpgradeEntrant,
   memberDisplayNameFromEmail,
   normalizeBusinessUpgradeStatus,
   ordinalPlace,
+  pickMonthlyPromoWinner,
   placeInBusinessUpgradeQueue,
   sortBusinessUpgradeQueue,
 } from "./business-upgrade";
@@ -117,5 +120,39 @@ describe("business class upgrade request", () => {
       businessUpgradeQueueDetail(first!),
       "No one ahead of you · 3 on the list.",
     );
+  });
+
+  it("enters paying Coach requests in the monthly drawing, not staff grants", () => {
+    assert.match(MONTHLY_UPGRADE_PROMO_COPY, /one paying Coach Class member/i);
+    assert.equal(
+      isPayingCoachUpgradeEntrant({
+        plan: "member",
+        paymentStatus: "paid",
+        paymentMethod: "stripe",
+        businessUpgradeStatus: "pending",
+      }),
+      true,
+    );
+    assert.equal(
+      isPayingCoachUpgradeEntrant({
+        plan: "member",
+        paymentStatus: "paid",
+        paymentMethod: "venmo",
+        businessUpgradeStatus: "pending",
+      }),
+      true,
+    );
+    assert.equal(
+      isPayingCoachUpgradeEntrant({
+        plan: "member",
+        paymentStatus: "paid",
+        paymentMethod: "manual",
+        businessUpgradeStatus: "pending",
+      }),
+      false,
+    );
+    const pool = ["ali", "todd", "stephanie"];
+    assert.equal(pickMonthlyPromoWinner(pool, () => 1), "todd");
+    assert.equal(pickMonthlyPromoWinner([], () => 0), null);
   });
 });

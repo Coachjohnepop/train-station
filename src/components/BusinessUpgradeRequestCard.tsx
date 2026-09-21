@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import {
   BUSINESS_UPGRADE_REQUEST_COPY,
+  MONTHLY_UPGRADE_PROMO_COPY,
   businessUpgradeQueueDetail,
   businessUpgradeQueuePlace,
   ordinalPlace,
@@ -10,12 +11,21 @@ import {
   type BusinessUpgradeStatus,
 } from "@/lib/business-upgrade";
 
+export type MonthlyUpgradePromoView = {
+  monthLabel: string;
+  eligible: boolean;
+  drawn: boolean;
+  iWon: boolean;
+  eligibleCount: number;
+};
+
 export default function BusinessUpgradeRequestCard({
   canRequest,
   status,
   requestedAt,
   queuePosition,
   queueSize,
+  promo,
   onStatus,
 }: {
   canRequest: boolean;
@@ -23,6 +33,7 @@ export default function BusinessUpgradeRequestCard({
   requestedAt?: string | null;
   queuePosition?: number | null;
   queueSize?: number | null;
+  promo?: MonthlyUpgradePromoView | null;
   onStatus?: (
     status: BusinessUpgradeStatus,
     place?: BusinessUpgradeQueuePlace | null,
@@ -110,6 +121,19 @@ export default function BusinessUpgradeRequestCard({
             when it&apos;s approved.
             {requestedLabel ? ` Requested ${requestedLabel}.` : ""}
           </p>
+          {promo?.eligible && !promo.drawn ? (
+            <p className="text-sm text-[var(--text)]">
+              You&apos;re in {promo.monthLabel}&apos;s drawing
+              {promo.eligibleCount > 0 ? ` · ${promo.eligibleCount} paying requests` : ""}.
+              One lucky paying customer gets complimentary Business Class.
+            </p>
+          ) : null}
+          {promo?.drawn && !promo.iWon ? (
+            <p className="text-sm text-[var(--muted)]">
+              {promo.monthLabel}&apos;s lucky upgrade was awarded. You&apos;re still on the list
+              for crew approval.
+            </p>
+          ) : null}
         </>
       ) : (
         <>
@@ -118,6 +142,7 @@ export default function BusinessUpgradeRequestCard({
             You&apos;re on Coach Class. Request an upgrade and we&apos;ll ping the crew to
             approve — not automatic, just like hoping for a better seat.
           </p>
+          <p className="text-sm text-[var(--text)]">{MONTHLY_UPGRADE_PROMO_COPY}</p>
           {shown === "declined" ? (
             <p className="text-xs text-amber-200">
               Last request wasn&apos;t approved. You can request again.

@@ -10,7 +10,9 @@ import type { SignupPlan } from "@/lib/signup-plans";
 import { signupPlanLabel } from "@/lib/signup-plans";
 import QuickAuthSettings from "@/components/QuickAuthSettings";
 import PushAlertSettings from "@/components/PushAlertSettings";
-import BusinessUpgradeRequestCard from "@/components/BusinessUpgradeRequestCard";
+import BusinessUpgradeRequestCard, {
+  type MonthlyUpgradePromoView,
+} from "@/components/BusinessUpgradeRequestCard";
 import PaymentReceiptCard, {
   type PaymentReceiptView,
 } from "@/components/PaymentReceiptCard";
@@ -42,6 +44,7 @@ type MembershipData = {
   businessUpgradeRequestedAt?: string | null;
   businessUpgradeQueuePosition?: number | null;
   businessUpgradeQueueSize?: number | null;
+  monthlyUpgradePromo?: MonthlyUpgradePromoView | null;
   intensive: {
     sessionsTotal: number | null;
     sessionsRemaining: number | null;
@@ -285,6 +288,19 @@ export default function MemberAccountClient({
         </div>
       </div>
 
+      {membership.monthlyUpgradePromo?.iWon ? (
+        <div className="card space-y-2 border border-accent/35 bg-[color-mix(in_srgb,var(--accent)_8%,var(--surface))]">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-accent">
+            Monthly promo
+          </p>
+          <h3 className="text-lg font-semibold">You won this month&apos;s upgrade</h3>
+          <p className="text-sm text-[var(--muted)]">
+            Complimentary Business Class — Live Zooms are on your ticket. Coach Class billing
+            stays as-is.
+          </p>
+        </div>
+      ) : null}
+
       {(membership.canRequestBusinessUpgrade ||
         membership.businessUpgradeStatus === "pending" ||
         membership.businessUpgradeStatus === "declined") && (
@@ -294,6 +310,7 @@ export default function MemberAccountClient({
           requestedAt={membership.businessUpgradeRequestedAt}
           queuePosition={membership.businessUpgradeQueuePosition}
           queueSize={membership.businessUpgradeQueueSize}
+          promo={membership.monthlyUpgradePromo}
         />
       )}
 

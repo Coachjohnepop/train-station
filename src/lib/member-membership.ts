@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getLatestPaidPaymentFact } from "@/lib/analytics-facts";
+import { memberMonthlyPromoView } from "@/lib/business-upgrade-monthly-promo";
 import {
   getBusinessUpgradeQueuePlaceForUser,
   getMemberProfile,
@@ -67,6 +68,14 @@ export type MemberMembershipSnapshot = {
   /** 1-based place on the pending upgrade list (Delta-style). */
   businessUpgradeQueuePosition: number | null;
   businessUpgradeQueueSize: number | null;
+  monthlyUpgradePromo: {
+    monthKey: string;
+    monthLabel: string;
+    eligible: boolean;
+    drawn: boolean;
+    iWon: boolean;
+    eligibleCount: number;
+  } | null;
   intensive: {
     sessionsTotal: number | null;
     sessionsRemaining: number | null;
@@ -207,6 +216,12 @@ export async function getMemberMembershipSnapshot(
     normalizeBusinessUpgradeStatus(profile.businessUpgradeStatus) === "pending"
       ? await getBusinessUpgradeQueuePlaceForUser(userId)
       : null;
+  let monthlyUpgradePromo: MemberMembershipSnapshot["monthlyUpgradePromo"] = null;
+  try {
+    monthlyUpgradePromo = await memberMonthlyPromoView(userId);
+  } catch {
+    monthlyUpgradePromo = null;
+  }
 
   const lastPay =
     profile.paymentStatus === "paid" ? await getLatestPaidPaymentFact(userId) : null;
@@ -256,6 +271,7 @@ export async function getMemberMembershipSnapshot(
     businessUpgradeRequestedAt: profile.businessUpgradeRequestedAt,
     businessUpgradeQueuePosition: upgradePlace?.position ?? null,
     businessUpgradeQueueSize: upgradePlace?.size ?? null,
+    monthlyUpgradePromo,
     intensive:
       plan === "pro" && profile.intensiveSessionsTotal
         ? {

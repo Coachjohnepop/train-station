@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import BusinessUpgradeRequestCard from "@/components/BusinessUpgradeRequestCard";
+import BusinessUpgradeRequestCard, {
+  type MonthlyUpgradePromoView,
+} from "@/components/BusinessUpgradeRequestCard";
 import PaymentReceiptCard, {
   type PaymentReceiptView,
 } from "@/components/PaymentReceiptCard";
@@ -28,6 +30,7 @@ function CheckoutSuccessInner() {
   const [upgradeRequestedAt, setUpgradeRequestedAt] = useState<string | null>(null);
   const [upgradeQueuePosition, setUpgradeQueuePosition] = useState<number | null>(null);
   const [upgradeQueueSize, setUpgradeQueueSize] = useState<number | null>(null);
+  const [upgradePromo, setUpgradePromo] = useState<MonthlyUpgradePromoView | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -161,6 +164,9 @@ function CheckoutSuccessInner() {
       if (typeof membership.businessUpgradeQueueSize === "number") {
         setUpgradeQueueSize(membership.businessUpgradeQueueSize);
       }
+      if (membership.monthlyUpgradePromo && typeof membership.monthlyUpgradePromo === "object") {
+        setUpgradePromo(membership.monthlyUpgradePromo);
+      }
     })();
 
     return () => {
@@ -243,6 +249,7 @@ function CheckoutSuccessInner() {
               requestedAt={upgradeRequestedAt}
               queuePosition={upgradeQueuePosition}
               queueSize={upgradeQueueSize}
+              promo={upgradePromo}
               onStatus={(next, nextPlace) => {
                 setUpgradeStatus(next);
                 setUpgradeRequestedAt(new Date().toISOString());
@@ -294,6 +301,7 @@ function CheckoutSuccessInner() {
                 requestedAt={upgradeRequestedAt}
                 queuePosition={upgradeQueuePosition}
                 queueSize={upgradeQueueSize}
+                promo={upgradePromo}
                 onStatus={(next, nextPlace) => {
                   setUpgradeStatus(next);
                   setUpgradeRequestedAt(new Date().toISOString());
