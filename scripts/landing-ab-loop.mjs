@@ -127,7 +127,7 @@ async function assertVariant(page, expect, label) {
     else pass(`${label} tour is not B`);
   }
   if (expect === "jeremy") {
-    if (/Start membership/i.test(body) && /See the program/i.test(body) && /I workout today/i.test(body)) {
+    if (/Start membership/i.test(body) && /See the program/i.test(body) && /Track Your Current Workout/i.test(body)) {
       pass(`${label} B fork`);
     } else fail(`${label} B fork`, body.slice(0, 180));
   }
@@ -206,7 +206,7 @@ async function browserCtas(viewportKey) {
 
     await own.first().click();
     await page.waitForTimeout(400);
-    const learn = page.getByRole("button", { name: "Learn About The Train Station" });
+    const learn = page.getByRole("button", { name: "Learn the Train Station Way" });
     const upload = page.getByRole("button", { name: "Upload Your Own Workout" });
     if ((await learn.count()) > 0 && (await upload.count()) > 0) pass(`${viewportKey} B today split`);
     else fail(`${viewportKey} B today split`);

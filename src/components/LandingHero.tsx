@@ -426,7 +426,7 @@ function JeremyHeroStack({
   return (
     <>
       <div className="w-full max-w-sm">
-        <EasyPathChoices kicker="" hint="Do a workout on us">
+        <EasyPathChoices kicker="" hint="Tickets first · or start today’s work">
           <Link
             href={JOIN_TICKETS_HREF}
             data-analytics-action={returnMode ? "hero-start-membership-return" : "hero-start-membership"}
@@ -452,7 +452,7 @@ function JeremyHeroStack({
             onClick={() => onTour("today")}
             className="landing-hero-explore-cta inline-flex h-11 w-full items-center justify-center rounded-full px-8 text-[15px] font-bold tracking-tight text-white/90"
           >
-            I workout today
+            Track Your Current Workout
           </button>
         </EasyPathChoices>
       </div>
@@ -468,13 +468,13 @@ function JeremyHeroStack({
           />
         </div>
       ) : null}
-      <h1 className="landing-hero-headline mt-8 mb-3 text-[clamp(2.1rem,10vw,3.2rem)] font-semibold leading-[0.92] tracking-[-0.04em] text-white sm:mt-10 sm:text-5xl">
-        Are you Good
+      <h1 className="landing-hero-headline mt-8 mb-3 text-[clamp(2.4rem,11vw,3.4rem)] font-semibold leading-[0.9] tracking-[-0.04em] text-white sm:mt-10 sm:text-6xl">
+        Your workout
         <br />
-        with Apps?
+        <span className="landing-hero-accent">or ours.</span>
       </h1>
-      <p className="landing-hero-subhead max-w-[22rem] text-[17px] font-semibold leading-snug text-white sm:max-w-sm sm:text-xl">
-        <span className="landing-hero-accent">Do a workout on us!</span>
+      <p className="landing-hero-subhead max-w-[20.5rem] text-[15px] font-semibold leading-snug text-white sm:max-w-sm sm:text-xl">
+        The Train Station app on your phone. See your board, or log the session you already have.
       </p>
     </>
   );

@@ -218,32 +218,32 @@ export default function LandingByowFork({
         {!path || path === "today" ? (
           <div className="space-y-4">
             <h2 id="byow-fork-title" className="text-[1.65rem] font-semibold leading-tight tracking-tight text-white sm:text-3xl">
-              I workout today
+              Track Your Current Workout
             </h2>
             <p className="text-[15px] leading-relaxed text-white/80 sm:text-base">
-              Learn how The Train Station works, or upload the session you already have.
+              Upload what you already do, or learn The Train Station Way.
             </p>
             <button
               type="button"
-              data-analytics-action="b-learn-station"
-              className="inline-flex h-14 w-full items-center justify-center rounded-full bg-[#7c3aed] text-[17px] font-extrabold text-white"
-              onClick={() => {
-                trackLandingCustom("b-learn-station");
-                onLearn?.();
-              }}
-            >
-              Learn About The Train Station
-            </button>
-            <button
-              type="button"
               data-analytics-action="b-fork-own"
-              className="inline-flex h-12 w-full items-center justify-center rounded-full border border-white/25 text-[15px] font-bold text-white/90"
+              className="inline-flex h-14 w-full items-center justify-center rounded-full bg-[#7c3aed] text-[17px] font-extrabold text-white"
               onClick={() => {
                 setPath("own");
                 trackLandingCustom("b-fork-own");
               }}
             >
               Upload Your Own Workout
+            </button>
+            <button
+              type="button"
+              data-analytics-action="b-learn-station"
+              className="inline-flex h-12 w-full items-center justify-center rounded-full border border-white/25 text-[15px] font-bold text-white/90"
+              onClick={() => {
+                trackLandingCustom("b-learn-station");
+                onLearn?.();
+              }}
+            >
+              Learn the Train Station Way
             </button>
           </div>
         ) : (
