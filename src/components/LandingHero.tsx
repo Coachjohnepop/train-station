@@ -94,6 +94,7 @@ export default function LandingHero({
   const [forkPath, setForkPath] = useState<"today" | "own" | "jeremy" | null>(null);
   const [liveReturn, setLiveReturn] = useState(false);
   const [fadingOut, setFadingOut] = useState<number | null>(null);
+  const [heroDurations, setHeroDurations] = useState<Record<string, number>>({});
   const fadeClearRef = useRef<number | null>(null);
   const returnMode = returning || liveReturn;
 
@@ -140,6 +141,8 @@ export default function LandingHero({
   }, []);
 
   const imageIndex = images.length ? imageTick % images.length : 0;
+  const imageIndexRef = useRef(imageIndex);
+  imageIndexRef.current = imageIndex;
 
   function goTo(nextIndex: number) {
     if (!images.length) return;
@@ -154,16 +157,16 @@ export default function LandingHero({
     }, HERO_SLIDE_FADE_MS);
   }
 
-  // Photos hold ~3.2s; video slides hold longer so slow-mo is visible.
+  // Photos hold ~3.2s; videos hold one play-through (ended also advances).
   useEffect(() => {
     if (images.length <= 1) return;
     const current = images[imageIndex];
-    const ms = current ? heroSlideHoldMs(current) : 3200;
+    const known = current ? heroDurations[current.id] : undefined;
+    const ms = current ? heroSlideHoldMs(current, known) : 3200;
     const id = window.setTimeout(() => goTo(imageIndex + 1), ms);
     return () => window.clearTimeout(id);
-    // goTo closes over imageIndex; restart the hold when the visible slide changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [images, imageIndex]);
+  }, [images, imageIndex, heroDurations]);
 
   useEffect(() => {
     return () => {
@@ -224,6 +227,14 @@ export default function LandingHero({
               active={index === imageIndex || index === fadingOut}
               className="h-full w-full object-cover sm:object-center"
               fetchPriority={index === imageIndex ? "high" : "low"}
+              onDuration={(seconds) => {
+                setHeroDurations((prev) =>
+                  prev[image.id] === seconds ? prev : { ...prev, [image.id]: seconds },
+                );
+              }}
+              onEnded={() => {
+                if (index === imageIndexRef.current) goTo(imageIndexRef.current + 1);
+              }}
             />
           ) : (
             <div className="h-full w-full bg-black" aria-hidden />

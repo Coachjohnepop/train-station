@@ -272,14 +272,21 @@ export function heroSlideShouldLoadMedia(
   return index === activeIndex || index === next || extraKeep.includes(index);
 }
 
-export function heroSlideHoldMs(slide: HeroSlide): number {
+export function heroSlideHoldMs(slide: HeroSlide, durationSec?: number | null): number {
   if (slide.kind !== "video" && !isHeroVideoSrc(slide.src)) return 3200;
   const rate = heroPlaybackRate(slide);
-  const trimmed = heroTrimDurationSec(slide);
-  if (trimmed != null && trimmed > 0) {
-    return Math.min(16000, Math.max(4000, Math.round((trimmed / rate) * 1000)));
+  const window = heroTrimWindow(slide, durationSec ?? null);
+  const span =
+    window.end != null
+      ? Math.max(0, window.end - window.start)
+      : durationSec && durationSec > 0
+        ? Math.max(0, durationSec - window.start)
+        : null;
+  if (span != null && span > 0) {
+    // Play once (plus a beat for the dissolve). Never long enough to loop.
+    return Math.min(20000, Math.max(700, Math.round((span / rate) * 1000) + 250));
   }
-  return Math.min(12000, Math.max(4800, Math.round(5600 / rate)));
+  return 9000;
 }
 
 export const HERO_MIN_TRIM_SEC = 0.4;

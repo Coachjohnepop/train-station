@@ -27,6 +27,7 @@ export default function HeroSlideMedia({
   alt,
   fetchPriority,
   onDuration,
+  onEnded,
   playAudio,
 }: {
   slide: HeroSlide;
@@ -35,6 +36,8 @@ export default function HeroSlideMedia({
   alt?: string;
   fetchPriority?: "high" | "low" | "auto";
   onDuration?: (seconds: number) => void;
+  /** Fired when the clip hits trim end or native ended — do not loop. */
+  onEnded?: () => void;
   /** Play this slide's audioSrc. Default = active (public carousel). */
   playAudio?: boolean;
 }) {
@@ -42,6 +45,8 @@ export default function HeroSlideMedia({
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const onDurationRef = useRef(onDuration);
   onDurationRef.current = onDuration;
+  const onEndedRef = useRef(onEnded);
+  onEndedRef.current = onEnded;
   const isVideo = slide.kind === "video" || isHeroVideoSrc(slide.src);
   const crop = heroSlideCropStyle(slide);
   const label = alt || slide.alt || "Hero";
@@ -71,17 +76,26 @@ export default function HeroSlideMedia({
     const onMeta = () => {
       applyWindow();
     };
+    let finished = false;
+    const finish = () => {
+      if (!active || finished) return;
+      finished = true;
+      el.pause();
+      onEndedRef.current?.();
+    };
+
     const onTime = () => {
       const duration = Number.isFinite(el.duration) && el.duration > 0 ? el.duration : null;
-      const { start, end } = heroTrimWindow(slide, duration);
+      const { end } = heroTrimWindow(slide, duration);
       const limit = end ?? duration;
-      if (limit != null && el.currentTime >= limit - 0.04) {
-        el.currentTime = start;
+      if (limit != null && el.currentTime >= limit - 0.05) {
+        finish();
       }
     };
 
     el.addEventListener("loadedmetadata", onMeta);
     el.addEventListener("timeupdate", onTime);
+    el.addEventListener("ended", finish);
     if (el.readyState >= 1) applyWindow();
 
     if (active) {
@@ -97,6 +111,7 @@ export default function HeroSlideMedia({
     return () => {
       el.removeEventListener("loadedmetadata", onMeta);
       el.removeEventListener("timeupdate", onTime);
+      el.removeEventListener("ended", finish);
     };
   }, [active, slide.playbackRate, slide.src, slide.trimStartSec, slide.trimEndSec]);
 
@@ -115,7 +130,7 @@ export default function HeroSlideMedia({
         return;
       }
       if (!isLandingMixUnlocked()) return;
-      el.loop = true;
+      el.loop = false;
       el.muted = false;
       applyMixVolume(el, slide.audioVolume);
       const play = el.play();
@@ -133,7 +148,6 @@ export default function HeroSlideMedia({
       <audio
         ref={audioRef}
         src={slide.audioSrc}
-        loop
         preload={audioOn ? "auto" : "none"}
         playsInline
         data-ts-hero-audio="true"
@@ -141,7 +155,6 @@ export default function HeroSlideMedia({
     ) : null;
 
   if (isVideo) {
-    const trimmed = slide.trimStartSec > 0 || slide.trimEndSec != null;
     return (
       <>
         <video
@@ -149,7 +162,7 @@ export default function HeroSlideMedia({
           className={`ts-inapp-video bg-black ${className}`}
           src={slide.src}
           muted
-          loop={!trimmed}
+          loop={false}
           playsInline
           autoPlay={false}
           preload="auto"
