@@ -108,10 +108,10 @@ export default function LandingNav({
       }`}
     >
       {/*
-        Mobile welcome: [logo] [Memberships · Sign out] …… [theme] [☰]
-        No Dashboard pill (primary actions live on the page body).
+        Phone welcome: [logo] …… [theme] [☰]
+        Today / Sign out live in the menu — they used to crowd the bar and steal taps.
       */}
-      <div className="mx-auto flex max-w-6xl items-center gap-1.5 px-3 py-2.5 sm:gap-3 sm:px-6 sm:py-3">
+      <div className="mx-auto flex max-w-6xl items-center gap-2 px-3 py-2.5 sm:gap-3 sm:px-6 sm:py-3">
         <div className="flex min-w-0 flex-1 items-center gap-1 sm:gap-2">
           <Link
             href={brandHref}
@@ -138,7 +138,7 @@ export default function LandingNav({
           </Link>
 
           {isWelcome ? (
-            <div className="flex min-w-0 items-center gap-0.5 sm:gap-1">
+            <div className="hidden min-w-0 items-center gap-1 md:flex">
               {purchaseAuth.signedIn ? (
                 <>
                   <Link
@@ -285,6 +285,7 @@ export default function LandingNav({
             type="button"
             className={`landing-nav__menu-btn ${menuAlways ? "" : "md:hidden"}`}
             aria-expanded={mobileOpen}
+            aria-controls="landing-nav-menu"
             aria-label={mobileOpen ? "Close menu" : "Open menu"}
             data-analytics-action={mobileOpen ? "close-menu" : "open-menu"}
             onClick={() => {
@@ -299,6 +300,7 @@ export default function LandingNav({
 
       {mobileOpen && (
         <div
+          id="landing-nav-menu"
           className={`landing-nav__menu-panel border-t border-[var(--border)] bg-[var(--surface)] px-4 py-3 text-[var(--text)] ${
             menuAlways ? "" : "md:hidden"
           }`}

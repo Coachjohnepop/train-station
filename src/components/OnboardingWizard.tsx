@@ -200,27 +200,6 @@ export default function OnboardingWizard({
       <div className="card mx-4 space-y-4 p-4 sm:mx-0 sm:p-6">
         {currentStep === 1 && (
           <>
-            <div>
-              <p className="mb-1.5 block text-xs text-[var(--muted)]">I am</p>
-              <div className="grid grid-cols-2 gap-2">
-                {(["man", "woman"] as const).map((option) => (
-                  <button
-                    key={option}
-                    type="button"
-                    onClick={() => pickGender(option)}
-                    className={`rounded-xl border px-3 py-2.5 text-sm font-semibold ${
-                      gender === option
-                        ? "border-accent bg-accent/15 text-[var(--text)]"
-                        : "border-[var(--border)] bg-[var(--surface-2)] text-[var(--muted)]"
-                    }`}
-                  >
-                    {option === "man" ? "Man" : "Woman"}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <NextStepButton onClick={() => void nextStep()}>Continue</NextStepButton>
-
             <h1 className="font-bold">Welcome aboard</h1>
             <p className="text-sm leading-relaxed text-[var(--muted)]">
               You&apos;re on <strong className="text-[var(--text)]">{signupPlanLabel(plan)}</strong>.
@@ -248,7 +227,7 @@ export default function OnboardingWizard({
 
             {planWelcomeUrl ? (
               <div className="overflow-hidden rounded-xl bg-black ring-1 ring-[var(--border)]">
-                <div className="mx-auto aspect-video w-full max-h-[22vh] sm:max-h-none">
+                <div className="mx-auto aspect-video w-full max-h-[38vh] sm:max-h-none">
                   <PlayableVideoFrame
                     className="h-full w-full"
                     videoUrl={planWelcomeUrl}
@@ -267,6 +246,29 @@ export default function OnboardingWizard({
                 Your coach welcome clip will appear here soon — setup works either way.
               </p>
             )}
+
+            <div>
+              <p className="mb-1.5 block text-xs text-[var(--muted)]">I am</p>
+              <div className="grid grid-cols-2 gap-2">
+                {(["man", "woman"] as const).map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    onClick={() => pickGender(option)}
+                    className={`min-h-12 rounded-xl border px-3 py-2.5 text-sm font-semibold ${
+                      gender === option
+                        ? "border-accent bg-accent/15 text-[var(--text)]"
+                        : "border-[var(--border)] bg-[var(--surface-2)] text-[var(--muted)]"
+                    }`}
+                  >
+                    {option === "man" ? "Man" : "Woman"}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <OnboardActionDock>
+              <NextStepButton onClick={() => void nextStep()}>Continue</NextStepButton>
+            </OnboardActionDock>
           </>
         )}
 

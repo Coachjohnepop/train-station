@@ -1570,6 +1570,7 @@ body:has([data-admin-chrome]) [data-global-theme-toggle] {
 
 .landing-nav {
   color: var(--text);
+  padding-top: env(safe-area-inset-top, 0px);
 }
 
 .landing-nav__link {
@@ -1616,16 +1617,17 @@ body:has([data-admin-chrome]) [data-global-theme-toggle] {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2.25rem;
-  height: 2.25rem;
+  width: 2.75rem;
+  height: 2.75rem;
   border-radius: 10px;
   border: 1px solid var(--border);
   background: var(--surface-2);
   color: var(--text);
-  font-size: 1rem;
+  font-size: 1.15rem;
   flex-shrink: 0;
   position: relative;
-  z-index: 2;
+  z-index: 5;
+  touch-action: manipulation;
 }
 
 /* Same trap as .landing-nav__link: display:inline-flex beats Tailwind md:hidden. */
@@ -1637,6 +1639,16 @@ body:has([data-admin-chrome]) [data-global-theme-toggle] {
 
 .landing-nav__menu-panel {
   display: block;
+  position: relative;
+  z-index: 6;
+  max-height: min(70dvh, 28rem);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.landing-nav__menu-panel a,
+.landing-nav__menu-panel button {
+  min-height: 2.75rem;
 }
 
 /* Theme control in landing/member chrome — keep icon-only on narrow phones */
