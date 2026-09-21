@@ -376,8 +376,8 @@ export default function MemberAccountClient({
           >
             {resetBusy ? "Sending…" : "Email password reset"}
           </button>
-          <Link href="/forgot-password" className="btn-ghost text-xs">
-            Reset password page
+          <Link href="/reset-password" className="btn-ghost text-xs">
+            Reset password
           </Link>
         </div>
         {resetMsg && <p className="text-xs text-[var(--muted)]">{resetMsg}</p>}

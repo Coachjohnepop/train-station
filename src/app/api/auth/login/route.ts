@@ -41,7 +41,7 @@ export async function POST(request: Request) {
     const res = NextResponse.json(
       {
         error: noPasswordSet
-          ? "No password set for this account yet — use Forgot password to create one."
+          ? "No password set for this account yet — use Reset password to create one."
           : "Invalid email or password",
         code: noPasswordSet ? "no_password" : "invalid_credentials",
       },

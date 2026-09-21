@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { normalizeAccountEmail } from "@/lib/account-email";
 import { lookupPasswordResetToken } from "@/lib/password-reset-store";
+import ResetPasswordRequestForm from "@/components/ResetPasswordRequestForm";
 import ResetPasswordForm from "./ResetPasswordForm";
 
 export default async function ResetPasswordPage({
@@ -14,25 +15,34 @@ export default async function ResetPasswordPage({
   const tokenEntry = token ? await lookupPasswordResetToken(token) : null;
   const accountEmail =
     tokenEntry?.email ?? (rawEmail ? normalizeAccountEmail(rawEmail) || null : null);
+  const requesting = !token;
 
   return (
     <div className="app-shell-bg flex min-h-screen flex-col items-center justify-center px-4 py-12">
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
           <p className="text-sm font-semibold tracking-tight text-[var(--accent)]">The Train Station</p>
-          <h1 className="mt-4 text-2xl font-bold">Set a new password</h1>
-          {accountEmail ? (
+          <h1 className="mt-4 text-2xl font-bold">
+            {requesting ? "Reset password" : "Set a new password"}
+          </h1>
+          {accountEmail && !requesting ? (
             <p className="mt-2 text-sm text-[var(--text)]">
               For <span className="font-medium text-accent">{accountEmail}</span>
             </p>
           ) : null}
           <p className="mt-2 text-sm text-[var(--muted)]">
-            Choose a password you&apos;ll use to sign in from now on.
+            {requesting
+              ? "Enter your email and we’ll send a link to set a new password."
+              : "Choose a password you’ll use to sign in from now on."}
           </p>
         </div>
 
         <Suspense fallback={<div className="card text-sm text-[var(--muted)]">Loading…</div>}>
-          <ResetPasswordForm token={token} accountEmail={accountEmail} />
+          {requesting ? (
+            <ResetPasswordRequestForm initialEmail={accountEmail || ""} />
+          ) : (
+            <ResetPasswordForm token={token} accountEmail={accountEmail} />
+          )}
         </Suspense>
 
         <div className="mt-6 text-center text-sm">

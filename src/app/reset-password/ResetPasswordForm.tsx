@@ -89,9 +89,9 @@ export default function ResetPasswordForm({
   if (!token) {
     return (
       <div className="card space-y-4 text-sm text-[var(--muted)]">
-        <p>This reset link is invalid. Request a new one from the forgot password page.</p>
-        <Link href="/forgot-password" className="text-accent hover:underline">
-          Request reset link
+        <p>This reset link is invalid. Request a new one from the reset password page.</p>
+        <Link href="/reset-password" className="text-accent hover:underline">
+          Reset password
         </Link>
       </div>
     );
@@ -126,7 +126,7 @@ export default function ResetPasswordForm({
           <p>{error}</p>
           {error.includes("invalid or has expired") && (
             <p>
-              <Link href="/forgot-password" className="text-accent hover:underline">
+              <Link href="/reset-password" className="text-accent hover:underline">
                 Request a fresh reset link
               </Link>
             </p>

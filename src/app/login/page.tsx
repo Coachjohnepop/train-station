@@ -308,9 +308,9 @@ function LoginForm() {
             {error && (
               <div className="space-y-2 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-sm text-[var(--danger)]">
                 <p>{error}</p>
-                {error.includes("Forgot password") && (
+                {(error.includes("Forgot password") || error.includes("Reset password")) && (
                   <p>
-                    <Link href="/forgot-password" className="text-accent hover:underline">
+                    <Link href="/reset-password" className="text-accent hover:underline">
                       Reset your password →
                     </Link>
                   </p>
@@ -338,8 +338,8 @@ function LoginForm() {
             </button>
 
             <p className="text-center text-xs">
-              <Link href="/forgot-password" className="text-accent hover:underline">
-                Forgot password?
+              <Link href="/reset-password" className="text-accent hover:underline">
+                Reset password
               </Link>
             </p>
 
@@ -359,9 +359,9 @@ function LoginForm() {
         )}
 
         <p className="mt-6 text-center text-[10px] text-[var(--muted)]">
-          First time or forgot your password?{" "}
-          <Link href="/forgot-password" className="text-accent hover:underline">
-            Reset it here
+          Need a new password?{" "}
+          <Link href="/reset-password" className="text-accent hover:underline">
+            Reset password
           </Link>{" "}
           — we&apos;ll email you a link.
         </p>

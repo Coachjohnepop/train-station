@@ -55,8 +55,8 @@ export default function LandingWelcomeBack({
           Sign in as someone else
         </Link>
         <span className="mx-1">·</span>
-        <Link href="/forgot-password" className="hover:text-[var(--text)] transition mx-3">
-          Forgot password
+        <Link href="/reset-password" className="hover:text-[var(--text)] transition mx-3">
+          Reset password
         </Link>
         <span className="mx-1">·</span>
         <Link href="/signup" className="hover:text-[var(--text)] transition mx-3">
