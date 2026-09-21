@@ -15,6 +15,7 @@ import {
   LANDING_AB_HEADER,
   landingAbPath,
   parseLandingAbVariant,
+  parseLandingLetterPath,
   resolveLiveLandingAb,
   type LandingAbVariant,
 } from "@/lib/landing-ab";
@@ -77,6 +78,7 @@ const PUBLIC_API_PREFIXES = [
 function isPublicPage(pathname: string): boolean {
   if (pathname === "/") return true;
   if (pathname === "/l" || pathname.startsWith("/l/")) return true;
+  if (parseLandingLetterPath(pathname)) return true;
   return PUBLIC_PAGE_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 }
 
@@ -115,6 +117,20 @@ function rewriteHomeWithLandingVariant(request: NextRequest, variant: LandingAbV
 
 async function handleLandingAb(request: NextRequest): Promise<NextResponse | null> {
   const { pathname } = request.nextUrl;
+  const fromLetter = parseLandingLetterPath(pathname);
+  if (fromLetter) {
+    if (pathname !== pathname.toLowerCase()) {
+      const dest = NextResponse.redirect(new URL(pathname.toLowerCase(), request.url));
+      dest.headers.set("X-Robots-Tag", "noindex, nofollow");
+      return applyLandingCookie(dest, fromLetter);
+    }
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set("x-pathname", pathname);
+    requestHeaders.set(LANDING_AB_HEADER, fromLetter);
+    const res = NextResponse.next({ request: { headers: requestHeaders } });
+    res.headers.set("X-Robots-Tag", "noindex, nofollow");
+    return applyLandingCookie(res, fromLetter);
+  }
   const fromPath = pathname.startsWith("/l/")
     ? parseLandingAbVariant(pathname.slice(3).split("/")[0])
     : null;

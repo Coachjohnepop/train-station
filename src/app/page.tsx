@@ -76,10 +76,10 @@ export default async function HomePage() {
               </span>
             </p>
             <div className="flex items-center gap-2">
-              <Link href={landingAbPath("tour")} className="text-[10px] font-bold uppercase tracking-wide text-white/70 hover:text-white">
+              <Link href="/a" className="text-[10px] font-bold uppercase tracking-wide text-white/70 hover:text-white">
                 A
               </Link>
-              <Link href={landingAbPath("jeremy")} className="text-[10px] font-bold uppercase tracking-wide text-white/70 hover:text-white">
+              <Link href="/b" className="text-[10px] font-bold uppercase tracking-wide text-white/70 hover:text-white">
                 B
               </Link>
               <Link href={landingAbPath("floor")} className="text-[10px] font-bold uppercase tracking-wide text-white/70 hover:text-white">

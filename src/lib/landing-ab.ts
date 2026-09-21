@@ -3,7 +3,7 @@
  *
  * `tour` IS the current production landing. It stays in the stock forever.
  * If a challenger fails, set LANDING_AB_ENABLED to false (or LIVE to ["tour"] only).
- * Preview URLs /l/jeremy, /l/floor, /l/class still work without rotating traffic.
+ * Preview URLs: `/a` and `/b` (easy), plus `/l/jeremy`, `/l/floor`, `/l/class`.
  *
  * Live split: A (tour / tickets) vs B (user-chosen: BYOW ingest or Jeremy's Today).
  */
@@ -83,7 +83,17 @@ export function resolveLiveLandingAb(existing: LandingAbVariant | null): Landing
 }
 
 export function landingAbPath(variant: LandingAbVariant): string {
+  if (variant === "tour") return "/a";
+  if (variant === "jeremy") return "/b";
   return `/l/${variant}`;
+}
+
+/** Easy preview doors: /a = tour, /b = jeremy. */
+export function parseLandingLetterPath(pathname: string): LandingAbVariant | null {
+  const key = pathname.replace(/\/+$/, "").toLowerCase();
+  if (key === "/a") return "tour";
+  if (key === "/b") return "jeremy";
+  return null;
 }
 
 export function landingAbCookiePair(variant: LandingAbVariant): string {
