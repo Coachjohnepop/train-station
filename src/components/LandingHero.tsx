@@ -436,7 +436,7 @@ function JeremyHeroStack({
 
   return (
     <>
-      <div className="w-full max-w-sm">
+      <div className="landing-b-start-btns w-full max-w-md">
         <EasyPathChoices kicker="" hint="Tickets first · or start today’s work">
           <Link
             href={JOIN_TICKETS_HREF}
@@ -445,7 +445,7 @@ function JeremyHeroStack({
               markLandingConverted();
               fireLandingJoinHook(e.currentTarget);
             }}
-            className={primaryCta}
+            className={`${primaryCta} min-h-[4.05rem] text-[19.5px] sm:min-h-[4.05rem] sm:text-[1.25rem]`}
           >
             Grab Your Ticket
           </Link>
@@ -453,7 +453,7 @@ function JeremyHeroStack({
             type="button"
             data-analytics-action="hero-b-want-jeremy"
             onClick={() => onTour("jeremy")}
-            className={secondaryCta}
+            className={`${secondaryCta} min-h-[3.75rem] text-[18.5px] sm:min-h-[4.05rem] sm:text-[1.2rem]`}
           >
             See the program
           </button>
@@ -461,7 +461,7 @@ function JeremyHeroStack({
             type="button"
             data-analytics-action="hero-b-have-workout"
             onClick={() => onTour("today")}
-            className="landing-hero-explore-cta inline-flex h-11 w-full items-center justify-center rounded-full px-8 text-[15px] font-bold tracking-tight text-white/90"
+            className="landing-hero-explore-cta inline-flex min-h-[3.2rem] w-full items-center justify-center rounded-full px-8 text-[17px] font-bold tracking-tight text-white/90 sm:min-h-[3.45rem] sm:text-[1.1rem]"
           >
             Track Your Current Workout
           </button>

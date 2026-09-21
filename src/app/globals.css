@@ -1846,6 +1846,10 @@ body:has([data-admin-chrome]) [data-global-theme-toggle] {
     0 10px 22px rgba(0, 0, 0, 0.45);
 }
 
+.landing-b-start-btns {
+  overflow: visible;
+}
+
 @media (hover: hover) and (pointer: fine) {
   .landing-hero-early-signup,
   .landing-hero-secondary-cta,
