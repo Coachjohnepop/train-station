@@ -165,41 +165,99 @@ def page1(c):
 
 
 def page2(c):
-    header_footer(c, 2, "Landing  ·  Coach Class upgrade")
+    header_footer(c, 2, "Landing to payment  ·  then the upgrade request")
     c.setFillColor(NAVY_DEEP)
-    c.setFont("Georgia-Bold", 18)
-    c.drawString(LEFT, PAGE_H - 0.72 * inch, "Airline-style upgrade after Coach payment")
+    c.setFont("Georgia-Bold", 16)
+    c.drawString(LEFT, PAGE_H - 0.62 * inch, "Ticket first. Stripe only. Upgrade is a request, not a checkout.")
     c.setFillColor(MUTED)
-    c.setFont("Helvetica", 9)
-    c.drawString(LEFT, PAGE_H - 0.92 * inch, "Everyone who finished Coach Class Stripe sees the offer. John approves. One paying request can win the month.")
+    c.setFont("Helvetica", 8)
+    c.drawString(
+        LEFT,
+        PAGE_H - 0.8 * inch,
+        "Paid Coach Class sees the card on checkout success, Today, and Account. Crew approval is complimentary. Checkout is the only $50 door.",
+    )
 
-    y = PAGE_H - 1.15 * inch
-    boxes = [
-        (NAVY, "PAY COACH $25", ["Stripe Checkout", "plan = member", "paid on Jeremy Live"]),
-        (PURPLE, "REQUEST", ["Like to join Live Zooms?", "Request Upgrade to", "Business Class"]),
-        (GOLD, "WAITLIST", ["1st / 2nd / 3rd", "ahead count", "Admin Upgrades tab"]),
-        (EMERALD, "APPROVE", ["Stripe sub -> $50/mo", "or stamp Business", "if no sub on file"]),
-        (PURPLE, "MONTHLY DRAW", ["Paying Stripe only", "1 complimentary seat", "Coach billing stays"]),
+    y = PAGE_H - 0.98 * inch
+    row = [
+        (PURPLE, "DOOR", ["/   50/50 A|B", "/a tour   /b console", "Members skip the test"]),
+        (NAVY, "GRAB TICKET", ["Both landings", "-> /join#tickets", "Free / $25 / $50 / $850"]),
+        (GOLD, "SIGNUP", ["Email + password", "Free -> onboard", "Paid -> checkout"]),
+        (EMERALD, "STRIPE", ["Jeremy Live only", "No Venmo rail", "Success = paid"]),
     ]
     x = LEFT
-    bw = 1.95 * inch
-    for hdr, title, lines in boxes:
-        box(c, x, y - 1.15 * inch, bw, 1.15 * inch, title, lines, hdr)
-        x += bw + 0.1 * inch
+    bw = 2.4 * inch
+    bh = 0.78 * inch
+    gap = 0.18 * inch
+    for i, (hdr, title, lines) in enumerate(row):
+        box(c, x, y - bh, bw, bh, title, lines, hdr)
+        if i < len(row) - 1:
+            arrow(c, x + bw, y - bh / 2, x + bw + gap, y - bh / 2)
+        x += bw + gap
 
-    y = y - 1.45 * inch
-    box(c, LEFT, y - 1.35 * inch, 4.8 * inch, 1.35 * inch, "WHO SEES IT", [
-        "plan = member AND paymentStatus = paid",
-        "Not Explorer, not already Business / 1st",
-        "Lemon John is Business — no button",
-        "Ali after Coach checkout — yes",
+    y = y - bh - 0.28 * inch
+    c.setFillColor(EMERALD)
+    c.setFont("Helvetica-Bold", 8)
+    c.drawString(LEFT, y, "AFTER COACH CLASS IS PAID  ·  plan = member  ·  paymentStatus = paid")
+    y -= 0.06 * inch
+
+    flow = [
+        (NAVY, "THE CARD", [
+            "Live Zooms are on",
+            "Business Class",
+            "Not automatic",
+        ]),
+        (PURPLE, "REQUEST", [
+            "Like to join Live Zooms?",
+            "Request Upgrade to",
+            "Business Class",
+        ]),
+        (GOLD, "LIST PLACE", [
+            "1st / 2nd / 3rd",
+            "Email the crew",
+            "Still Coach $25",
+        ]),
+        (EMERALD, "APPROVE", [
+            "Complimentary seat",
+            "Stripe price stays",
+            "Not a $50 switch",
+        ]),
+        (PURPLE, "OR THE DRAW", [
+            "1 paying request",
+            "wins the month",
+            "Also no price change",
+        ]),
+    ]
+    x = LEFT
+    bw = 1.9 * inch
+    bh = 0.92 * inch
+    gap = 0.12 * inch
+    for i, (hdr, title, lines) in enumerate(flow):
+        box(c, x, y - bh, bw, bh, title, lines, hdr)
+        if i < len(flow) - 1:
+            arrow(c, x + bw, y - bh / 2, x + bw + gap, y - bh / 2, GOLD if i == 3 else NAVY)
+        x += bw + gap
+
+    y = y - bh - 0.22 * inch
+    box(c, LEFT, y - 1.55 * inch, 3.25 * inch, 1.55 * inch, "WHO SEES THE CARD", [
+        "Paid Coach Class only",
+        "Checkout success, Today, Account",
+        "Declined can request again",
+        "Pending shows their place",
     ], NAVY)
-    box(c, LEFT + 5.05 * inch, y - 1.35 * inch, 4.85 * inch, 1.35 * inch, "MONEY DESK", [
-        "Jeremy = CEO   John = CFO",
-        "One merchant: Jeremy Live Stripe",
-        "Venmo retired 21 Sep 2026",
-        "25% x 4: Fees / John Pay / Reinvest / Jeremy Pay",
+    box(c, LEFT + 3.4 * inch, y - 1.55 * inch, 3.25 * inch, 1.55 * inch, "WHO DOES NOT", [
+        "Free Explorer",
+        "Unpaid Coach (pay first)",
+        "Already Business or 1st",
+        "Ali is Business — no card",
+        "Lemon John — standing grant",
     ], GOLD)
+    box(c, LEFT + 6.8 * inch, y - 1.55 * inch, 3.1 * inch, 1.55 * inch, "TWO WAYS ON", [
+        "Approve: no extra charge",
+        "Buy Business: $50 checkout",
+        "Draw: also complimentary",
+        "Staff grants never enter",
+        "Decline is not a downgrade",
+    ], EMERALD)
     c.showPage()
 
 

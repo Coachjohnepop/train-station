@@ -8,7 +8,6 @@ import {
 } from "@/lib/business-upgrade-request";
 import { getAccountByUserId } from "@/lib/member-accounts-store";
 import { getMemberProfile, updateMemberProfile } from "@/lib/member-profiles-store";
-import { changeMemberSubscriptionPlan } from "@/lib/stripe";
 
 export const dynamic = "force-dynamic";
 
@@ -80,29 +79,9 @@ export async function POST(request: Request, { params }: Params) {
     });
   }
 
-  let stripeChanged = false;
-  if (profile.stripeSubscriptionId) {
-    const changed = await changeMemberSubscriptionPlan({
-      userId,
-      subscriptionId: profile.stripeSubscriptionId,
-      newPlan: "business",
-    });
-    if ("error" in changed) {
-      return NextResponse.json(
-        {
-          error: `Could not switch their Stripe subscription to Business: ${changed.error}`,
-        },
-        { status: 502 },
-      );
-    }
-    stripeChanged = true;
-  }
-
   const note =
     parsed.data.note?.trim() ||
-    (stripeChanged
-      ? `Business Class upgrade approved ${nowIso.slice(0, 10)} by ${actorEmail} · Stripe sub → $50/mo`
-      : `Business Class upgrade approved ${nowIso.slice(0, 10)} by ${actorEmail} · no Stripe sub on file`);
+    `Business Class upgrade approved ${nowIso.slice(0, 10)} by ${actorEmail} · complimentary, Stripe price unchanged`;
 
   const updated = await updateMemberProfile(userId, {
     plan: "business",
@@ -119,19 +98,18 @@ export async function POST(request: Request, { params }: Params) {
     actorEmail,
     hasStripeSubscription,
     note,
-    extraLines: stripeChanged
-      ? ["Stripe subscription switched to Business Class ($50/mo, prorated)."]
-      : ["No Stripe subscription on file — plan stamped Business Class without a price change."],
+    extraLines: [
+      "Complimentary seat. Stripe billing was not changed.",
+      "Buying Business Class at checkout is still $50/mo.",
+    ],
   });
 
   return NextResponse.json({
     ok: true,
     status: "approved" as const,
-    stripeChanged,
+    stripeChanged: false,
     profile: updated,
     notify,
-    message: stripeChanged
-      ? `${memberName} is on Business Class. Stripe will bill $50/mo.`
-      : `${memberName} is on Business Class. No Stripe subscription was on file.`,
+    message: `${memberName} is on Business Class. Their Stripe price stays the same.`,
   });
 }

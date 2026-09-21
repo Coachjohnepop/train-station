@@ -52,8 +52,8 @@ export async function notifyBusinessUpgradeAdmins(params: {
     `Member: ${params.memberName} <${params.memberEmail}>`,
     `From: ${signupPlanLabel("member")} → ${signupPlanLabel("business")}`,
     params.hasStripeSubscription
-      ? "Stripe subscription: on file (approve switches them to Business $50/mo)"
-      : "Stripe subscription: none on file (approve stamps Business without a price change)",
+      ? "Stripe subscription: on file. Approval does not change the price."
+      : "Stripe subscription: none on file. Approval stamps the seat only.",
     params.actorEmail ? `By: ${params.actorEmail}` : null,
     params.note ? `Note: ${params.note}` : null,
     ...(params.extraLines || []),

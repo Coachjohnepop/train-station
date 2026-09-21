@@ -225,10 +225,10 @@ export default function AdminMemberCard({ userId }: { userId: string }) {
   }
 
   async function reviewBusinessUpgrade(action: "approve" | "decline") {
-    const hasSub = Boolean(card?.profile.stripeSubscriptionId);
-    const stripeBit = hasSub
-      ? "This switches their Stripe subscription to Business Class ($50/mo, prorated)."
-      : "No Stripe subscription on file — this stamps Business Class without a price change.";
+    const stripeBit =
+      action === "approve"
+        ? "Complimentary Business Class. Their Stripe price does not change. Buying Business Class at checkout is still $50/mo."
+        : "They stay on Coach Class and can request again.";
     if (
       !window.confirm(
         `${action === "approve" ? "Approve" : "Decline"} Business Class upgrade for ${card?.name}?\n\n${stripeBit}`,
@@ -327,9 +327,8 @@ export default function AdminMemberCard({ userId }: { userId: string }) {
             .
           </p>
           <p className="mt-1 text-xs text-[var(--muted)]">
-            {profile.stripeSubscriptionId
-              ? "Stripe subscription on file — approve switches them to Business $50/mo."
-              : "No Stripe subscription on file — approve stamps Business without a price change."}
+            Approve gives Business Class at no extra charge. Their Stripe price stays.
+            Buying Business Class at checkout is still $50/mo.
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             <button

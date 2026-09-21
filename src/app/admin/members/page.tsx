@@ -370,9 +370,10 @@ export default function AdminMembersPage() {
 
   async function reviewBusinessUpgrade(member: MemberRow, action: "approve" | "decline") {
     const verb = action === "approve" ? "Approve" : "Decline";
-    const stripeBit = member.hasStripeSubscription
-      ? "This switches their Stripe subscription to Business Class ($50/mo, prorated)."
-      : "No Stripe subscription on file — this stamps Business Class without a price change.";
+    const stripeBit =
+      action === "approve"
+        ? "Complimentary Business Class. Their Stripe price does not change. Buying Business Class at checkout is still $50/mo."
+        : "They stay on Coach Class and can request again.";
     if (
       !window.confirm(
         `${verb} Business Class upgrade for ${member.name} (${member.email})?\n\n${stripeBit}`,
@@ -906,11 +907,7 @@ export default function AdminMembersPage() {
                             disabled={upgradeActing === `${member.userId}:approve`}
                             className="btn-primary text-xs px-3 py-1.5"
                           >
-                            {upgradeActing === `${member.userId}:approve`
-                              ? "…"
-                              : member.hasStripeSubscription
-                                ? "Approve upgrade ($50/mo)"
-                                : "Approve upgrade"}
+                            {upgradeActing === `${member.userId}:approve` ? "…" : "Approve upgrade"}
                           </button>
                           <button
                             type="button"

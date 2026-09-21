@@ -6,7 +6,7 @@ describe("checkout already-paid skip", () => {
   it("does not skip house-paid members who still need a Stripe customer", () => {
     assert.equal(
       checkoutShouldSkipAsAlreadyPaid(
-        { ok: true, plan: "business", periodEnd: null, reason: "staff_grant" },
+        { ok: true },
         { stripeCustomerId: null },
       ),
       false,
@@ -16,14 +16,14 @@ describe("checkout already-paid skip", () => {
   it("skips only when coverage is real and a Jeremy Live customer exists", () => {
     assert.equal(
       checkoutShouldSkipAsAlreadyPaid(
-        { ok: true, plan: "member", periodEnd: null, reason: "ledger_period" },
+        { ok: true },
         { stripeCustomerId: "cus_live" },
       ),
       true,
     );
     assert.equal(
       checkoutShouldSkipAsAlreadyPaid(
-        { ok: false, plan: "member", periodEnd: null, reason: "plan_mismatch" },
+        { ok: false },
         { stripeCustomerId: null },
       ),
       false,
