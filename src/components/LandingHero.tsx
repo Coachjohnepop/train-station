@@ -461,7 +461,7 @@ function JeremyHeroStack({
             type="button"
             data-analytics-action="hero-b-have-workout"
             onClick={() => onTour("today")}
-            className="landing-hero-explore-cta inline-flex min-h-[3.2rem] w-full items-center justify-center rounded-full px-8 text-[17px] font-bold tracking-tight text-white/90 sm:min-h-[3.45rem] sm:text-[1.1rem]"
+            className="landing-hero-explore-cta inline-flex min-h-[3.2rem] w-full items-center justify-center rounded-full px-8 text-[17px] font-bold tracking-tight sm:min-h-[3.45rem] sm:text-[1.1rem]"
           >
             Track Your Current Workout
           </button>
@@ -478,13 +478,16 @@ function JeremyHeroStack({
           />
         </div>
       ) : null}
-      <h1 className="landing-hero-headline mt-8 mb-3 text-[clamp(2.4rem,11vw,3.4rem)] font-semibold leading-[0.9] tracking-[-0.04em] text-white sm:mt-10 sm:text-6xl">
-        Your workout
+      <p className="mt-8 mb-2 text-[11px] font-extrabold uppercase tracking-[0.28em] text-amber-200 drop-shadow-[0_2px_14px_rgba(0,0,0,0.95)] sm:mt-10 sm:text-xs sm:tracking-[0.32em]">
+        First Day Free
+      </p>
+      <h1 className="landing-hero-headline mb-3 text-[clamp(2.15rem,10vw,3.2rem)] font-semibold leading-[0.92] tracking-[-0.04em] text-white sm:text-6xl">
+        Use Your Workout
         <br />
-        <span className="landing-hero-accent">or ours.</span>
+        <span className="landing-hero-accent">or Ours</span>
       </h1>
-      <p className="landing-hero-subhead max-w-[22rem] text-[15px] font-semibold leading-snug text-white sm:max-w-sm sm:text-xl">
-        One day on us. Bring your session, or train the Train Station way.
+      <p className="landing-hero-subhead max-w-[22.5rem] text-[15px] font-semibold leading-snug text-white sm:max-w-md sm:text-xl">
+        Start by seeing how the application works for you and use your own workout or one of ours.
       </p>
     </>
   );
