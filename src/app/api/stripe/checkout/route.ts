@@ -48,12 +48,13 @@ export async function POST(request: Request) {
     // Already paid this ticket for the current period. Prove it, then pass through.
     if (!parsed.data.customOfferId && !parsed.data.merchandiseSkuId) {
       const { resolvePaidCoverage } = await import("@/lib/paid-coverage");
+      const { checkoutShouldSkipAsAlreadyPaid } = await import("@/lib/paid-coverage-skip");
       const coverage = await resolvePaidCoverage({
         userId: session.id,
         sessionEmail: session.email,
         requestedPlan: plan,
       });
-      if (coverage.ok) {
+      if (checkoutShouldSkipAsAlreadyPaid(coverage, existingProfile)) {
         const redirectTo = existingProfile?.onboardingComplete
           ? "/member/today"
           : `/member/onboard?plan=${encodeURIComponent(coverage.plan || plan)}`;

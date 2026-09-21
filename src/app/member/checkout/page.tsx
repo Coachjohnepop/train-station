@@ -84,6 +84,7 @@ function MemberCheckoutInner() {
   const [payments, setPayments] = useState<PaymentsPublic | null>(null);
   const [paymentsLoading, setPaymentsLoading] = useState(true);
   const [hasSavedCard, setHasSavedCard] = useState(false);
+  const [needsCardOnFile, setNeedsCardOnFile] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState<string | null>(null);
   const [alreadyPaidPass, setAlreadyPaidPass] = useState(false);
   const [alreadyPaidPlan, setAlreadyPaidPlan] = useState<string | null>(null);
@@ -119,6 +120,7 @@ function MemberCheckoutInner() {
 
       setPayments(paymentsRes.ok ? paymentsData : null);
       setHasSavedCard(Boolean(membershipData.hasSavedPaymentMethod));
+      setNeedsCardOnFile(Boolean(membershipData.needsCardOnFile));
       const status =
         typeof membershipData.paymentStatus === "string" ? membershipData.paymentStatus : null;
       setPaymentStatus(status);
@@ -273,6 +275,8 @@ function MemberCheckoutInner() {
     plan === "member" &&
     !isDowngradeIntent &&
     !coverageMatchesThisTicket &&
+    !needsCardOnFile &&
+    paymentStatus !== "paid" &&
     Boolean(stripeReady);
 
   return (
@@ -334,6 +338,11 @@ function MemberCheckoutInner() {
                 Checkout was canceled. You can try Stripe again.
               </p>
             )}
+            {needsCardOnFile && plan === "member" ? (
+              <p className="rounded-lg border border-accent/30 bg-accent/10 px-3 py-2 text-sm text-[var(--text)]">
+                Add your card on Coach Class — $25 today on Jeremy Live. We never see the number.
+              </p>
+            ) : null}
 
             {paymentsLoading && (
               <p className="text-sm text-[var(--muted)]">Loading payment options…</p>

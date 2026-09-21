@@ -102,6 +102,8 @@ export async function resolvePaidCoverage(input: {
   };
 }
 
+export { checkoutShouldSkipAsAlreadyPaid } from "@/lib/paid-coverage-skip";
+
 /**
  * Same email paid this ticket earlier (then the account was purged / re-signed).
  * Audit survives the delete. Re-attach the paid stamp so checkout does not charge twice.
