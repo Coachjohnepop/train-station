@@ -35,6 +35,7 @@ type MembershipData = {
   lastPaymentLabel?: string | null;
   canManageBilling: boolean;
   canCompleteCheckout: boolean;
+  needsCardOnFile?: boolean;
   hasSavedPaymentMethod: boolean;
   switchablePlans: SignupPlan[];
   upgradePlans?: SignupPlan[];
@@ -413,6 +414,22 @@ export default function MemberAccountClient({
           >
             Complete checkout
           </Link>
+        )}
+
+        {membership.needsCardOnFile && (
+          <div className="space-y-2 rounded-xl border border-accent/30 bg-[color-mix(in_srgb,var(--accent)_8%,var(--surface))] p-3">
+            <p className="text-sm font-medium text-[var(--text)]">Add your card</p>
+            <p className="text-xs text-[var(--muted)]">
+              Your seat is on the books, but there&apos;s no card on Jeremy Live yet. Stripe
+              checkout stores the card — we never see the number.
+            </p>
+            <Link
+              href="/member/checkout?plan=member"
+              className="btn-primary inline-block text-sm"
+            >
+              Add card · Coach Class $25
+            </Link>
+          </div>
         )}
 
         {/* Payment confirmation — reopen anytime after card checkout */}

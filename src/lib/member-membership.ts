@@ -54,6 +54,8 @@ export type MemberMembershipSnapshot = {
   alreadyPaidPeriodEnd: string | null;
   canManageBilling: boolean;
   canCompleteCheckout: boolean;
+  /** Paid on the books but no Jeremy Live customer — needs Stripe Checkout to add a card. */
+  needsCardOnFile: boolean;
   hasSavedPaymentMethod: boolean;
   /** @deprecated Prefer upgradePlans — higher tiers only. */
   switchablePlans: SignupPlan[];
@@ -261,6 +263,12 @@ export async function getMemberMembershipSnapshot(
     ),
     canCompleteCheckout: Boolean(
       isPaidSignupPlan(plan) && profile.paymentStatus !== "paid" && stripeReady,
+    ),
+    needsCardOnFile: Boolean(
+      stripeReady &&
+        isPaidSignupPlan(plan) &&
+        profile.paymentStatus === "paid" &&
+        !profile.stripeCustomerId,
     ),
     hasSavedPaymentMethod,
     switchablePlans: finalUpgrades,
