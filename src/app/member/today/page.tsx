@@ -47,6 +47,10 @@ import {
 import { listCoachMembersForUi } from "@/lib/sms";
 import { resolveDemoUser } from "@/lib/demo-user-directory";
 import { getMemberProfile } from "@/lib/member-profiles-store";
+import {
+  canRequestBusinessClassUpgrade,
+  normalizeBusinessUpgradeStatus,
+} from "@/lib/business-upgrade";
 import { isCoachIntakeComplete } from "@/lib/member-intake";
 import { getCoachSettings } from "@/lib/coach-settings-store";
 import { getMemberContent } from "@/lib/member-content-store";
@@ -426,6 +430,15 @@ export default async function MemberTodayPage({ searchParams }: Props) {
 
           <Suspense fallback={<div className="card h-40 animate-pulse p-4" />}>
             <MemberTodayShell
+              businessUpgrade={
+                profile
+                  ? {
+                      canRequest: canRequestBusinessClassUpgrade(profile),
+                      status: normalizeBusinessUpgradeStatus(profile.businessUpgradeStatus),
+                      requestedAt: profile.businessUpgradeRequestedAt,
+                    }
+                  : null
+              }
               promptSaveUsername={isPlaceholderGuestUsername(dashboard.user.name)}
               todayIso={programTodayKey}
               selectedDate={clampedViewDate}

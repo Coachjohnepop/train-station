@@ -21,6 +21,8 @@ import type { ResolvedDayPart } from "@/lib/program-day-sessions";
 import FreeContentLockCard from "@/components/FreeContentLockCard";
 import SaveGuestUsernamePrompt from "@/components/SaveGuestUsernamePrompt";
 import type { ContentAccessResult } from "@/lib/gamification-content-access";
+import BusinessUpgradeRequestCard from "@/components/BusinessUpgradeRequestCard";
+import type { BusinessUpgradeStatus } from "@/lib/business-upgrade";
 import MemberMaintainConsoleStage, {
   notifyMaintainWorkoutEngage,
 } from "@/components/MemberMaintainConsoleStage";
@@ -132,6 +134,13 @@ type Props = {
   previewFutureReadOnly?: boolean;
   /** First visit to the site — not a returning member. */
   firstTimeOnSite?: boolean;
+  businessUpgrade?: {
+    canRequest: boolean;
+    status: BusinessUpgradeStatus | null;
+    requestedAt?: string | null;
+    queuePosition?: number | null;
+    queueSize?: number | null;
+  } | null;
   promptSaveUsername?: boolean;
 };
 
@@ -302,6 +311,7 @@ export default function MemberTodayShell({
   previewFutureReadOnly = false,
   firstTimeOnSite = false,
   promptSaveUsername = false,
+  businessUpgrade = null,
 }: Props) {
   const canUseMaintain = Boolean(maintainAccess?.allowed);
   const router = useRouter();
@@ -490,6 +500,19 @@ export default function MemberTodayShell({
       {programBlock?.status === "expired" && (
         <ExpiredProgramBlockCard blockEndsAt={programBlock.blockEndsAt} />
       )}
+
+      {businessUpgrade &&
+      (businessUpgrade.canRequest ||
+        businessUpgrade.status === "pending" ||
+        businessUpgrade.status === "declined") ? (
+        <BusinessUpgradeRequestCard
+          canRequest={businessUpgrade.canRequest}
+          status={businessUpgrade.status}
+          requestedAt={businessUpgrade.requestedAt}
+          queuePosition={businessUpgrade.queuePosition}
+          queueSize={businessUpgrade.queueSize}
+        />
+      ) : null}
 
       <div className="member-today-heading">
         <div className="flex flex-wrap items-center gap-2">

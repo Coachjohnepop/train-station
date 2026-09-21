@@ -197,6 +197,19 @@ export default function MemberAccountClient({
 
   return (
     <div className="space-y-4">
+      {(membership.canRequestBusinessUpgrade ||
+        membership.businessUpgradeStatus === "pending" ||
+        membership.businessUpgradeStatus === "declined") && (
+        <BusinessUpgradeRequestCard
+          canRequest={Boolean(membership.canRequestBusinessUpgrade)}
+          status={membership.businessUpgradeStatus ?? null}
+          requestedAt={membership.businessUpgradeRequestedAt}
+          queuePosition={membership.businessUpgradeQueuePosition}
+          queueSize={membership.businessUpgradeQueueSize}
+          promo={membership.monthlyUpgradePromo}
+        />
+      )}
+
       {/* Current plan */}
       <div className={`${hasSeatArt ? "card payment-seat-card" : "card"} space-y-3`}>
         {hasSeatArt && (
@@ -301,19 +314,6 @@ export default function MemberAccountClient({
           </p>
         </div>
       ) : null}
-
-      {(membership.canRequestBusinessUpgrade ||
-        membership.businessUpgradeStatus === "pending" ||
-        membership.businessUpgradeStatus === "declined") && (
-        <BusinessUpgradeRequestCard
-          canRequest={Boolean(membership.canRequestBusinessUpgrade)}
-          status={membership.businessUpgradeStatus ?? null}
-          requestedAt={membership.businessUpgradeRequestedAt}
-          queuePosition={membership.businessUpgradeQueuePosition}
-          queueSize={membership.businessUpgradeQueueSize}
-          promo={membership.monthlyUpgradePromo}
-        />
-      )}
 
       {/* Tip coach — evergreen primary home (not mid-workout) */}
       <CoachTipPanel justTipped={justTipped} />

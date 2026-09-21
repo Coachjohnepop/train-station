@@ -61,6 +61,21 @@ export default function BusinessUpgradeRequestCard({
     }
   }, [queuePosition, queueSize]);
 
+  useEffect(() => {
+    if (shown !== "pending" || place) return;
+    let cancelled = false;
+    void fetch("/api/member/business-upgrade-request", { cache: "no-store" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((body) => {
+        if (cancelled || typeof body?.position !== "number") return;
+        setPlace(businessUpgradeQueuePlace(body.position, Number(body.size) || body.position));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [shown, place]);
+
   if (!offerOpen) return null;
 
   async function requestUpgrade() {
@@ -150,7 +165,7 @@ export default function BusinessUpgradeRequestCard({
           ) : null}
           <button
             type="button"
-            className="btn-primary w-full text-sm"
+            className="btn-primary min-h-12 w-full text-sm"
             disabled={busy}
             onClick={() => void requestUpgrade()}
           >
