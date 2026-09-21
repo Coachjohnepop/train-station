@@ -426,7 +426,7 @@ function JeremyHeroStack({
   return (
     <>
       <div className="w-full max-w-sm">
-        <EasyPathChoices kicker="" hint="Tickets first · or start today’s work">
+        <EasyPathChoices kicker="" hint="Do a workout on us">
           <Link
             href={JOIN_TICKETS_HREF}
             data-analytics-action={returnMode ? "hero-start-membership-return" : "hero-start-membership"}
@@ -468,13 +468,13 @@ function JeremyHeroStack({
           />
         </div>
       ) : null}
-      <h1 className="landing-hero-headline mt-8 mb-3 text-[clamp(2.4rem,11vw,3.4rem)] font-semibold leading-[0.9] tracking-[-0.04em] text-white sm:mt-10 sm:text-6xl">
-        Your workout
+      <h1 className="landing-hero-headline mt-8 mb-3 text-[clamp(2.1rem,10vw,3.2rem)] font-semibold leading-[0.92] tracking-[-0.04em] text-white sm:mt-10 sm:text-5xl">
+        Are you Good
         <br />
-        <span className="landing-hero-accent">or ours.</span>
+        with Apps?
       </h1>
-      <p className="landing-hero-subhead max-w-[20.5rem] text-[15px] font-semibold leading-snug text-white sm:max-w-sm sm:text-xl">
-        The Train Station app on your phone. See your board, or log the session you already have.
+      <p className="landing-hero-subhead max-w-[22rem] text-[17px] font-semibold leading-snug text-white sm:max-w-sm sm:text-xl">
+        <span className="landing-hero-accent">Do a workout on us!</span>
       </p>
     </>
   );
