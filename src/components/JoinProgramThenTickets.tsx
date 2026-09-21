@@ -91,7 +91,7 @@ export default function JoinProgramThenTickets({
                 className={`rounded-2xl border p-4 text-left transition ${
                   active
                     ? "border-[#7c3aed] bg-[#7c3aed]/15 ring-2 ring-[#7c3aed]/40"
-                    : "border-[var(--border)] bg-[var(--bg)]/80 hover:border-[#7c3aed]/50 hover:bg-[#1a1428]"
+                    : "border-[var(--border)] bg-[var(--surface)] hover:border-[#7c3aed]/50 hover:bg-[color-mix(in_srgb,var(--accent)_10%,var(--surface))]"
                 }`}
               >
                 {soon ? (

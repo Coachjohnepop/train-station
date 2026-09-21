@@ -134,13 +134,15 @@ export default function MembershipTicketGrid({
                 <div className="text-[9px] font-bold uppercase tracking-widest text-white/50 sm:text-[10px]">
                   {isFree && mode === "checkout" ? "Current" : tier.subtitle}
                 </div>
-                <div className="mt-1 text-sm font-bold leading-tight text-[var(--text)] sm:text-lg">
+                <div className="mt-1 text-sm font-bold leading-tight text-white sm:text-lg">
                   {tier.title}
                 </div>
                 <div className="mt-2 flex items-baseline gap-0.5">
-                  <span className="text-xl font-semibold text-[var(--text)] sm:text-3xl">{tier.price}</span>
+                  <span className="text-xl font-extrabold tracking-tight text-white sm:text-3xl">
+                    {tier.price}
+                  </span>
                   {tier.priceNote ? (
-                    <span className="text-[10px] text-white/60 sm:text-xs">{tier.priceNote}</span>
+                    <span className="text-[10px] font-semibold text-white/80 sm:text-xs">{tier.priceNote}</span>
                   ) : null}
                 </div>
                 <ul className="mt-2 flex-1 space-y-0.5">

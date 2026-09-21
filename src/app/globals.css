@@ -1999,6 +1999,12 @@ html[data-free-ticket="open"] .landing-nav .theme-mode-toggle {
   overflow: hidden;
   padding: 0 !important;
   min-height: 0;
+  /* Seat photos are always dark art — never inherit light-mode --text. */
+  --text: #f8f5fc;
+  --muted: #ddd6ea;
+  --accent-fg: #e9d5ff;
+  --foreground: #f8f5fc;
+  color: #f8f5fc;
 }
 
 /* Same art band on Free / Coach / Business / 1st — matches seat photos (1024×683). */
@@ -2024,6 +2030,7 @@ html[data-free-ticket="open"] .landing-nav .theme-mode-toggle {
   flex: 1;
   flex-direction: column;
   padding: 0.625rem 0.625rem 0.75rem;
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.72);
 }
 
 @media (min-width: 640px) {
@@ -2043,9 +2050,9 @@ html[data-free-ticket="open"] .landing-nav .theme-mode-toggle {
   inset: 0;
   background: linear-gradient(
     180deg,
-    rgba(10, 6, 18, 0.05) 0%,
-    rgba(10, 6, 18, 0.55) 72%,
-    rgba(10, 6, 18, 0.82) 100%
+    rgba(10, 6, 18, 0.12) 0%,
+    rgba(10, 6, 18, 0.62) 58%,
+    rgba(10, 6, 18, 0.9) 100%
   );
   pointer-events: none;
 }
