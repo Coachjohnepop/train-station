@@ -1,8 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   BUSINESS_UPGRADE_REQUEST_COPY,
+  businessUpgradeQueueDetail,
+  businessUpgradeQueuePlace,
+  ordinalPlace,
+  type BusinessUpgradeQueuePlace,
   type BusinessUpgradeStatus,
 } from "@/lib/business-upgrade";
 
@@ -10,19 +14,42 @@ export default function BusinessUpgradeRequestCard({
   canRequest,
   status,
   requestedAt,
+  queuePosition,
+  queueSize,
   onStatus,
 }: {
   canRequest: boolean;
   status: BusinessUpgradeStatus | null;
   requestedAt?: string | null;
-  onStatus?: (status: BusinessUpgradeStatus) => void;
+  queuePosition?: number | null;
+  queueSize?: number | null;
+  onStatus?: (
+    status: BusinessUpgradeStatus,
+    place?: BusinessUpgradeQueuePlace | null,
+  ) => void;
 }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [localStatus, setLocalStatus] = useState<BusinessUpgradeStatus | null>(status);
+  const [place, setPlace] = useState<BusinessUpgradeQueuePlace | null>(() =>
+    queuePosition
+      ? businessUpgradeQueuePlace(queuePosition, queueSize || queuePosition)
+      : null,
+  );
 
   const shown = localStatus ?? status;
   const offerOpen = canRequest || shown === "pending" || shown === "declined";
+
+  useEffect(() => {
+    setLocalStatus(status);
+  }, [status]);
+
+  useEffect(() => {
+    if (queuePosition) {
+      setPlace(businessUpgradeQueuePlace(queuePosition, queueSize || queuePosition));
+    }
+  }, [queuePosition, queueSize]);
+
   if (!offerOpen) return null;
 
   async function requestUpgrade() {
@@ -39,8 +66,13 @@ export default function BusinessUpgradeRequestCard({
         );
         return;
       }
+      const nextPlace =
+        typeof body.position === "number"
+          ? businessUpgradeQueuePlace(body.position, Number(body.size) || body.position)
+          : null;
       setLocalStatus("pending");
-      onStatus?.("pending");
+      setPlace(nextPlace);
+      onStatus?.("pending", nextPlace);
     } catch {
       setError("Could not send the upgrade request.");
     } finally {
@@ -62,7 +94,17 @@ export default function BusinessUpgradeRequestCard({
       </p>
       {shown === "pending" ? (
         <>
-          <h3 className="text-lg font-semibold">Upgrade requested</h3>
+          {place ? (
+            <div className="space-y-1">
+              <p className="text-4xl font-semibold tracking-tight text-accent">
+                {ordinalPlace(place.position)}
+              </p>
+              <h3 className="text-lg font-semibold">on the upgrade list</h3>
+              <p className="text-sm text-[var(--text)]">{businessUpgradeQueueDetail(place)}</p>
+            </div>
+          ) : (
+            <h3 className="text-lg font-semibold">Upgrade requested</h3>
+          )}
           <p className="text-sm text-[var(--muted)]">
             Like a seat upgrade on a flight — we&apos;ll alert the crew. You&apos;ll hear back
             when it&apos;s approved.

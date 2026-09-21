@@ -19,10 +19,16 @@ import {
 import {
   loadMemberProfileFromDb,
   loadMemberProfilesFromDb,
+  loadPendingBusinessUpgradeQueueFromDb,
   removeMemberProfilesFromDb,
   updateMemberProfileInDb,
   upsertMemberProfileToDb,
 } from "@/lib/member-profiles-db";
+import {
+  placeInBusinessUpgradeQueue,
+  sortBusinessUpgradeQueue,
+  type BusinessUpgradeQueuePlace,
+} from "@/lib/business-upgrade";
 import type {
   MemberProfile,
   MemberProfilePatch,
@@ -303,6 +309,39 @@ export async function listMemberProfiles(): Promise<MemberProfile[]> {
     .map(([userId, raw]) => normalizeProfile(raw, userId))
     .filter((p): p is MemberProfile => Boolean(p))
     .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+}
+
+export async function listPendingBusinessUpgradeQueue(): Promise<
+  { userId: string; requestedAt: string | null }[]
+> {
+  if (!isDemoMode() && readsFromDatabase(STORE_KEY)) {
+    try {
+      return await loadPendingBusinessUpgradeQueueFromDb();
+    } catch (error) {
+      if (!blobReadFallbackEnabled(STORE_KEY)) throw error;
+      console.warn(
+        "[migration] business-upgrade queue DB read failed, falling back to blob",
+        error,
+      );
+    }
+  }
+
+  const profiles = await listMemberProfiles();
+  return sortBusinessUpgradeQueue(
+    profiles
+      .filter((profile) => profile.businessUpgradeStatus === "pending")
+      .map((profile) => ({
+        userId: profile.userId,
+        requestedAt: profile.businessUpgradeRequestedAt,
+      })),
+  );
+}
+
+export async function getBusinessUpgradeQueuePlaceForUser(
+  userId: string,
+): Promise<BusinessUpgradeQueuePlace | null> {
+  const queue = await listPendingBusinessUpgradeQueue();
+  return placeInBusinessUpgradeQueue(queue, userId);
 }
 
 export async function ensureMemberProfile(input: {

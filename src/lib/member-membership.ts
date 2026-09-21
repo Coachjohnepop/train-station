@@ -1,7 +1,11 @@
 import "server-only";
 
 import { getLatestPaidPaymentFact } from "@/lib/analytics-facts";
-import { getMemberProfile, type MemberProfile } from "@/lib/member-profiles-store";
+import {
+  getBusinessUpgradeQueuePlaceForUser,
+  getMemberProfile,
+  type MemberProfile,
+} from "@/lib/member-profiles-store";
 import { isPaidSignupPlan, isStripePaymentsEnabled } from "@/lib/member-gates";
 import { getEffectiveMembershipOffer } from "@/lib/pricing-catalog";
 import { getOfferDefinition } from "@/lib/product-offers";
@@ -60,6 +64,9 @@ export type MemberMembershipSnapshot = {
   canRequestBusinessUpgrade: boolean;
   businessUpgradeStatus: BusinessUpgradeStatus | null;
   businessUpgradeRequestedAt: string | null;
+  /** 1-based place on the pending upgrade list (Delta-style). */
+  businessUpgradeQueuePosition: number | null;
+  businessUpgradeQueueSize: number | null;
   intensive: {
     sessionsTotal: number | null;
     sessionsRemaining: number | null;
@@ -196,6 +203,11 @@ export async function getMemberMembershipSnapshot(
   } catch {
     alreadyPaidPass = false;
   }
+  const upgradePlace =
+    normalizeBusinessUpgradeStatus(profile.businessUpgradeStatus) === "pending"
+      ? await getBusinessUpgradeQueuePlaceForUser(userId)
+      : null;
+
   const lastPay =
     profile.paymentStatus === "paid" ? await getLatestPaidPaymentFact(userId) : null;
   const lastPaymentAmountCents = lastPay?.amountCents ?? null;
@@ -242,6 +254,8 @@ export async function getMemberMembershipSnapshot(
     canRequestBusinessUpgrade: canRequestBusinessClassUpgrade(profile),
     businessUpgradeStatus: normalizeBusinessUpgradeStatus(profile.businessUpgradeStatus),
     businessUpgradeRequestedAt: profile.businessUpgradeRequestedAt,
+    businessUpgradeQueuePosition: upgradePlace?.position ?? null,
+    businessUpgradeQueueSize: upgradePlace?.size ?? null,
     intensive:
       plan === "pro" && profile.intensiveSessionsTotal
         ? {

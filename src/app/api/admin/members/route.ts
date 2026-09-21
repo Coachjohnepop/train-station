@@ -4,6 +4,7 @@ import { getSessionUser, isStaffRole } from "@/lib/auth";
 import { listSelfRegisteredAccounts } from "@/lib/member-accounts-store";
 import { listMemberProfiles } from "@/lib/member-profiles-store";
 import { signupPlanLabel } from "@/lib/signup-plans";
+import { sortBusinessUpgradeQueue } from "@/lib/business-upgrade";
 import {
   onboardGenderLabel,
   primaryGoalLabel,
@@ -43,6 +44,18 @@ export async function GET() {
   const profileByUserId = new Map(profiles.map((p) => [p.userId, p]));
   const userIds = accounts.map(({ account }) => account.userId);
   const lastPaidMap = await getLatestPaidAmountsByUserIds(userIds);
+  const upgradeQueue = sortBusinessUpgradeQueue(
+    profiles
+      .filter((profile) => profile.businessUpgradeStatus === "pending")
+      .map((profile) => ({
+        userId: profile.userId,
+        requestedAt: profile.businessUpgradeRequestedAt,
+      })),
+  );
+  const upgradeQueueSize = upgradeQueue.length;
+  const upgradePositionByUser = new Map(
+    upgradeQueue.map((row, index) => [row.userId, index + 1]),
+  );
 
   const members = accounts.map(({ email, account }) => {
     const profile = profileByUserId.get(account.userId) ?? null;
@@ -88,6 +101,9 @@ export async function GET() {
       businessUpgradeStatus: profile?.businessUpgradeStatus ?? null,
       businessUpgradeReviewedAt: profile?.businessUpgradeReviewedAt ?? null,
       businessUpgradeReviewedBy: profile?.businessUpgradeReviewedBy ?? null,
+      businessUpgradeQueuePosition: upgradePositionByUser.get(account.userId) ?? null,
+      businessUpgradeQueueSize:
+        profile?.businessUpgradeStatus === "pending" ? upgradeQueueSize : null,
       hasStripeSubscription: Boolean(profile?.stripeSubscriptionId),
       coachingMode: coachingModeFromPrefs(prefsMap.get(account.userId), account.userId),
     };

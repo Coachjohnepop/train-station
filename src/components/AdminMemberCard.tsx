@@ -16,6 +16,7 @@ import {
   primaryGoalLabel,
   workoutScheduleLabel,
 } from "@/lib/onboard-path";
+import { ordinalPlace } from "@/lib/business-upgrade";
 import { signupPlanLabel } from "@/lib/signup-plans";
 
 type CardPayload = {
@@ -26,6 +27,8 @@ type CardPayload = {
   planLabel: string;
   coachingMode: string;
   profile: MemberProfile;
+  businessUpgradeQueuePosition?: number | null;
+  businessUpgradeQueueSize?: number | null;
 };
 
 type FormState = {
@@ -317,6 +320,9 @@ export default function AdminMemberCard({ userId }: { userId: string }) {
             {card.name} asked to upgrade Coach Class → Business Class
             {profile.businessUpgradeRequestedAt
               ? ` · ${formatWhen(profile.businessUpgradeRequestedAt)}`
+              : ""}
+            {card.businessUpgradeQueuePosition
+              ? ` · ${ordinalPlace(card.businessUpgradeQueuePosition)} of ${card.businessUpgradeQueueSize ?? "?"} on the list`
               : ""}
             .
           </p>

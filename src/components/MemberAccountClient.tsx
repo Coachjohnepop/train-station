@@ -40,6 +40,8 @@ type MembershipData = {
   canRequestBusinessUpgrade?: boolean;
   businessUpgradeStatus?: BusinessUpgradeStatus | null;
   businessUpgradeRequestedAt?: string | null;
+  businessUpgradeQueuePosition?: number | null;
+  businessUpgradeQueueSize?: number | null;
   intensive: {
     sessionsTotal: number | null;
     sessionsRemaining: number | null;
@@ -290,6 +292,8 @@ export default function MemberAccountClient({
           canRequest={Boolean(membership.canRequestBusinessUpgrade)}
           status={membership.businessUpgradeStatus ?? null}
           requestedAt={membership.businessUpgradeRequestedAt}
+          queuePosition={membership.businessUpgradeQueuePosition}
+          queueSize={membership.businessUpgradeQueueSize}
         />
       )}
 

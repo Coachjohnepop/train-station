@@ -26,6 +26,8 @@ function CheckoutSuccessInner() {
   const [paidPlan, setPaidPlan] = useState<string | null>(null);
   const [upgradeStatus, setUpgradeStatus] = useState<BusinessUpgradeStatus | null>(null);
   const [upgradeRequestedAt, setUpgradeRequestedAt] = useState<string | null>(null);
+  const [upgradeQueuePosition, setUpgradeQueuePosition] = useState<number | null>(null);
+  const [upgradeQueueSize, setUpgradeQueueSize] = useState<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -153,6 +155,12 @@ function CheckoutSuccessInner() {
       if (typeof membership.businessUpgradeRequestedAt === "string") {
         setUpgradeRequestedAt(membership.businessUpgradeRequestedAt);
       }
+      if (typeof membership.businessUpgradeQueuePosition === "number") {
+        setUpgradeQueuePosition(membership.businessUpgradeQueuePosition);
+      }
+      if (typeof membership.businessUpgradeQueueSize === "number") {
+        setUpgradeQueueSize(membership.businessUpgradeQueueSize);
+      }
     })();
 
     return () => {
@@ -233,9 +241,13 @@ function CheckoutSuccessInner() {
               })}
               status={upgradeStatus}
               requestedAt={upgradeRequestedAt}
-              onStatus={(next) => {
+              queuePosition={upgradeQueuePosition}
+              queueSize={upgradeQueueSize}
+              onStatus={(next, nextPlace) => {
                 setUpgradeStatus(next);
                 setUpgradeRequestedAt(new Date().toISOString());
+                setUpgradeQueuePosition(nextPlace?.position ?? null);
+                setUpgradeQueueSize(nextPlace?.size ?? null);
               }}
             />
           ) : null}
@@ -280,9 +292,13 @@ function CheckoutSuccessInner() {
                 })}
                 status={upgradeStatus}
                 requestedAt={upgradeRequestedAt}
-                onStatus={(next) => {
+                queuePosition={upgradeQueuePosition}
+                queueSize={upgradeQueueSize}
+                onStatus={(next, nextPlace) => {
                   setUpgradeStatus(next);
                   setUpgradeRequestedAt(new Date().toISOString());
+                  setUpgradeQueuePosition(nextPlace?.position ?? null);
+                  setUpgradeQueueSize(nextPlace?.size ?? null);
                 }}
               />
             ) : null}

@@ -3,10 +3,15 @@ import { describe, it } from "node:test";
 import {
   appendPaymentNote,
   BUSINESS_UPGRADE_REQUEST_COPY,
+  businessUpgradeQueueDetail,
+  businessUpgradeQueueHeadline,
   canRequestBusinessClassUpgrade,
   isBusinessUpgradePending,
   memberDisplayNameFromEmail,
   normalizeBusinessUpgradeStatus,
+  ordinalPlace,
+  placeInBusinessUpgradeQueue,
+  sortBusinessUpgradeQueue,
 } from "./business-upgrade";
 
 describe("business class upgrade request", () => {
@@ -83,5 +88,34 @@ describe("business class upgrade request", () => {
       "Ali Fletcher",
     );
     assert.equal(memberDisplayNameFromEmail("ali@example.com"), "ali");
+  });
+
+  it("ranks the upgrade list first-come like a Delta waitlist", () => {
+    assert.equal(ordinalPlace(1), "1st");
+    assert.equal(ordinalPlace(2), "2nd");
+    assert.equal(ordinalPlace(3), "3rd");
+    assert.equal(ordinalPlace(4), "4th");
+    assert.equal(ordinalPlace(11), "11th");
+    assert.equal(ordinalPlace(21), "21st");
+    const queue = sortBusinessUpgradeQueue([
+      { userId: "c", requestedAt: "2026-09-21T12:00:00.000Z" },
+      { userId: "a", requestedAt: "2026-09-21T11:00:00.000Z" },
+      { userId: "b", requestedAt: "2026-09-21T11:00:00.000Z" },
+    ]);
+    assert.deepEqual(
+      queue.map((row) => row.userId),
+      ["a", "b", "c"],
+    );
+    const second = placeInBusinessUpgradeQueue(queue, "b");
+    assert.equal(second?.position, 2);
+    assert.equal(second?.ahead, 1);
+    assert.equal(second?.size, 3);
+    assert.equal(businessUpgradeQueueHeadline(second!), "You're 2nd on the upgrade list");
+    assert.equal(businessUpgradeQueueDetail(second!), "1 request ahead of you · 3 on the list.");
+    const first = placeInBusinessUpgradeQueue(queue, "a");
+    assert.equal(
+      businessUpgradeQueueDetail(first!),
+      "No one ahead of you · 3 on the list.",
+    );
   });
 });

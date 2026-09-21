@@ -9,6 +9,7 @@ import type { MemberProfile, MemberProfilePatch, PaymentMethod } from "@/lib/mem
 import { parseSmsReminderCadence } from "@/lib/sms-reminder-cadence";
 import { prisma } from "@/lib/prisma";
 import { normalizeSignupPlan } from "@/lib/signup-plans";
+import { sortBusinessUpgradeQueue } from "@/lib/business-upgrade";
 
 type UserContactFields = {
   phone: string | null;
@@ -299,6 +300,21 @@ export async function removeMemberProfilesFromDb(userIds: string[]): Promise<num
     where: { userId: { in: userIds } },
   });
   return result.count;
+}
+
+export async function loadPendingBusinessUpgradeQueueFromDb(): Promise<
+  { userId: string; requestedAt: string | null }[]
+> {
+  const rows = await prisma.memberProfile.findMany({
+    where: { businessUpgradeStatus: "pending" },
+    select: { userId: true, businessUpgradeRequestedAt: true },
+  });
+  return sortBusinessUpgradeQueue(
+    rows.map((row) => ({
+      userId: row.userId,
+      requestedAt: toIso(row.businessUpgradeRequestedAt),
+    })),
+  );
 }
 
 export async function probeMemberProfilesDb(): Promise<{ ok: boolean; message: string | null }> {

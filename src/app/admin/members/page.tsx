@@ -11,6 +11,7 @@ import {
   type MemberCoachingMode,
 } from "@/lib/member-coaching-mode";
 import { memberCardPath } from "@/lib/member-card-path";
+import { ordinalPlace } from "@/lib/business-upgrade";
 import { signupPlanLabel } from "@/lib/signup-plans";
 import { formatPhoneDisplay } from "@/lib/sms-phone";
 
@@ -59,6 +60,8 @@ type MemberRow = {
   businessUpgradeStatus: string | null;
   businessUpgradeReviewedAt: string | null;
   businessUpgradeReviewedBy: string | null;
+  businessUpgradeQueuePosition: number | null;
+  businessUpgradeQueueSize: number | null;
   hasStripeSubscription: boolean;
   coachingMode: MemberCoachingMode;
 };
@@ -423,7 +426,15 @@ export default function AdminMembersPage() {
   const staffGrantCount = members.filter(isStaffGrantRow).length;
   const staffReapproveCount = members.filter(staffGrantNeedsReapprove).length;
   const upgradeRequestCount = members.filter((m) => m.businessUpgradeStatus === "pending").length;
-  const visibleMembers = members.filter(matchesFilter);
+  const visibleMembers = members
+    .filter(matchesFilter)
+    .slice()
+    .sort((a, b) => {
+      if (filter !== "upgrades") return 0;
+      const ap = a.businessUpgradeQueuePosition ?? Number.MAX_SAFE_INTEGER;
+      const bp = b.businessUpgradeQueuePosition ?? Number.MAX_SAFE_INTEGER;
+      return ap - bp;
+    });
 
   const filterButtons: { id: MemberFilter; label: string; count?: number }[] = [
     { id: "all", label: "All" },
@@ -602,7 +613,9 @@ export default function AdminMembersPage() {
                     <div>{member.planLabel || signupPlanLabel(member.plan as "explorer")}</div>
                     {member.businessUpgradeStatus === "pending" ? (
                       <div className="mt-1 text-[10px] font-semibold uppercase tracking-wide text-amber-300">
-                        Business upgrade requested
+                        {member.businessUpgradeQueuePosition
+                          ? `${ordinalPlace(member.businessUpgradeQueuePosition)} of ${member.businessUpgradeQueueSize ?? "?"} on upgrade list`
+                          : "Business upgrade requested"}
                         {member.businessUpgradeRequestedAt
                           ? ` · ${formatWhen(member.businessUpgradeRequestedAt)}`
                           : ""}

@@ -6,6 +6,7 @@ import { getMemberCoachPrefs } from "@/lib/member-coach-prefs-store";
 import { coachingModeFromPrefs } from "@/lib/member-coaching-mode";
 import {
   ensureMemberProfile,
+  getBusinessUpgradeQueuePlaceForUser,
   getMemberProfile,
   updateMemberProfile,
 } from "@/lib/member-profiles-store";
@@ -63,6 +64,10 @@ async function loadCard(userId: string) {
 
   const prefs = await getMemberCoachPrefs(userId);
   const coachingMode = coachingModeFromPrefs(prefs, userId);
+  const upgradePlace =
+    profile.businessUpgradeStatus === "pending"
+      ? await getBusinessUpgradeQueuePlaceForUser(userId)
+      : null;
 
   return {
     userId,
@@ -72,6 +77,8 @@ async function loadCard(userId: string) {
     planLabel: signupPlanLabel(profile.plan),
     coachingMode,
     profile,
+    businessUpgradeQueuePosition: upgradePlace?.position ?? null,
+    businessUpgradeQueueSize: upgradePlace?.size ?? null,
   };
 }
 
