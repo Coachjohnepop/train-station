@@ -132,6 +132,8 @@ export default function MemberNav({
   const wrapRef = useRef<HTMLDivElement>(null);
   const [moreOpen, setMoreOpen] = useState(false);
   const [nutritionOpen, setNutritionOpen] = useState(false);
+  const nutritionBtnRef = useRef<HTMLButtonElement>(null);
+  const [nutritionMenu, setNutritionMenu] = useState<{ left: number; top: number } | null>(null);
   const [scorePoints, setScorePoints] = useState<number | null>(null);
   const [scorePulse, setScorePulse] = useState(false);
   const [textScale, setTextScale] = useState<MemberTextScale>("md");
@@ -183,6 +185,30 @@ export default function MemberNav({
       window.removeEventListener("pointerdown", onPointer);
     };
   }, [moreOpen, nutritionOpen]);
+
+  useEffect(() => {
+    if (!nutritionOpen) {
+      setNutritionMenu(null);
+      return;
+    }
+    function place() {
+      const button = nutritionBtnRef.current;
+      const wrap = wrapRef.current;
+      if (!button || !wrap || window.innerWidth < 1024) {
+        setNutritionMenu(null);
+        return;
+      }
+      const buttonBox = button.getBoundingClientRect();
+      const wrapBox = wrap.getBoundingClientRect();
+      setNutritionMenu({
+        left: buttonBox.left - wrapBox.left,
+        top: buttonBox.bottom - wrapBox.top + 8,
+      });
+    }
+    place();
+    window.addEventListener("resize", place);
+    return () => window.removeEventListener("resize", place);
+  }, [nutritionOpen]);
 
   useEffect(() => {
     function onScoreUpdated(e: Event) {
@@ -250,6 +276,7 @@ export default function MemberNav({
                 ) : null}
               </Link>
               <button
+                ref={nutritionBtnRef}
                 type="button"
                 id="member-nav-nutrition"
                 aria-expanded={nutritionOpen}
@@ -374,6 +401,11 @@ export default function MemberNav({
           id="member-nav-nutrition-panel"
           className="member-nav-more-panel member-nav-nutrition-panel"
           aria-label={nutritionTabLabel}
+          style={
+            nutritionMenu
+              ? { left: nutritionMenu.left, top: nutritionMenu.top, right: "auto", width: "18rem" }
+              : undefined
+          }
         >
           {nutritionMeals.map((meal) => (
             <Link

@@ -2522,10 +2522,16 @@ html[data-free-ticket="open"] .landing-nav .theme-mode-toggle {
 }
 
 @media (min-width: 1024px) {
-  .member-nav-more-panel {
+  .member-nav-more-panel:not(.member-nav-nutrition-panel) {
     left: auto;
     right: max(1.5rem, calc((100% - 72rem) / 2 + 1.5rem));
     width: 16.5rem;
+  }
+
+  .member-nav-nutrition-panel {
+    left: 0;
+    right: auto;
+    width: 18rem;
   }
 }
 
