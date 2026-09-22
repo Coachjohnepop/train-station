@@ -137,6 +137,7 @@ export default function AdminMemberCard({ userId }: { userId: string }) {
   const [error, setError] = useState("");
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [saveFlash, setSaveFlash] = useState(0);
+  const [addingGoal, setAddingGoal] = useState(false);
   const [equipmentOpen, setEquipmentOpen] = useState(false);
   const [measurementsOpen, setMeasurementsOpen] = useState(false);
   const [upgradeActing, setUpgradeActing] = useState<"approve" | "decline" | null>(null);
@@ -584,8 +585,22 @@ export default function AdminMemberCard({ userId }: { userId: string }) {
                 <Field label="Primary goal">
                   <select
                     className={inputClass}
-                    value={form.primaryGoal}
-                    onChange={(e) => patchForm("primaryGoal", e.target.value)}
+                    value={
+                      addingGoal ||
+                      (form.primaryGoal &&
+                        !PRIMARY_GOALS.some((g) => g.id === form.primaryGoal))
+                        ? "__custom__"
+                        : form.primaryGoal
+                    }
+                    onChange={(e) => {
+                      if (e.target.value === "__custom__") {
+                        setAddingGoal(true);
+                        patchForm("primaryGoal", "");
+                        return;
+                      }
+                      setAddingGoal(false);
+                      patchForm("primaryGoal", e.target.value);
+                    }}
                   >
                     <option value="">Not set</option>
                     {PRIMARY_GOALS.map((g) => (
@@ -593,7 +608,19 @@ export default function AdminMemberCard({ userId }: { userId: string }) {
                         {g.label}
                       </option>
                     ))}
+                    <option value="__custom__">Add a goal…</option>
                   </select>
+                  {addingGoal ||
+                  (form.primaryGoal &&
+                    !PRIMARY_GOALS.some((g) => g.id === form.primaryGoal)) ? (
+                    <input
+                      className={`${inputClass} mt-2`}
+                      value={form.primaryGoal}
+                      maxLength={120}
+                      placeholder="Type their goal"
+                      onChange={(e) => patchForm("primaryGoal", e.target.value)}
+                    />
+                  ) : null}
                 </Field>
                 <Field label="Fat-loss target">
                   <input
@@ -603,7 +630,7 @@ export default function AdminMemberCard({ userId }: { userId: string }) {
                     placeholder="Drop 20 lbs for the wedding"
                   />
                 </Field>
-                <Field label="Timeline">
+                <Field label="Timeline — how long for the fat-loss target">
                   <select
                     className={inputClass}
                     value={form.weightLossTimeline}

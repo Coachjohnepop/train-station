@@ -35,7 +35,7 @@ const patchSchema = z.object({
   gender: z.string().max(20).nullable().optional(),
   weightLossGoal: z.string().max(240).nullable().optional(),
   weightLossTimeline: z.string().max(80).nullable().optional(),
-  primaryGoal: z.string().max(40).nullable().optional(),
+  primaryGoal: z.string().max(120).nullable().optional(),
   workoutSchedule: z.string().max(40).nullable().optional(),
   notes: nullableString,
   city: z.string().max(80).nullable().optional(),

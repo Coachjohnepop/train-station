@@ -26,18 +26,20 @@ export const WORKOUT_SCHEDULES = [
 ] as const;
 export type WorkoutScheduleId = (typeof WORKOUT_SCHEDULES)[number]["id"];
 
-export function normalizePrimaryGoal(raw: string | null | undefined): PrimaryGoalId | null {
-  const v = (raw || "").trim();
-  return PRIMARY_GOALS.some((g) => g.id === v) ? (v as PrimaryGoalId) : null;
+export function normalizePrimaryGoal(raw: string | null | undefined): string | null {
+  const v = (raw || "").trim().slice(0, 120);
+  if (!v || v === "__custom__") return null;
+  return v;
 }
 
 export function primaryGoalLabel(raw: string | null | undefined): string | null {
-  const id = normalizePrimaryGoal(raw);
-  return PRIMARY_GOALS.find((g) => g.id === id)?.label ?? null;
+  const v = (raw || "").trim();
+  if (!v) return null;
+  return PRIMARY_GOALS.find((g) => g.id === v)?.label ?? v;
 }
 
 export function isFatLossGoal(raw: string | null | undefined): boolean {
-  const id = normalizePrimaryGoal(raw);
+  const id = (raw || "").trim();
   return id === "lose-fat" || id === "lose-fast";
 }
 
