@@ -1873,29 +1873,29 @@ body:has([data-admin-chrome]) [data-global-theme-toggle] {
   overflow: visible;
 }
 
-/* B hero: jelly beans are 50% so Jeremy shows through. Letters stay solid. */
+/* B hero: 35% see-through so less of Jeremy shows. Gold stays rich. Letters stay solid. */
 .landing-b-start-btns .landing-hero-early-signup,
 .landing-b-start-btns .landing-hero-explore-cta {
   background: linear-gradient(
     180deg,
-    rgba(221, 214, 254, 0.5) 0%,
-    rgba(167, 139, 250, 0.5) 22%,
-    rgba(124, 58, 237, 0.5) 58%,
-    rgba(91, 33, 182, 0.5) 100%
+    rgba(221, 214, 254, 0.65) 0%,
+    rgba(167, 139, 250, 0.65) 22%,
+    rgba(124, 58, 237, 0.65) 58%,
+    rgba(91, 33, 182, 0.65) 100%
   ) !important;
-  border: 3px solid rgba(76, 29, 149, 0.5) !important;
+  border: 3px solid rgba(76, 29, 149, 0.65) !important;
   box-shadow:
-    0 3px 0 rgba(91, 33, 182, 0.5),
-    0 7px 0 rgba(59, 7, 100, 0.5),
-    0 11px 0 rgba(46, 16, 101, 0.5),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2),
-    0 14px 22px rgba(0, 0, 0, 0.18) !important;
+    0 3px 0 rgba(91, 33, 182, 0.65),
+    0 7px 0 rgba(59, 7, 100, 0.65),
+    0 11px 0 rgba(46, 16, 101, 0.65),
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 14px 22px rgba(0, 0, 0, 0.22) !important;
 }
 
 .landing-b-start-btns .landing-hero-early-signup,
 .landing-b-start-btns .landing-hero-early-signup:hover {
-  color: #f0c75e !important;
-  -webkit-text-fill-color: #f0c75e !important;
+  color: #ffd24a !important;
+  -webkit-text-fill-color: #ffd24a !important;
   -webkit-text-stroke: 1.6px #4c1d95;
   paint-order: stroke fill;
   text-shadow: none;
@@ -1905,43 +1905,43 @@ body:has([data-admin-chrome]) [data-global-theme-toggle] {
 .landing-b-start-btns .landing-hero-explore-cta:hover {
   background: linear-gradient(
     180deg,
-    rgba(237, 233, 254, 0.5) 0%,
-    rgba(196, 181, 253, 0.5) 28%,
-    rgba(139, 92, 246, 0.5) 62%,
-    rgba(109, 40, 217, 0.5) 100%
+    rgba(237, 233, 254, 0.65) 0%,
+    rgba(196, 181, 253, 0.65) 28%,
+    rgba(139, 92, 246, 0.65) 62%,
+    rgba(109, 40, 217, 0.65) 100%
   ) !important;
-  border-color: rgba(91, 33, 182, 0.5) !important;
+  border-color: rgba(91, 33, 182, 0.65) !important;
 }
 
 .landing-b-start-btns .landing-hero-secondary-cta,
 .landing-b-start-btns .landing-hero-secondary-cta:hover {
   background: linear-gradient(
     180deg,
-    rgba(255, 246, 208, 0.5) 0%,
-    rgba(240, 199, 94, 0.5) 30%,
-    rgba(212, 175, 55, 0.5) 68%,
-    rgba(184, 134, 11, 0.5) 100%
+    rgba(255, 210, 74, 0.92) 0%,
+    rgba(232, 168, 12, 0.92) 32%,
+    rgba(196, 132, 6, 0.92) 68%,
+    rgba(138, 90, 4, 0.92) 100%
   ) !important;
-  border: 3px solid rgba(138, 106, 18, 0.5) !important;
+  border: 3px solid rgba(122, 84, 4, 0.92) !important;
   color: #5b21b6 !important;
   -webkit-text-fill-color: #5b21b6 !important;
   -webkit-text-stroke: 1.35px #ffffff;
   paint-order: stroke fill;
   text-shadow: none;
   box-shadow:
-    0 3px 0 rgba(212, 175, 55, 0.5),
-    0 7px 0 rgba(184, 134, 11, 0.5),
-    0 11px 0 rgba(107, 79, 8, 0.5),
-    inset 0 1px 0 rgba(255, 255, 255, 0.32),
-    0 14px 22px rgba(0, 0, 0, 0.18) !important;
+    0 3px 0 rgba(196, 132, 6, 0.85),
+    0 7px 0 rgba(138, 90, 4, 0.85),
+    0 11px 0 rgba(92, 58, 2, 0.85),
+    inset 0 1px 0 rgba(255, 236, 160, 0.45),
+    0 14px 22px rgba(0, 0, 0, 0.22) !important;
 }
 
 .landing-b-start-btns .landing-hero-secondary-cta:hover {
   background: linear-gradient(
     180deg,
-    rgba(255, 251, 230, 0.5) 0%,
-    rgba(255, 224, 138, 0.5) 32%,
-    rgba(228, 193, 90, 0.5) 100%
+    rgba(255, 220, 90, 0.94) 0%,
+    rgba(240, 176, 16, 0.94) 40%,
+    rgba(184, 122, 4, 0.94) 100%
   ) !important;
 }
 
@@ -1949,8 +1949,8 @@ body:has([data-admin-chrome]) [data-global-theme-toggle] {
 .landing-b-start-btns .landing-hero-explore-cta:hover {
   color: #111111 !important;
   -webkit-text-fill-color: #111111 !important;
-  -webkit-text-stroke: 0;
-  paint-order: fill;
+  -webkit-text-stroke: 1.35px #ffffff;
+  paint-order: stroke fill;
   text-shadow: none;
 }
 
