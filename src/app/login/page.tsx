@@ -48,6 +48,7 @@ function LoginForm() {
   const [quickAuthAvailable, setQuickAuthAvailable] = useState(false);
   const [quickAuthResolved, setQuickAuthResolved] = useState(false);
   const emailTouchedRef = useRef(switchAccount || Boolean(prefillEmail));
+  const passwordTouchedRef = useRef(false);
   const formRef = useRef<HTMLFormElement>(null);
 
   useEffect(() => {
@@ -64,6 +65,14 @@ function LoginForm() {
   useEffect(() => {
     void ensureDeviceId();
   }, []);
+
+  useEffect(() => {
+    if (!switchAccount) return;
+    const creds = navigator.credentials as CredentialsContainer & {
+      preventSilentAccess?: () => Promise<void>;
+    };
+    void creds.preventSilentAccess?.();
+  }, [switchAccount]);
 
   useEffect(() => {
     setQuickAuthResolved(false);
@@ -121,6 +130,10 @@ function LoginForm() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (switchAccount && !passwordTouchedRef.current) {
+      setError("Sign-in was cancelled. Tap Sign in when you want to come back in.");
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
@@ -240,7 +253,7 @@ function LoginForm() {
               value={email}
               onChange={handleEmailChange}
               placeholder="you@thetrainstation.co"
-              prefillFromHistory={!prefillEmail}
+              prefillFromHistory={!prefillEmail && !switchAccount}
             />
           </div>
           {email.trim() && (
@@ -259,6 +272,7 @@ function LoginForm() {
             <QuickAuthLogin
               email={email}
               redirect={redirect}
+              autoStart={!switchAccount}
               onUsePassword={() => setShowPasswordForm(true)}
               onSwitchAccount={switchToDifferentAccount}
               onAvailabilityChange={setQuickAuthAvailable}
@@ -328,7 +342,10 @@ function LoginForm() {
                 purpose={passwordUpdated ? "new" : "current"}
                 required
                 value={password}
-                onChange={setPassword}
+                onChange={(next) => {
+                  passwordTouchedRef.current = true;
+                  setPassword(next);
+                }}
                 placeholder={passwordUpdated ? "Type your new password" : "Your password"}
               />
             </div>

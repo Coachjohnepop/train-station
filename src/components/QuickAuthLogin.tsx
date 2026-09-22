@@ -15,6 +15,8 @@ type QuickAuthLoginProps = {
   email: string;
   redirect: string;
   onUsePassword: () => void;
+  /** After Sign out, wait for a tap. Do not open Face ID / Touch ID by itself. */
+  autoStart?: boolean;
   onSwitchAccount?: () => void;
   onAvailabilityChange?: (enabled: boolean) => void;
   onStatusResolved?: (enabled: boolean) => void;
@@ -24,6 +26,7 @@ export default function QuickAuthLogin({
   email,
   redirect,
   onUsePassword,
+  autoStart = true,
   onSwitchAccount,
   onAvailabilityChange,
   onStatusResolved,
@@ -194,11 +197,11 @@ export default function QuickAuthLogin({
   const showPinPad = pinEnabled && (!biometricPrimary || showPin);
 
   useEffect(() => {
-    if (!statusResolved || !biometricPrimary || loading || showPin) return;
+    if (!autoStart || !statusResolved || !biometricPrimary || loading || showPin) return;
     if (autoBiometricAttempted.current) return;
     autoBiometricAttempted.current = true;
     void signInWithBiometrics();
-  }, [statusResolved, biometricPrimary, loading, showPin, signInWithBiometrics]);
+  }, [autoStart, statusResolved, biometricPrimary, loading, showPin, signInWithBiometrics]);
 
   useEffect(() => {
     if (!pinEnabled || pin.length !== 4 || loading || !ready || !showPinPad) return;
@@ -238,7 +241,9 @@ export default function QuickAuthLogin({
             {loading ? "Verifying…" : "Sign in with Face ID / Touch ID"}
           </button>
           <p className="text-center text-[10px] text-[var(--muted)]">
-            Touch ID or Face ID opens automatically on this device.
+            {autoStart
+              ? "Touch ID or Face ID opens automatically on this device."
+              : "Signed out. Tap the button when you want to sign in again."}
           </p>
           {pinEnabled ? (
             <button
