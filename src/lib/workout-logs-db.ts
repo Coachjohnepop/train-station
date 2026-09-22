@@ -3,6 +3,7 @@ import "server-only";
 import { prisma } from "@/lib/prisma";
 import { resolveStorageUserId } from "@/lib/enrollment-db";
 import { computeStrengthScoreFromPerfs } from "@/lib/demo-logs";
+import { pacificDayBounds } from "@/lib/daily-user-activity-format";
 import { localTodayIso } from "@/lib/program-calendar";
 
 export type WorkoutExercisePast = {
@@ -69,6 +70,29 @@ export async function getCatchUpCalendarDatesDb(userId: string): Promise<Set<str
     if (log.catchUpForDate) dates.add(log.catchUpForDate);
   }
   return dates;
+}
+
+/** One completed log for this workout on this business day. A second browser must not offer Log again. */
+export async function findCompletedSessionLog(input: {
+  userId: string;
+  workoutId: string;
+  sessionDate: string;
+}): Promise<{ id: string; performedAt: Date; progress: number } | null> {
+  const storageUserId = await resolveStorageUserId(input.userId);
+  const { start, end } = pacificDayBounds(input.sessionDate);
+  return prisma.workoutLog.findFirst({
+    where: {
+      userId: storageUserId,
+      workoutId: input.workoutId,
+      completed: true,
+      OR: [
+        { catchUpForDate: input.sessionDate },
+        { catchUpForDate: null, performedAt: { gte: start, lt: end } },
+      ],
+    },
+    orderBy: { performedAt: "desc" },
+    select: { id: true, performedAt: true, progress: true },
+  });
 }
 
 export async function getWorkoutLogCountDb(userId: string): Promise<number> {

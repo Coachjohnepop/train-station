@@ -2406,6 +2406,14 @@ export default function MemberWorkoutConsole({
 
       const data = await res.json();
       await clearLiveSession();
+      if (data.alreadyLogged) {
+        setLogResult({
+          performedAt: data.performedAt,
+          count: 0,
+          progress: data.progress ?? 100,
+        });
+        return;
+      }
       if (isMaintainSession) {
         clearMaintainResume(liveSyncUserId || targetUserId, workout.workoutId);
       }

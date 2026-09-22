@@ -10,6 +10,8 @@ import { getWeatherForLocation, logUserWeather } from "@/lib/weather";
 import { getActiveScheduleOverride } from "@/lib/demo-schedule-overrides";
 import { resolveMemberWorkoutContext } from "@/lib/member-workout-context";
 import { resolveTargetUserId } from "@/lib/resolve-target-user";
+import { localTodayIso } from "@/lib/program-calendar";
+import { findCompletedSessionLog } from "@/lib/workout-logs-db";
 
 type Props = {
   searchParams: Promise<{
@@ -99,6 +101,19 @@ export default async function MemberWorkoutPage({ searchParams }: Props) {
         userId: memberUserId,
       })
     : null;
+
+  const sessionDate =
+    date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : localTodayIso();
+  let alreadyLogged = false;
+  if (workout && memberUserId && !byow) {
+    alreadyLogged = Boolean(
+      await findCompletedSessionLog({
+        userId: memberUserId,
+        workoutId: workout.workoutId,
+        sessionDate,
+      }),
+    );
+  }
 
   const backHref = byow ? "/member/byow" : "/member/today";
   const backLabel = byow ? "← My notes" : program ? "← Back to program" : "← Dashboard";
@@ -201,7 +216,7 @@ export default async function MemberWorkoutPage({ searchParams }: Props) {
             programSlug={program}
             targetUserId={memberUserId}
             instructorName={asInstructor ? "Instructor" : undefined}
-            reviewMode={!!review}
+            reviewMode={!!review || alreadyLogged}
             byow={Boolean(byow)}
             calendarDateLabel={workoutContext?.calendarDateLabel}
             scheduleLabel={workoutContext?.scheduleLabel}

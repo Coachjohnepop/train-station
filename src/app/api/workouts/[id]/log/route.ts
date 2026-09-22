@@ -13,6 +13,7 @@ import {
 } from "@/lib/member-workout-late";
 import { resolveLogSessionDate } from "@/lib/member-workout-log";
 import { localTodayIso } from "@/lib/program-calendar";
+import { findCompletedSessionLog } from "@/lib/workout-logs-db";
 
 const logExerciseSchema = z.object({
   workoutExerciseId: z.string().optional(),
@@ -112,6 +113,22 @@ export async function POST(request: Request, { params }: Params) {
 
   try {
     const catchUpForDate = isCatchUpSessionDate(sessionDate, todayIso) ? sessionDate : null;
+    const already = await findCompletedSessionLog({
+      userId: uid,
+      workoutId,
+      sessionDate,
+    });
+    if (already) {
+      return NextResponse.json({
+        ok: true,
+        alreadyLogged: true,
+        logId: already.id,
+        performedAt: already.performedAt,
+        progress: already.progress,
+        performances: 0,
+        gamification: { awarded: false, pointsEarned: 0 },
+      });
+    }
     const result = await createWorkoutLogAndPerformances({
       workoutId,
       userId: uid,
