@@ -14,6 +14,7 @@ export type ExerciseRow = {
   id: string;
   name: string;
   description: string | null;
+  previousDescription?: string | null;
   videoUrl: string | null;
   tags: string | null;
   defaultSetScheme?: string | null;
@@ -37,6 +38,7 @@ function serializeExercise(row: {
   id: string;
   name: string;
   description: string | null;
+  previousDescription?: string | null;
   videoUrl: string | null;
   tags: string | null;
   defaultSetScheme?: string | null;
@@ -50,6 +52,7 @@ function serializeExercise(row: {
     id: row.id,
     name: row.name,
     description: row.description,
+    previousDescription: row.previousDescription ?? null,
     videoUrl: row.videoUrl,
     tags: row.tags,
     defaultSetScheme: row.defaultSetScheme ?? null,

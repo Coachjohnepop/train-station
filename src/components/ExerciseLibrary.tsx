@@ -14,6 +14,7 @@ type Exercise = {
   id: string;
   name: string;
   description: string | null;
+  previousDescription?: string | null;
   videoUrl: string | null;
   tags: string | null;
   archivedAt?: string | null;
@@ -654,6 +655,30 @@ export default function ExerciseLibrary() {
     await load();
   }
 
+  async function swapDefinition(ex: Exercise) {
+    setError(null);
+    const res = await fetch(`/api/exercises/${ex.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "swap-definition" }),
+    });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      setError(formatApiError((body as { detail?: unknown }).detail) || "Could not swap the definition.");
+      return;
+    }
+    const updated = (await res.json()) as Exercise;
+    applyExerciseUpdate(updated);
+    if (editingExercise?.id === ex.id) {
+      setEditDraft((draft) => ({
+        ...draft,
+        description: updated.description || "",
+      }));
+      setEditingExercise(updated);
+    }
+    setMessage("Swapped to the last definition.");
+  }
+
   function startEdit(ex: Exercise) {
     setEditingExercise(ex);
     setEditDraft({
@@ -1046,6 +1071,21 @@ export default function ExerciseLibrary() {
                       ) : (
                         "—"
                       )}
+                      {ex.previousDescription &&
+                      ex.previousDescription !== ex.description ? (
+                        <div className="mt-1.5 space-y-1">
+                          <p className="line-clamp-2 text-[10px] text-[var(--muted)]">
+                            Last: {ex.previousDescription}
+                          </p>
+                          <button
+                            type="button"
+                            className="text-[10px] font-semibold text-accent hover:underline"
+                            onClick={() => void swapDefinition(ex)}
+                          >
+                            Use last definition
+                          </button>
+                        </div>
+                      ) : null}
                     </td>
                     <td className="align-top">
                       <ExerciseVideoCell exercise={ex} onSaved={applyExerciseUpdate} />
@@ -1285,6 +1325,22 @@ export default function ExerciseLibrary() {
                   value={editDraft.description}
                   onChange={(e) => setEditDraft({ ...editDraft, description: e.target.value })}
                 />
+                {editingExercise.previousDescription &&
+                editingExercise.previousDescription !== editingExercise.description ? (
+                  <div className="mt-2 rounded-md border border-[var(--border)] bg-[var(--surface-2)] px-2.5 py-2">
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">
+                      Last definition
+                    </p>
+                    <p className="mt-1 text-sm text-[var(--text)]">{editingExercise.previousDescription}</p>
+                    <button
+                      type="button"
+                      className="mt-2 text-sm font-semibold text-accent hover:underline"
+                      onClick={() => void swapDefinition(editingExercise)}
+                    >
+                      Use last definition
+                    </button>
+                  </div>
+                ) : null}
               </div>
 
               <div>

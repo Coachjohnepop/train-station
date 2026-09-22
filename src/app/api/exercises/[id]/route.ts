@@ -59,6 +59,52 @@ export async function PATCH(request: Request, { params }: Params) {
   const body = await request.json().catch(() => ({}));
 
   // Restore from archive shelf (same contract as workout templates).
+  if (body?.action === "swap-definition") {
+    try {
+      if (isDemoMode()) {
+        await hydrateDemoExercises({ preferFresh: true });
+        const list = loadDemoExercises();
+        const idx = list.findIndex((e: { id: string }) => e.id === id);
+        if (idx === -1) {
+          return NextResponse.json({ detail: "Exercise not found" }, { status: 404 });
+        }
+        const ex = { ...list[idx] };
+        const previous = (ex.previousDescription || "").trim();
+        if (!previous) {
+          return NextResponse.json({ detail: "No last definition to swap." }, { status: 400 });
+        }
+        const current = ex.description ?? null;
+        ex.description = previous;
+        ex.previousDescription = current;
+        ex.updatedAt = new Date().toISOString();
+        list[idx] = ex;
+        const saveResult = await saveDemoExercises(list);
+        const persistenceFailure = demoPersistenceError(saveResult, "Exercise update");
+        if (persistenceFailure) return persistenceFailure;
+        return NextResponse.json(ex);
+      }
+      const existing = await prisma.exercise.findUnique({ where: { id } });
+      if (!existing) {
+        return NextResponse.json({ detail: "Exercise not found" }, { status: 404 });
+      }
+      const previous = existing.previousDescription?.trim();
+      if (!previous) {
+        return NextResponse.json({ detail: "No last definition to swap." }, { status: 400 });
+      }
+      const exercise = await prisma.exercise.update({
+        where: { id },
+        data: {
+          description: previous,
+          previousDescription: existing.description,
+        },
+      });
+      return NextResponse.json(exercise);
+    } catch (e) {
+      console.error("exercise.swap-definition failed:", e);
+      return NextResponse.json({ detail: "Could not swap the definition." }, { status: 500 });
+    }
+  }
+
   if (body?.action === "restore") {
     try {
       const row = await restoreCatalogExercise(id);
@@ -84,6 +130,7 @@ export async function PATCH(request: Request, { params }: Params) {
   const data: {
     name?: string;
     description?: string | null;
+    previousDescription?: string | null;
     videoUrl?: string | null;
     tags?: string | null;
   } = {};
@@ -111,7 +158,11 @@ export async function PATCH(request: Request, { params }: Params) {
     }
     const ex = { ...list[idx] };
     if (data.name !== undefined) ex.name = data.name;
-    if (data.description !== undefined) ex.description = data.description;
+    if (data.description !== undefined && data.description !== (ex.description ?? null)) {
+      const prior = (ex.description || "").trim();
+      if (prior) ex.previousDescription = ex.description;
+      ex.description = data.description;
+    }
     if (data.videoUrl !== undefined) ex.videoUrl = data.videoUrl;
     if (data.tags !== undefined) ex.tags = data.tags;
     ex.updatedAt = new Date().toISOString();
@@ -125,6 +176,15 @@ export async function PATCH(request: Request, { params }: Params) {
   }
 
   try {
+    if (data.description !== undefined) {
+      const existing = await prisma.exercise.findUnique({
+        where: { id },
+        select: { description: true },
+      });
+      const next = data.description;
+      const prior = existing?.description?.trim() ? existing.description : null;
+      if (prior && prior !== next) data.previousDescription = prior;
+    }
     const exercise = await prisma.exercise.update({
       where: { id },
       data,

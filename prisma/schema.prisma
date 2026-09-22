@@ -121,6 +121,8 @@ model Exercise {
   defaultSets       Int?
   defaultWeightTier String?
   description       String?
+  /// Previous definition, so admin can swap back.
+  previousDescription String?
   videoUrl          String?
   tags              String?
   /// Soft-archive: hidden from pickers / active library; existing workout refs stay intact.
