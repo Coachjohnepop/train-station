@@ -15,6 +15,21 @@ export function remoteRestIsClear(rest: RemoteRestSnapshot): rest is null {
 }
 
 /**
+ * A poll or stream snapshot from before this rest was saved. Closing on that
+ * null makes the popup flash once and disappear.
+ */
+export function remoteClearIsStale(input: {
+  localEndsAt: number | null;
+  now: number;
+  remoteRevision: number | null;
+  pushedRevision: number;
+}): boolean {
+  if (input.localEndsAt == null || input.localEndsAt <= input.now + 500) return false;
+  if (input.remoteRevision == null) return false;
+  return input.remoteRevision <= input.pushedRevision;
+}
+
+/**
  * True when this restActive must not open the popup:
  * expired, inside the skip suppress window, or the same window we just closed.
  */

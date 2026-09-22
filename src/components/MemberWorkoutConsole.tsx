@@ -45,6 +45,7 @@ import CoachRestSoundLibrary from "@/components/CoachRestSoundLibrary";
 import { confettiOriginFromElement, fireWorkoutConfetti } from "@/lib/workout-confetti";
 import type { LiveRestActive } from "@/lib/live-workout-session";
 import {
+  remoteClearIsStale,
   remoteRestIsClear,
   remoteRestShouldIgnore,
 } from "@/lib/live-rest-policy";
@@ -522,6 +523,8 @@ export default function MemberWorkoutConsole({
   const restActiveDirtyRef = useRef(false);
   /** After skip, force restActive:null on next push even if something re-seeded the ref. */
   const pendingForceClearRestRef = useRef(false);
+  const restGenerationRef = useRef(0);
+  const clearGenerationRef = useRef(0);
   const lastAppliedRestEndsAt = useRef(0);
   /** endsAt of a timer we skipped/closed — poll/SSE must not resurrect it. */
   const ignoredRestEndsAtRef = useRef(0);
@@ -579,9 +582,23 @@ export default function MemberWorkoutConsole({
     stateRef.current = { completedSets, finishedExercises, weights, activeId };
   }, [completedSets, finishedExercises, weights, activeId]);
 
-  const applyRemoteRestActive = useCallback((rest: LiveRestActive | null | undefined) => {
+  const applyRemoteRestActive = useCallback((
+    rest: LiveRestActive | null | undefined,
+    remoteRevision?: number,
+  ) => {
     if (rest === undefined) return;
     if (remoteRestIsClear(rest)) {
+      const local = restActiveRef.current;
+      if (
+        remoteClearIsStale({
+          localEndsAt: local?.endsAt ?? null,
+          now: Date.now(),
+          remoteRevision: typeof remoteRevision === "number" ? remoteRevision : null,
+          pushedRevision: Math.max(lastPushedRevision.current, lastAppliedRevision.current),
+        })
+      ) {
+        return;
+      }
       // Partner closed shared rest. If countdown was already done / nearly done and we
       // never got our local finishAndClose (clock skew / coach clear after end), horn once.
       const prev = restActiveRef.current;
@@ -674,7 +691,7 @@ export default function MemberWorkoutConsole({
         if (session.revision === lastAppliedRevision.current) {
           // Same revision: still allow rest popup / rest-timer field refresh from coach.
           if ("restActive" in session) {
-            applyRemoteRestActive(session.restActive);
+            applyRemoteRestActive(session.restActive, session.revision);
           }
           if (session.updatedBy === "coach") {
             if (typeof session.restTimerEnabled === "boolean") {
@@ -783,7 +800,7 @@ export default function MemberWorkoutConsole({
       // Shared rest popup — apply immediately (coach checkoff → member timer).
       // Prefer this over the delayed completedSets effect so the timer spins now.
       if ("restActive" in session) {
-        applyRemoteRestActive(session.restActive);
+        applyRemoteRestActive(session.restActive, session.revision);
         if (session.restActive) {
           pendingRemoteRestRef.current = false;
         }
@@ -898,7 +915,9 @@ export default function MemberWorkoutConsole({
       // Only send restActive when we intentionally started/cleared it.
       // Omitting keeps the partner's countdown from being wiped by a null save.
       // After Skip, force null even if a race re-seeded the ref.
-      const forceClearRest = pendingForceClearRestRef.current;
+      const forceClearRest =
+        pendingForceClearRestRef.current &&
+        clearGenerationRef.current === restGenerationRef.current;
       if (forceClearRest) {
         payload.restActive = null;
         restActiveRef.current = null;
@@ -1235,6 +1254,7 @@ export default function MemberWorkoutConsole({
     setRestCompleting(false);
     restActiveRef.current = null;
     restActiveDirtyRef.current = true;
+    clearGenerationRef.current = ++restGenerationRef.current;
     pendingForceClearRestRef.current = true;
     lastAppliedRestEndsAt.current = 0;
     restTimerIdentityRef.current = "";
@@ -1389,6 +1409,8 @@ export default function MemberWorkoutConsole({
       lastAppliedRestEndsAt.current = endsAt;
 
       if (!opts?.fromRemote) {
+        restGenerationRef.current += 1;
+        pendingForceClearRestRef.current = false;
         restActiveRef.current = {
           blockId,
           completedSetNum: setNum,
@@ -1848,6 +1870,7 @@ export default function MemberWorkoutConsole({
           restActiveRef.current?.endsAt || lastAppliedRestEndsAt.current || ignoredRestEndsAtRef.current;
         restActiveRef.current = null;
         restActiveDirtyRef.current = true;
+        clearGenerationRef.current = ++restGenerationRef.current;
         pendingForceClearRestRef.current = true;
         lastAppliedRestEndsAt.current = 0;
         setRestTimer(null);
@@ -1937,6 +1960,7 @@ export default function MemberWorkoutConsole({
           restActiveRef.current?.endsAt || lastAppliedRestEndsAt.current || ignoredRestEndsAtRef.current;
         restActiveRef.current = null;
         restActiveDirtyRef.current = true;
+        clearGenerationRef.current = ++restGenerationRef.current;
         pendingForceClearRestRef.current = true;
         lastAppliedRestEndsAt.current = 0;
         setRestTimer(null);

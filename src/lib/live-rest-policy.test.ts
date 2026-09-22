@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  remoteClearIsStale,
   remoteRestIsClear,
   remoteRestShouldIgnore,
   shouldStartRestFromRemoteSetDiff,
@@ -62,6 +63,28 @@ describe("live rest policy", () => {
         ignoredEndsAt: 0,
       }),
       true,
+    );
+  });
+
+  it("does not close a fresh local rest on an older snapshot", () => {
+    const now = 1_000_000;
+    assert.equal(
+      remoteClearIsStale({
+        localEndsAt: now + 90_000,
+        now,
+        remoteRevision: 4,
+        pushedRevision: 4,
+      }),
+      true,
+    );
+    assert.equal(
+      remoteClearIsStale({
+        localEndsAt: now + 90_000,
+        now,
+        remoteRevision: 5,
+        pushedRevision: 4,
+      }),
+      false,
     );
   });
 
