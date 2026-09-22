@@ -68,6 +68,7 @@ export async function postCoachInboxItem(input: {
 
 export async function listCoachInbox(params?: {
   unreadOnly?: boolean;
+  readOnly?: boolean;
   kind?: CoachInboxKind;
   limit?: number;
 }): Promise<CoachInboxItemDto[]> {
@@ -76,7 +77,11 @@ export async function listCoachInbox(params?: {
     const { prisma } = await import("@/lib/prisma");
     const rows = await prisma.coachInboxItem.findMany({
       where: {
-        ...(params?.unreadOnly ? { readAt: null } : {}),
+        ...(params?.readOnly
+          ? { readAt: { not: null } }
+          : params?.unreadOnly
+            ? { readAt: null }
+            : {}),
         ...(params?.kind ? { kind: params.kind } : {}),
       },
       orderBy: { createdAt: "desc" },

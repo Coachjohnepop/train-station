@@ -15,7 +15,9 @@ export async function GET(request: Request) {
   if (!auth.ok) return auth.response;
 
   const { searchParams } = new URL(request.url);
-  const unreadOnly = searchParams.get("unread") === "1";
+  const box = searchParams.get("box");
+  const readOnly = box === "read";
+  const unreadOnly = !readOnly;
   const kindRaw = searchParams.get("kind");
   const kind =
     kindRaw === "signup" || kindRaw === "booking" || kindRaw === "zoom"
@@ -23,7 +25,7 @@ export async function GET(request: Request) {
       : undefined;
 
   const [items, unread] = await Promise.all([
-    listCoachInbox({ unreadOnly, kind, limit: 80 }),
+    listCoachInbox({ unreadOnly, readOnly, kind, limit: 80 }),
     countUnreadCoachInbox(),
   ]);
   return NextResponse.json({ ok: true, items, unread });

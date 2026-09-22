@@ -44,13 +44,19 @@ function whenLabel(iso: string): string {
 export default function AdminCoachInbox() {
   const [items, setItems] = useState<InboxItem[]>([]);
   const [unread, setUnread] = useState(0);
-  const [filter, setFilter] = useState<"all" | InboxItem["kind"]>("all");
+  const [filter, setFilter] = useState<"all" | "read" | InboxItem["kind"]>("all");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   const load = useCallback(async () => {
     setError("");
-    const qs = filter === "all" ? "" : `?kind=${filter}`;
+    const params = new URLSearchParams();
+    if (filter === "read") params.set("box", "read");
+    else {
+      params.set("box", "unread");
+      if (filter !== "all") params.set("kind", filter);
+    }
+    const qs = `?${params.toString()}`;
     const res = await fetch(`/api/admin/inbox${qs}`, { cache: "no-store" });
     const data = (await res.json().catch(() => ({}))) as {
       items?: InboxItem[];
@@ -85,16 +91,26 @@ export default function AdminCoachInbox() {
   }
 
   async function markAll() {
-    await fetch("/api/admin/inbox", {
+    const res = await fetch("/api/admin/inbox", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ action: "readAll" }),
     });
+    if (!res.ok) {
+      setError("Could not mark alerts read.");
+      return;
+    }
     window.dispatchEvent(new Event("coach-inbox-refresh"));
-    await load();
+    setFilter("read");
   }
 
-  const filters: Array<"all" | InboxItem["kind"]> = ["all", "signup", "booking", "zoom"];
+  const filters: Array<"all" | "read" | InboxItem["kind"]> = [
+    "all",
+    "signup",
+    "booking",
+    "zoom",
+    "read",
+  ];
 
   return (
     <div className="space-y-4">
@@ -110,13 +126,13 @@ export default function AdminCoachInbox() {
             }`}
             onClick={() => setFilter(f)}
           >
-            {f === "all" ? "All" : KIND_LABEL[f]}
+            {f === "all" ? "All" : f === "read" ? "Read" : KIND_LABEL[f]}
           </button>
         ))}
         <button
           type="button"
           className="ml-auto text-xs font-semibold text-[var(--accent)] underline"
-          disabled={unread <= 0}
+          disabled={filter === "read" || unread <= 0}
           onClick={() => void markAll()}
         >
           Mark all read
@@ -129,8 +145,9 @@ export default function AdminCoachInbox() {
       ) : null}
       {!loading && items.length === 0 ? (
         <p className="rounded-xl border border-dashed border-[var(--border)] px-4 py-8 text-center text-sm text-[var(--muted)]">
-          No {filter === "all" ? "" : `${KIND_LABEL[filter].toLowerCase()} `}alerts yet. New
-          signups, Calendly bookings, and Zoom join taps land here.
+          {filter === "read"
+            ? "Nothing read yet. Mark all read sends the open alerts here."
+            : `No ${filter === "all" ? "" : `${KIND_LABEL[filter].toLowerCase()} `}alerts waiting. New signups, Calendly bookings, and Zoom join taps land here.`}
         </p>
       ) : (
         <ul className="space-y-3">
