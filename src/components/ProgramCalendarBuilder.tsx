@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import SearchableExerciseSelect, {
   type LibraryExercise,
 } from "@/components/SearchableExerciseSelect";
+import { formatHitReps, resolveHitInterval } from "@/lib/hit-intervals";
 import { DAY_LABELS, PROGRAM_CYCLE_DAYS } from "@/lib/program-constants";
 import {
   coordinateFromEnrollmentDay,
@@ -123,6 +124,7 @@ type SlotItem = {
   sets: number | null;
   reps: string | null;
   restSec: number | null;
+  setScheme: string | null;
   /** Coach note for this workout line only (not the library exercise). */
   notes: string | null;
   approachId: string | null;
@@ -139,6 +141,20 @@ type Focus = {
   /** 1-based multi-part index (military double/triple days). */
   partIndex?: number;
 };
+
+function slotIsHit(slot: SlotItem | null): boolean {
+  if (!slot) return false;
+  return Boolean(
+    resolveHitInterval({
+      setScheme: slot.setScheme,
+      name: slot.name,
+      notes: slot.notes,
+      reps: slot.reps,
+      setCount: slot.sets,
+      restSec: slot.restSec,
+    }),
+  );
+}
 
 function daySessions(day: ProgramDay): DaySession[] {
   if (day.sessions && day.sessions.length > 0) {
@@ -307,6 +323,7 @@ export default function ProgramCalendarBuilder({
   const [editorRest, setEditorRest] = useState(DEFAULT_DAY_PRESCRIPTION.defaultRestSec);
   const [editorNotes, setEditorNotes] = useState("");
   const [editorApproachId, setEditorApproachId] = useState("");
+  const [editorHitWork, setEditorHitWork] = useState(20);
   const [approaches, setApproaches] = useState<
     { id: string; label: string; description: string }[]
   >([]);
@@ -778,6 +795,19 @@ export default function ProgramCalendarBuilder({
       setEditorRest(slot.restSec ?? rx.defaultRestSec);
       setEditorNotes(slot.notes ?? "");
       setEditorApproachId(slot.approachId ?? "");
+      const hit = resolveHitInterval({
+        setScheme: slot.setScheme,
+        name: slot.name,
+        notes: slot.notes,
+        reps: slot.reps,
+        setCount: slot.sets,
+        restSec: slot.restSec,
+      });
+      if (hit) {
+        setEditorHitWork(hit.workSec);
+        setEditorRest(hit.restSec);
+        setEditorSets(hit.rounds);
+      }
     } else {
       setEditorSets(rx.defaultSets);
       setEditorReps(rx.defaultReps);
@@ -838,6 +868,7 @@ export default function ProgramCalendarBuilder({
         sets: it.sets ?? null,
         reps: it.reps ?? null,
         restSec: it.restSec ?? null,
+        setScheme: typeof it.setScheme === "string" ? it.setScheme : null,
         notes: typeof it.notes === "string" ? it.notes : it.notes ?? null,
         approachId: typeof it.approachId === "string" ? it.approachId : null,
         sortOrder: it.sortOrder ?? 0,
@@ -1105,6 +1136,7 @@ export default function ProgramCalendarBuilder({
       restSec?: number;
       notes?: string | null;
       approachId?: string | null;
+      setScheme?: string;
     },
   ): Promise<{ ok: boolean; error?: string }> {
     if (!focus) return { ok: false, error: "No day selected." };
@@ -1131,6 +1163,7 @@ export default function ProgramCalendarBuilder({
       restSec?: number;
       notes?: string | null;
       approachId?: string | null;
+      setScheme?: string;
     },
   ): Promise<boolean> {
     if (!focus) return false;
@@ -1153,6 +1186,7 @@ export default function ProgramCalendarBuilder({
           ...(data.restSec !== undefined ? { restSec: data.restSec } : {}),
           ...(data.notes !== undefined ? { notes: data.notes } : {}),
           ...(data.approachId !== undefined ? { approachId: data.approachId } : {}),
+          ...(data.setScheme !== undefined ? { setScheme: data.setScheme } : {}),
         };
       }
       return next;
@@ -1212,6 +1246,23 @@ export default function ProgramCalendarBuilder({
       }
     } finally {
       if (manageSaving) setSaving(false);
+    }
+  }
+
+  async function saveHitSlot() {
+    if (selectedSlotIdx === null) return;
+    const work = Math.min(180, Math.max(5, editorHitWork || 20));
+    const rest = Math.min(180, Math.max(5, editorRest || 20));
+    const sets = Math.min(20, Math.max(1, editorSets || 1));
+    const ok = await persistExercisePatch(selectedSlotIdx, {
+      setScheme: "hit",
+      sets,
+      reps: formatHitReps(work, rest),
+      restSec: rest,
+    });
+    if (ok) {
+      setMessage("HIIT saved.");
+      setTimeout(() => setMessage(null), 1500);
     }
   }
 
@@ -2031,6 +2082,7 @@ export default function ProgramCalendarBuilder({
               sets: created.sets ?? null,
               reps: created.reps ?? null,
               restSec: created.restSec ?? null,
+              setScheme: created.setScheme ?? null,
               notes: created.notes ?? null,
               approachId: created.approachId ?? null,
               sortOrder: i,
@@ -3843,6 +3895,55 @@ export default function ProgramCalendarBuilder({
                       ? slots[selectedSlotIdx]!.name
                       : "Select exercise"}
                   </p>
+                  {slotIsHit(selectedSlotIdx !== null ? slots[selectedSlotIdx] : null) ? (
+                    <>
+                      <label className="text-[10px]">
+                        Go (sec)
+                        <input
+                          type="number"
+                          min={5}
+                          max={180}
+                          className="input mt-0.5 h-7 w-14 px-1 text-xs"
+                          value={editorHitWork}
+                          onChange={(e) => {
+                            const v = parseInt(e.target.value, 10);
+                            if (!Number.isNaN(v)) setEditorHitWork(v);
+                          }}
+                          onBlur={() => void saveHitSlot()}
+                        />
+                      </label>
+                      <label className="text-[10px]">
+                        Rest (sec)
+                        <input
+                          type="number"
+                          min={5}
+                          max={180}
+                          className="input mt-0.5 h-7 w-14 px-1 text-xs"
+                          value={editorRest}
+                          onChange={(e) => {
+                            const v = parseInt(e.target.value, 10);
+                            if (!Number.isNaN(v)) setEditorRest(v);
+                          }}
+                          onBlur={() => void saveHitSlot()}
+                        />
+                      </label>
+                      <label className="text-[10px]">
+                        Sets
+                        <input
+                          type="number"
+                          min={1}
+                          max={20}
+                          className="input mt-0.5 h-7 w-12 px-1 text-xs"
+                          value={editorSets}
+                          onChange={(e) => {
+                            const v = parseInt(e.target.value, 10);
+                            if (!Number.isNaN(v)) setEditorSets(v);
+                          }}
+                          onBlur={() => void saveHitSlot()}
+                        />
+                      </label>
+                    </>
+                  ) : null}
                   <label className="min-w-[11rem] flex-1 text-[10px]">
                     Approach
                     <select
@@ -3864,6 +3965,8 @@ export default function ProgramCalendarBuilder({
                       ))}
                     </select>
                   </label>
+                  {slotIsHit(selectedSlotIdx !== null ? slots[selectedSlotIdx] : null) ? null : (
+                  <>
                   <label className="text-[10px]">
                     Sets
                     <input
@@ -3916,6 +4019,8 @@ export default function ProgramCalendarBuilder({
                       onBlur={() => void saveSelectedSlot()}
                     />
                   </label>
+                  </>
+                  )}
                   <label className="min-w-[12rem] flex-1 text-[10px]">
                     Coach note (same as field under each exercise)
                     <input

@@ -3086,7 +3086,7 @@ export default function MemberWorkoutConsole({
                             }}
                             disabled={reviewMode && !instructorName}
                           >
-                            Go
+                            Go · {hit.rounds} × {hit.workSec}s / {hit.restSec}s
                           </button>
                         </div>
                       </>

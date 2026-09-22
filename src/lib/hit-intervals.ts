@@ -54,7 +54,16 @@ function parseNamedDurationSec(text: string): number | null {
   return null;
 }
 
-/** Parse "20s", "20/20", "20s/15s", "20 on / 20 off". */
+/** "10 rounds" / "for 10 sets" — not "5-7 rounds" (that range is not one number). */
+export function parseHitRounds(text: string | null | undefined): number | null {
+  if (!text?.trim()) return null;
+  const exact = text.match(/(?:^|[^\d-])(\d+)\s*(?:rounds?|sets?)\b/i);
+  if (!exact) return null;
+  if (new RegExp(`${exact[1]}\\s*-\\s*\\d+\\s*(?:rounds?|sets?)`, "i").test(text)) return null;
+  return clampRounds(Number(exact[1]));
+}
+
+/** Parse "20s", "20/20", "20s/15s", "20 sec on 20 sec off". */
 export function parseHitReps(reps: string | null | undefined): {
   workSec: number;
   restSec: number;
@@ -63,7 +72,7 @@ export function parseHitReps(reps: string | null | undefined): {
   const raw = reps.trim().toLowerCase();
   const pair =
     raw.match(/(\d+)\s*\/\s*(\d+)/) ||
-    raw.match(/(\d+)\s*(?:s|sec(?:ond)?s?)?\s*on\s*(\d+)/);
+    raw.match(/(\d+)\s*(?:s|sec(?:ond)?s?)?\s*on\s*(?:and\s*)?(\d+)/);
   if (pair) {
     return { workSec: clampSec(Number(pair[1])), restSec: clampSec(Number(pair[2])) };
   }
@@ -114,7 +123,8 @@ export function resolveHitInterval(input: {
 
   const namedDuration = parseNamedDurationSec(blob);
   const explicitRounds = input.setCount != null && input.setCount > 1 ? input.setCount : null;
-  let rounds = explicitRounds;
+  const textRounds = parseHitRounds(blob);
+  let rounds = explicitRounds ?? textRounds;
   let omitLastRest = false;
   if (rounds == null && namedDuration) {
     // Fit work/rest into the named duration (5 Min HIIT × 20/20 → 8 work + 7 rest = 5:00).

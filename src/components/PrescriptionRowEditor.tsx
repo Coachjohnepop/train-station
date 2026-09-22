@@ -221,9 +221,21 @@ export default function PrescriptionRowEditor({
           )}
 
           <div>
-            <p className="text-sm font-medium">
-              {patternType === "hit_intervals" ? "Rounds" : "Sets"}
-            </p>
+            <p className="text-sm font-medium">Sets</p>
+            {patternType === "hit_intervals" ? (
+              <input
+                type="number"
+                min={1}
+                max={20}
+                className="input mt-1.5 h-8 w-20 text-sm"
+                aria-label="HIIT sets"
+                value={setCount}
+                onChange={(e) => {
+                  const n = parseInt(e.target.value, 10);
+                  if (!Number.isNaN(n)) setSetCount(Math.min(20, Math.max(1, n)));
+                }}
+              />
+            ) : null}
             <div className="mt-1.5 flex flex-wrap gap-1.5">
               {SET_COUNTS.map((n) => (
                 <button
@@ -334,6 +346,20 @@ export default function PrescriptionRowEditor({
                 <p className="text-sm font-medium">
                   {patternType === "hit_intervals" ? "Work (seconds)" : "Work interval (seconds)"}
                 </p>
+                {patternType === "hit_intervals" ? (
+                  <input
+                    type="number"
+                    min={5}
+                    max={180}
+                    className="input mt-1.5 h-8 w-20 text-sm"
+                    aria-label="Go seconds"
+                    value={phase1DurationSec ?? 20}
+                    onChange={(e) => {
+                      const n = parseInt(e.target.value, 10);
+                      if (!Number.isNaN(n)) setPhase1DurationSec(n);
+                    }}
+                  />
+                ) : null}
                 <div className="mt-1.5 flex flex-wrap gap-1.5">
                   {(patternType === "hit_intervals" ? HIT_WORK_PRESETS : [10, 15, 20, 30, 45, 60]).map((n) => (
                     <button
@@ -387,6 +413,18 @@ export default function PrescriptionRowEditor({
                 <p className="mt-0.5 text-[11px] text-[var(--muted)]">
                   Same as work — 20/20, 30/30, 40/40. Change rest only if you need a split.
                 </p>
+                <input
+                  type="number"
+                  min={5}
+                  max={180}
+                  className="input mt-1.5 h-8 w-20 text-sm"
+                  aria-label="Rest seconds"
+                  value={phase2DurationSec ?? phase1DurationSec ?? 20}
+                  onChange={(e) => {
+                    const n = parseInt(e.target.value, 10);
+                    if (!Number.isNaN(n)) setPhase2DurationSec(n);
+                  }}
+                />
                 <div className="mt-1.5 flex flex-wrap gap-1.5">
                   {HIT_REST_PRESETS.map((n) => (
                     <button

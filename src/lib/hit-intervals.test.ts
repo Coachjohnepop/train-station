@@ -31,6 +31,23 @@ describe("HIT intervals", () => {
     assert.equal(formatHitSummary(hit), "10 × 20s · 6:40");
   });
 
+  it("reads 20 on, 20 off, 10 rounds from the coach note even if reps say 5 minutes", () => {
+    const hit = resolveHitInterval({
+      setScheme: "timed",
+      name: "HIIT Cardio Intervals",
+      reps: "5-10 min",
+      setCount: 1,
+      restSec: 120,
+      notes: "20 sec on 20 sec off for 10 rounds on",
+    });
+    assert.ok(hit);
+    assert.equal(hit.workSec, 20);
+    assert.equal(hit.restSec, 20);
+    assert.equal(hit.rounds, 10);
+    assert.equal(hit.omitLastRest, false);
+    assert.equal(hit.totalSeconds, 400);
+  });
+
   it("fits 5 Min HIIT at 20s intervals into 8 work + 7 rest = 5:00", () => {
     const hit = resolveHitInterval({
       setScheme: "standard",
