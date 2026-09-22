@@ -11,6 +11,7 @@
  * directly importing "demo-*.ts" or doing raw isDemoMode() + fs reads.
  */
 
+import { localTodayIso } from "@/lib/program-calendar";
 import {
   isDemoMode as _isDemoMode,
   getDemoEnrollments,
@@ -381,6 +382,25 @@ export async function createWorkoutLogAndPerformances(input: {
   }
 
   // Create the session log
+  const sessionDay = input.catchUpForDate || localTodayIso(performedAt);
+  const { findCompletedSessionLog } = await import("@/lib/workout-logs-db");
+  const existingLog = await findCompletedSessionLog({
+    userId: uid,
+    workoutId: input.workoutId,
+    sessionDate: sessionDay,
+  });
+  if (existingLog) {
+    return {
+      ok: true,
+      alreadyLogged: true,
+      logId: existingLog.id,
+      performances: 0,
+      performedAt: existingLog.performedAt.toISOString(),
+      progress: existingLog.progress,
+      completed: true,
+    };
+  }
+
   const log = await prisma.workoutLog.create({
     data: {
       userId: user.id,

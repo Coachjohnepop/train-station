@@ -137,6 +137,17 @@ export async function POST(request: Request, { params }: Params) {
       progress: parsed.data.progress,
       catchUpForDate,
     });
+    if ("alreadyLogged" in result && result.alreadyLogged) {
+      return NextResponse.json({
+        ok: true,
+        alreadyLogged: true,
+        logId: result.logId,
+        performedAt: result.performedAt,
+        progress: result.progress,
+        performances: 0,
+        gamification: { awarded: false, pointsEarned: 0 },
+      });
+    }
 
     let gamification: Awaited<ReturnType<typeof awardGamificationPoints>> | null = null;
     let gamificationWarning: string | null = null;

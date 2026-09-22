@@ -406,6 +406,7 @@ export default function MemberWorkoutConsole({
   const [logError, setLogError] = useState<string | null>(null);
   const [confirmIncompleteLog, setConfirmIncompleteLog] = useState(false);
   const [logResult, setLogResult] = useState<null | { performedAt: string; count: number; progress?: number }>(null);
+  const [alreadyLogged, setAlreadyLogged] = useState(false);
   const finishLockUntilRef = useRef(0);
   const [finishedListExpanded, setFinishedListExpanded] = useState(false);
   const [coachLive, setCoachLive] = useState(false);
@@ -2347,8 +2348,42 @@ export default function MemberWorkoutConsole({
     if (allExercisesFinished) setFinishedListExpanded(false);
   }, [allExercisesFinished]);
 
+  useEffect(() => {
+    if (byow || reviewMode || hideLogButton || !workout.workoutId) return;
+    const sessionDate = normalizeLogSessionDate(logSessionDate || liveSessionDate);
+    const params = new URLSearchParams();
+    if (sessionDate) params.set("date", sessionDate);
+    if (targetUserId) params.set("forUser", targetUserId);
+    let cancelled = false;
+    void fetch(`/api/workouts/${workout.workoutId}/logged?${params.toString()}`, {
+      cache: "no-store",
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data: { logged?: boolean; performedAt?: string | null; progress?: number | null } | null) => {
+        if (cancelled || !data?.logged) return;
+        setAlreadyLogged(true);
+        setLogResult({
+          performedAt: data.performedAt || new Date().toISOString(),
+          count: 0,
+          progress: data.progress ?? 100,
+        });
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    byow,
+    reviewMode,
+    hideLogButton,
+    workout.workoutId,
+    logSessionDate,
+    liveSessionDate,
+    targetUserId,
+  ]);
+
   const handleLogComplete = useCallback(async (opts?: { confirmed?: boolean }) => {
-    if (logResult || isLogging || futurePreview) return;
+    if (logResult || alreadyLogged || isLogging || futurePreview) return;
     setLogError(null);
 
     const plan = buildCompleteWorkoutLog({
@@ -2457,6 +2492,7 @@ export default function MemberWorkoutConsole({
     liveSyncUserId,
     clearLiveSession,
     logResult,
+    alreadyLogged,
     isLogging,
     futurePreview,
     freeExplorer,

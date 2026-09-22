@@ -3,7 +3,6 @@ import "server-only";
 import { prisma } from "@/lib/prisma";
 import { resolveStorageUserId } from "@/lib/enrollment-db";
 import { computeStrengthScoreFromPerfs } from "@/lib/demo-logs";
-import { pacificDayBounds } from "@/lib/daily-user-activity-format";
 import { localTodayIso } from "@/lib/program-calendar";
 
 export type WorkoutExercisePast = {
@@ -79,20 +78,22 @@ export async function findCompletedSessionLog(input: {
   sessionDate: string;
 }): Promise<{ id: string; performedAt: Date; progress: number } | null> {
   const storageUserId = await resolveStorageUserId(input.userId);
-  const { start, end } = pacificDayBounds(input.sessionDate);
-  return prisma.workoutLog.findFirst({
+  const recent = await prisma.workoutLog.findMany({
     where: {
       userId: storageUserId,
       workoutId: input.workoutId,
       completed: true,
-      OR: [
-        { catchUpForDate: input.sessionDate },
-        { catchUpForDate: null, performedAt: { gte: start, lt: end } },
-      ],
     },
     orderBy: { performedAt: "desc" },
-    select: { id: true, performedAt: true, progress: true },
+    take: 40,
+    select: { id: true, performedAt: true, progress: true, catchUpForDate: true },
   });
+  const hit = recent.find(
+    (log) =>
+      log.catchUpForDate === input.sessionDate ||
+      localTodayIso(log.performedAt) === input.sessionDate,
+  );
+  return hit ? { id: hit.id, performedAt: hit.performedAt, progress: hit.progress } : null;
 }
 
 export async function getWorkoutLogCountDb(userId: string): Promise<number> {
