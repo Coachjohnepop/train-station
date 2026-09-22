@@ -445,7 +445,7 @@ function JeremyHeroStack({
               markLandingConverted();
               fireLandingJoinHook(e.currentTarget);
             }}
-            className={`${primaryCta} min-h-[4.05rem] text-[19.5px] sm:min-h-[4.05rem] sm:text-[1.25rem]`}
+            className={`${primaryCta} min-h-[4.05rem] text-[23.5px] sm:min-h-[4.05rem] sm:text-[24px]`}
           >
             Grab Your Ticket
           </Link>
@@ -453,7 +453,7 @@ function JeremyHeroStack({
             type="button"
             data-analytics-action="hero-b-want-jeremy"
             onClick={() => onTour("jeremy")}
-            className={`${secondaryCta} min-h-[3.75rem] text-[18.5px] sm:min-h-[4.05rem] sm:text-[1.2rem]`}
+            className={`${secondaryCta} min-h-[4.05rem] text-[22.5px] sm:min-h-[4.05rem] sm:text-[23.2px]`}
           >
             See the program
           </button>
@@ -461,7 +461,7 @@ function JeremyHeroStack({
             type="button"
             data-analytics-action="hero-b-have-workout"
             onClick={() => onTour("today")}
-            className="landing-hero-explore-cta inline-flex min-h-[3.2rem] w-full items-center justify-center rounded-full px-8 text-[17px] font-bold tracking-tight sm:min-h-[3.45rem] sm:text-[1.1rem]"
+            className="landing-hero-explore-cta inline-flex min-h-[3.45rem] w-full items-center justify-center rounded-full px-8 text-[21px] font-bold tracking-tight sm:min-h-[3.7rem] sm:text-[21.6px]"
           >
             Track Your Current Workout
           </button>

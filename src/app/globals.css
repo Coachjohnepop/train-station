@@ -1954,6 +1954,27 @@ body:has([data-admin-chrome]) [data-global-theme-toggle] {
   text-shadow: none;
 }
 
+.landing-b-start-btns .landing-hero-early-signup {
+  font-size: 23.5px !important;
+}
+.landing-b-start-btns .landing-hero-secondary-cta {
+  font-size: 22.5px !important;
+}
+.landing-b-start-btns .landing-hero-explore-cta {
+  font-size: 21px !important;
+}
+@media (min-width: 640px) {
+  .landing-b-start-btns .landing-hero-early-signup {
+    font-size: 24px !important;
+  }
+  .landing-b-start-btns .landing-hero-secondary-cta {
+    font-size: 23.2px !important;
+  }
+  .landing-b-start-btns .landing-hero-explore-cta {
+    font-size: 21.6px !important;
+  }
+}
+
 @media (hover: hover) and (pointer: fine) {
   .landing-hero-early-signup,
   .landing-hero-secondary-cta,
