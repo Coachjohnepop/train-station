@@ -17,18 +17,18 @@ export default async function JoinPage({
   return (
     <div className="min-h-screen bg-[var(--bg)] text-[var(--text)]">
       <div className="border-b border-[var(--border)] bg-[var(--surface)]">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-4 pr-16 sm:px-6 sm:pr-28">
           <Link href="/" className="text-lg font-semibold tracking-tight hover:text-[var(--accent)]">
             The Train Station
           </Link>
           <div className="flex items-center gap-3 text-sm">
-            <a href="#programs" className="text-[var(--muted)] transition hover:text-[var(--text)]">
+            <a href="#programs" className="hidden text-[var(--muted)] transition hover:text-[var(--text)] sm:inline">
               Programs
             </a>
-            <a href="#plans" className="hidden text-[var(--muted)] transition hover:text-[var(--text)] sm:inline">
+            <a href="#plans" className="hidden text-[var(--muted)] transition hover:text-[var(--text)] md:inline">
               Compare
             </a>
-            <Link href="/login" className="text-[var(--muted)] transition hover:text-[var(--text)]">
+            <Link href="/login" className="font-semibold text-[#c4b5fd] transition hover:text-white">
               Sign in
             </Link>
           </div>

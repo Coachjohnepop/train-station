@@ -87,7 +87,7 @@ export default function LandingTicketPicker({
 
       <div className="mx-auto mt-6 flex max-w-md flex-col items-center gap-2 sm:flex-row sm:justify-center">
         {!purchaseAuth.signedIn ? (
-          <Link href="/login" className="text-sm text-[var(--muted)] hover:text-[var(--text)]">
+          <Link href="/login" className="text-sm font-semibold text-[#c4b5fd] hover:text-white">
             Already have access? Sign in
           </Link>
         ) : null}

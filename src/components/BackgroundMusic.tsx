@@ -761,8 +761,9 @@ export default function BackgroundMusic() {
   };
 
   const onPublicHome = pathname === "/" && !signedIn;
-  // Finger only while Theme Song is actually in play for guests (not the public home mute chip).
-  const fingerVisible = showHint && autoPlayAllowed && !onPublicHome;
+  const onTicketPage = pathname === "/join" || pathname.startsWith("/join/");
+  // Finger stays off the splash and the seat page — it was covering Sign in and the programs.
+  const fingerVisible = showHint && autoPlayAllowed && !onPublicHome && !onTicketPage;
 
   // Honest icon: only “on” when sound is confirmed live
   const showAsPlaying = !off && soundLive;
