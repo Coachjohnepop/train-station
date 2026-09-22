@@ -94,4 +94,5 @@ export type CreateLogResult = {
   performedAt: string;
   progress: number;
   completed: boolean;
+  alreadyLogged?: boolean;
 };
