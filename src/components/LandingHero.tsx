@@ -157,7 +157,7 @@ export default function LandingHero({
     }, HERO_SLIDE_FADE_MS);
   }
 
-  // Photos hold ~3.2s; videos hold one play-through (ended also advances).
+  // Photos hold ~3.2s. Videos crossfade 1s before they end so the last frame never sits paused.
   useEffect(() => {
     if (images.length <= 1) return;
     const current = images[imageIndex];

@@ -252,8 +252,8 @@ export function heroPlaybackRate(slide: Pick<HeroSlide, "playbackRate" | "kind">
   return clamp(rate, 0.25, 1);
 }
 
-/** Dissolve length — keep in sync with `.landing-hero-slide--leaving` CSS. */
-export const HERO_SLIDE_FADE_MS = 1600;
+/** Crossfade length — keep in sync with `.landing-hero-slide` CSS. */
+export const HERO_SLIDE_FADE_MS = 1000;
 
 /**
  * Photos always load. Videos: the on-screen clip, the next clip (so the fade
@@ -283,8 +283,10 @@ export function heroSlideHoldMs(slide: HeroSlide, durationSec?: number | null): 
         ? Math.max(0, durationSec - window.start)
         : null;
   if (span != null && span > 0) {
-    // Play once (plus a beat for the dissolve). Never long enough to loop.
-    return Math.min(20000, Math.max(700, Math.round((span / rate) * 1000) + 250));
+    // Start the 1s crossfade before the clip ends. Do not hold or extend the last frame.
+    const playMs = Math.round((span / rate) * 1000);
+    const lead = Math.min(HERO_SLIDE_FADE_MS, Math.max(0, playMs - 200));
+    return Math.min(20000, Math.max(200, playMs - lead));
   }
   return 9000;
 }

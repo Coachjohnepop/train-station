@@ -76,26 +76,27 @@ export default function HeroSlideMedia({
     const onMeta = () => {
       applyWindow();
     };
-    let finished = false;
-    const finish = () => {
-      if (!active || finished) return;
-      finished = true;
-      el.pause();
+    let handedOff = false;
+    const handoff = () => {
+      if (!active || handedOff) return;
+      handedOff = true;
+      // Keep playing through the crossfade. Pausing here freezes the last frame on screen.
       onEndedRef.current?.();
     };
 
     const onTime = () => {
       const duration = Number.isFinite(el.duration) && el.duration > 0 ? el.duration : null;
-      const { end } = heroTrimWindow(slide, duration);
+      const { start, end } = heroTrimWindow(slide, duration);
       const limit = end ?? duration;
-      if (limit != null && el.currentTime >= limit - 0.05) {
-        finish();
-      }
+      if (limit == null) return;
+      const span = Math.max(0, limit - start);
+      const lead = Math.min(1, Math.max(0, span - 0.2));
+      if (el.currentTime >= limit - lead) handoff();
     };
 
     el.addEventListener("loadedmetadata", onMeta);
     el.addEventListener("timeupdate", onTime);
-    el.addEventListener("ended", finish);
+    el.addEventListener("ended", handoff);
     if (el.readyState >= 1) applyWindow();
 
     if (active) {
@@ -111,7 +112,7 @@ export default function HeroSlideMedia({
     return () => {
       el.removeEventListener("loadedmetadata", onMeta);
       el.removeEventListener("timeupdate", onTime);
-      el.removeEventListener("ended", finish);
+      el.removeEventListener("ended", handoff);
     };
   }, [active, slide.playbackRate, slide.src, slide.trimStartSec, slide.trimEndSec]);
 

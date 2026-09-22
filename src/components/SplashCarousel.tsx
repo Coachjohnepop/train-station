@@ -41,7 +41,7 @@ export default function SplashCarousel({
   useEffect(() => {
     if (images.length <= 1) return;
     const slide = images[current];
-    const ms = slide ? Math.max(5000, heroSlideHoldMs(slide)) : 5000;
+    const ms = slide ? heroSlideHoldMs(slide) : 3200;
     const interval = window.setTimeout(() => goTo(current + 1), ms);
     return () => window.clearTimeout(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps

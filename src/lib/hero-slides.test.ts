@@ -3,6 +3,8 @@ import { describe, it } from "node:test";
 import { HERO_AUDIO_DEFAULT_VOLUME } from "./landing-mix-audio";
 import {
   createEmptyHeroSlide,
+  HERO_SLIDE_FADE_MS,
+  heroSlideHoldMs,
   heroSlideShouldLoadMedia,
   normalizeHeroSlide,
 } from "./hero-slides";
@@ -23,6 +25,18 @@ describe("heroSlideShouldLoadMedia", () => {
 
   it("keeps a fading-out clip mounted", () => {
     assert.equal(heroSlideShouldLoadMedia(2, 0, 3, video, [2]), true);
+  });
+});
+
+describe("heroSlideHoldMs", () => {
+  it("starts the crossfade 1s before a video ends instead of holding the last frame", () => {
+    const slide = normalizeHeroSlide({
+      src: "/videos/a.mp4",
+      kind: "video",
+      trimStartSec: 0,
+      trimEndSec: 8,
+    });
+    assert.equal(heroSlideHoldMs(slide, 8), 8000 - HERO_SLIDE_FADE_MS);
   });
 });
 

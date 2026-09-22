@@ -1723,8 +1723,8 @@ body:has([data-admin-chrome]) [data-global-theme-toggle] {
   opacity: 0;
   transform: scale(1.08);
   z-index: 0;
-  /* Incoming snaps in under the outgoing dissolve (no dual-fade to black). */
-  transition: opacity 1.6s ease-in-out, transform 8s ease-out;
+  /* Next clip is already moving underneath. This one fades off in 1s — no frozen frame. */
+  transition: opacity 1s linear, transform 8s ease-out;
   will-change: opacity, transform;
   pointer-events: none;
 }
@@ -1740,7 +1740,7 @@ body:has([data-admin-chrome]) [data-global-theme-toggle] {
   opacity: 0;
   transform: scale(1);
   z-index: 2;
-  transition: opacity 1.6s ease-in-out;
+  transition: opacity 1s linear;
 }
 
 .landing-hero-slide--idle {
