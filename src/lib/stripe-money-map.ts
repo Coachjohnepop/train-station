@@ -44,6 +44,12 @@ export type MoneyMap = {
     pendingCents: number | null;
     pendingLabel: string | null;
   };
+  /** Available + pending + Financial Account. Bank payouts already sent are excluded. */
+  grandStripe: {
+    cents: number | null;
+    label: string | null;
+    includesFinancialAccount: boolean;
+  };
   settings: Awaited<ReturnType<typeof getMoneyDeskSettings>>;
   split: MoneyDeskSplit;
   johnPay: {
@@ -318,6 +324,16 @@ export async function getMoneyMap(): Promise<MoneyMap> {
   }
 
   const floorCents = commissionPayoutMinCentsFromEnv();
+  const grandParts = [balance.availableCents, balance.pendingCents, fa.availableCents].filter(
+    (n): n is number => typeof n === "number",
+  );
+  const grandStripe = {
+    cents: grandParts.length ? grandParts.reduce((sum, n) => sum + n, 0) : null,
+    label: grandParts.length
+      ? money(grandParts.reduce((sum, n) => sum + n, 0))
+      : null,
+    includesFinancialAccount: typeof fa.availableCents === "number",
+  };
 
   return {
     payoutSchedule: schedule,
@@ -328,6 +344,7 @@ export async function getMoneyMap(): Promise<MoneyMap> {
       pendingCents: balance.pendingCents,
       pendingLabel: balance.pendingLabel,
     },
+    grandStripe,
     settings,
     split,
     johnPay: {

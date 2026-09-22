@@ -118,6 +118,11 @@ type MoneyMap = {
     availableLabel: string | null;
     pendingLabel: string | null;
   };
+  grandStripe?: {
+    cents: number | null;
+    label: string | null;
+    includesFinancialAccount: boolean;
+  };
   settings: {
     grokCents: number;
     vercelCents: number;
@@ -454,7 +459,7 @@ function MoneyMapBoard({
         <p className="mb-2 text-[10px] font-bold uppercase tracking-wide text-[var(--muted)]">
           Where the dollars sit
         </p>
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <Kpi
             title="Payments · available"
             value={map.payments.availableLabel || "—"}
@@ -472,6 +477,15 @@ function MoneyMapBoard({
               map.financialAccount.source === "payout_ledger"
                 ? `In ${usd(map.financialAccount.inboundCents)} · back ${usd(map.financialAccount.returnedCents)}`
                 : map.financialAccount.note
+            }
+          />
+          <Kpi
+            title="Grand Stripe total"
+            value={map.grandStripe?.label || "—"}
+            hint={
+              map.grandStripe?.includesFinancialAccount
+                ? "Available + pending + Financial Account. Bank payouts already sent are not included."
+                : "Available + pending. Financial Account balance is not in this number yet."
             }
           />
         </div>
