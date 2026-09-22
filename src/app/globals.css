@@ -1757,6 +1757,23 @@ body:has([data-admin-chrome]) [data-global-theme-toggle] {
     0 2px 12px rgba(0, 0, 0, 0.7);
 }
 
+/* +8 from 10px. 320px phones cannot hold 18px with this tracking, so only that width steps back to 16px. */
+.landing-hero-kicker {
+  font-size: 18px !important;
+  letter-spacing: 0.4em !important;
+}
+@media (max-width: 339px) {
+  .landing-hero-kicker {
+    font-size: 16px !important;
+  }
+}
+@media (min-width: 640px) {
+  .landing-hero-kicker {
+    font-size: 19px !important;
+    letter-spacing: 0.45em !important;
+  }
+}
+
 .landing-hero-stack {
   animation: landing-hero-rise 0.85s cubic-bezier(0.22, 1, 0.36, 1) both;
 }

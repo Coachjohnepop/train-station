@@ -254,7 +254,7 @@ export default function LandingHero({
             : "pb-[max(2.75rem,calc(env(safe-area-inset-bottom)+4.5rem))]"
         }`}>
           <div className="landing-hero-stack flex w-full max-w-md flex-col items-center sm:max-w-xl">
-            <p className="mb-2.5 text-[10px] font-extrabold uppercase tracking-[0.4em] text-[#e9d5ff] drop-shadow-[0_2px_14px_rgba(0,0,0,0.95)] sm:mb-3 sm:text-[11px] sm:tracking-[0.45em]">
+            <p className="landing-hero-kicker mb-2.5 font-extrabold uppercase text-[#e9d5ff] drop-shadow-[0_2px_14px_rgba(0,0,0,0.95)] sm:mb-3">
               The Train Station
             </p>
 
