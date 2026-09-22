@@ -182,6 +182,11 @@ function DaySummaryCard({
                   : "Today"}
             <span className="mx-1">·</span>
             {dayLabel}
+            {summary.customWorkout && !smsOverride ? (
+              <span className="ml-1.5 rounded-full border border-[#7c3aed]/40 bg-[#7c3aed]/15 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#c4b5fd]">
+                Custom
+              </span>
+            ) : null}
           </p>
           {previewOnly ? (
             <p className="mt-1 text-xs text-[var(--muted)]">
@@ -540,6 +545,7 @@ export default function MemberTodayShell({
               {!scheduleOpen && selectedSummary ? (
                 <span>
                   {selectedSummary.weekday} {selectedSummary.dayLabel}
+                  {selectedSummary.customWorkout && !selectedSummary.smsOverride ? " · Custom" : ""}
                 </span>
               ) : (
                 <span>{scheduleOpen ? "Hide days" : "Days"}</span>
@@ -767,6 +773,7 @@ export default function MemberTodayShell({
                   : undefined
               }
               classOverride={Boolean(selectedSummary?.smsOverride)}
+              customWorkout={Boolean(selectedSummary?.customWorkout) && !selectedSummary?.smsOverride}
             />
           )}
         </div>

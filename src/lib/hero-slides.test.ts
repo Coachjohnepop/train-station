@@ -36,6 +36,7 @@ describe("heroSlideHoldMs", () => {
       trimStartSec: 0,
       trimEndSec: 8,
     });
+    if (!slide) throw new Error("expected a slide");
     assert.equal(heroSlideHoldMs(slide, 8), 8000 - HERO_SLIDE_FADE_MS);
   });
 });

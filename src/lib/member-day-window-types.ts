@@ -21,6 +21,8 @@ export type MemberDaySummary = {
   exerciseNames: string[];
   stretchNames: string[];
   smsOverride: boolean;
+  /** Program day still M1D1, but the workout inside it was swapped. */
+  customWorkout?: boolean;
   hasWorkout: boolean;
   daysFromToday: number;
   visibilityTier: DayVisibilityTier;

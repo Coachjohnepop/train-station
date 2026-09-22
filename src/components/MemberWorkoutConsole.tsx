@@ -257,6 +257,7 @@ export default function MemberWorkoutConsole({
   scheduleLabel,
   cycleDayLabel,
   classOverride = false,
+  customWorkout = false,
   liveSyncUserId,
   liveSessionDate,
   logSessionDate,
@@ -287,6 +288,8 @@ export default function MemberWorkoutConsole({
   cycleDayLabel?: string;
   /** Coach replaced this day's program workout with a class. */
   classOverride?: boolean;
+  /** Still this program day, but the workout inside it was swapped. */
+  customWorkout?: boolean;
   /** Member id for live coach ↔ member checkoff sync */
   liveSyncUserId?: string;
   liveSessionDate?: string;
@@ -2692,6 +2695,10 @@ export default function MemberWorkoutConsole({
                       {classOverride ? (
                         <span className="rounded-full border border-amber-400/40 bg-amber-500/15 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-amber-200">
                           Class
+                        </span>
+                      ) : customWorkout ? (
+                        <span className="rounded-full border border-[#7c3aed]/40 bg-[#7c3aed]/15 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-[#c4b5fd]">
+                          Custom
                         </span>
                       ) : null}
                     </div>

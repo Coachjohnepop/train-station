@@ -237,6 +237,9 @@ async function summarizeProgramDay(
 ): Promise<MemberDaySummary> {
   const enrollmentDayNumber = entry.enrollmentDayNumber;
   const dayLabel = formatCycleDayFromWeekDay(entry.weekNumber, entry.dayNumber);
+  const customWorkout = Boolean(
+    (entry.day as { smsOverrideActive?: boolean }).smsOverrideActive,
+  );
   const visibilityTier =
     extras?.visibilityTier ?? dayVisibilityTierByOffset(entry.offset);
   const isProgramToday = entry.offset === 0;
@@ -272,6 +275,7 @@ async function summarizeProgramDay(
         exerciseNames: visibleNames,
         stretchNames: pickStretchPreview(preview),
         smsOverride: true,
+        customWorkout: false,
         hasWorkout: true,
         daysFromToday: entry.offset,
         visibilityTier,
@@ -317,6 +321,7 @@ async function summarizeProgramDay(
     exerciseNames: visibleNames,
     stretchNames: pickStretchPreview(names),
     smsOverride: false,
+    customWorkout,
     hasWorkout: !!workoutId || optsForDay.length > 0,
     daysFromToday: entry.offset,
     visibilityTier,
