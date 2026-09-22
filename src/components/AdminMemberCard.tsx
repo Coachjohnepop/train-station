@@ -136,6 +136,7 @@ export default function AdminMemberCard({ userId }: { userId: string }) {
   const [intakeSigning, setIntakeSigning] = useState(false);
   const [error, setError] = useState("");
   const [savedAt, setSavedAt] = useState<string | null>(null);
+  const [saveFlash, setSaveFlash] = useState(0);
   const [equipmentOpen, setEquipmentOpen] = useState(false);
   const [measurementsOpen, setMeasurementsOpen] = useState(false);
   const [upgradeActing, setUpgradeActing] = useState<"approve" | "decline" | null>(null);
@@ -161,6 +162,12 @@ export default function AdminMemberCard({ userId }: { userId: string }) {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    if (!saveFlash) return;
+    const id = window.setTimeout(() => setSaveFlash(0), 1800);
+    return () => window.clearTimeout(id);
+  }, [saveFlash]);
 
   const dirty = useMemo(() => {
     if (!card) return false;
@@ -204,6 +211,7 @@ export default function AdminMemberCard({ userId }: { userId: string }) {
       setCard(next);
       setForm(formFromCard(next));
       setSavedAt(new Date().toISOString());
+      setSaveFlash((n) => n + 1);
     }
     setSaving(false);
   }, [form, userId]);
@@ -352,6 +360,14 @@ export default function AdminMemberCard({ userId }: { userId: string }) {
       ) : null}
 
       <section className="relative overflow-hidden rounded-[28px] border-2 border-[color-mix(in_srgb,var(--ramp-gold)_42%,var(--border))] bg-[var(--surface)] shadow-[0_24px_60px_rgba(0,0,0,0.28)]">
+        {saveFlash > 0 ? (
+          <div key={saveFlash} className="pointer-events-none absolute inset-0 z-20" aria-live="polite">
+            <div className="member-card-save-ring absolute inset-0 rounded-[26px]" />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <p className="score-points-3d saved-pop-fade">Saved</p>
+            </div>
+          </div>
+        ) : null}
         <div className="pointer-events-none absolute left-3 top-3 h-4 w-4 border-l-2 border-t-2 border-[color-mix(in_srgb,var(--ramp-gold)_70%,transparent)]" />
         <div className="pointer-events-none absolute right-3 top-3 h-4 w-4 border-r-2 border-t-2 border-[color-mix(in_srgb,var(--ramp-gold)_70%,transparent)]" />
         <div className="pointer-events-none absolute bottom-3 left-3 h-4 w-4 border-b-2 border-l-2 border-[color-mix(in_srgb,var(--ramp-gold)_70%,transparent)]" />

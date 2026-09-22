@@ -3577,6 +3577,66 @@ html[data-free-ticket="open"] .landing-nav .theme-mode-toggle {
   animation: score-points-grow 1.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
+.member-card-save-ring {
+  border: 3px solid transparent;
+  animation: member-card-border-flash 1.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.saved-pop-fade {
+  font-size: clamp(3.5rem, 9vw, 6rem);
+  transform-origin: center center;
+  animation: saved-pop-fade 1.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes member-card-border-flash {
+  0% {
+    border-color: transparent;
+    box-shadow: inset 0 0 0 0 transparent;
+  }
+  18% {
+    border-color: #fde68a;
+    box-shadow:
+      inset 0 0 0 2px #f0c75e,
+      0 0 28px rgba(253, 230, 138, 0.85),
+      0 0 64px rgba(212, 175, 55, 0.45);
+  }
+  100% {
+    border-color: transparent;
+    box-shadow: inset 0 0 0 0 transparent;
+  }
+}
+
+@keyframes saved-pop-fade {
+  0% {
+    transform: scale(0.45);
+    opacity: 0;
+    filter: drop-shadow(0 0 0 transparent);
+  }
+  22% {
+    transform: scale(1.18);
+    opacity: 1;
+  }
+  48% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.08);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .member-card-save-ring,
+  .saved-pop-fade {
+    animation: none;
+  }
+  .saved-pop-fade {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 .score-points-settled {
   transform: scale(1);
   font-weight: 900;
