@@ -797,10 +797,9 @@ export default function ExerciseLibrary() {
         {showAddForm && (
           <form onSubmit={handleAdd} className="card p-3 space-y-3 mt-2">
             <p className="text-xs text-[var(--muted)]">
-              Name, library description, and demo video (YouTube links are fine as
-              placeholders until your own videos are ready). Sets, weight, and
-              coach notes for a specific day live under Programs / Workouts — not
-              here.
+              Name, definition, and demo video. The definition is only what the
+              movement is. Sets, reps, holds, and approach live on the workout,
+              not here.
             </p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -824,13 +823,13 @@ export default function ExerciseLibrary() {
               <div>
                 <FieldLabel
                   htmlFor="ex-desc"
-                  label="Description"
-                  hint="Short overview of the movement. Optional."
+                  label="Definition"
+                  hint="What the movement is. No sets, reps, holds, counts, or approach."
                 />
                 <textarea
                   id="ex-desc"
                   className="input py-1.5 text-sm min-h-[80px] resize-y"
-                  placeholder="e.g. Barbell squat targeting quads and glutes…"
+                  placeholder="e.g. Squat with a barbell on the upper back."
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                 />
@@ -924,8 +923,11 @@ export default function ExerciseLibrary() {
               <li className="flex gap-3">
                 <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--surface-2)] text-[10px] font-bold">2</span>
                 <div>
-                  <p className="font-medium text-[var(--text)]">Description (optional)</p>
-                  <p className="text-xs">A short summary members can read in the library context.</p>
+                  <p className="font-medium text-[var(--text)]">Definition</p>
+                  <p className="text-xs">
+                    What the movement is. Members see it under the exercise name. Do not put sets,
+                    reps, holds, or approach here.
+                  </p>
                 </div>
               </li>
               <li className="flex gap-3">
@@ -1022,7 +1024,7 @@ export default function ExerciseLibrary() {
             <thead>
               <tr>
                 <th>Name</th>
-                <th>Description</th>
+                <th>Definition</th>
                 <th>Video</th>
                 <th>Tags</th>
                 <th>Programs</th>
@@ -1273,11 +1275,12 @@ export default function ExerciseLibrary() {
               <div>
                 <FieldLabel
                   htmlFor="edit-desc"
-                  label="Description"
-                  hint="Short overview of the movement. Optional."
+                  label="Definition"
+                  hint="What the movement is. No sets, reps, holds, counts, or approach."
                 />
                 <textarea
                   id="edit-desc"
+                  placeholder="e.g. Leg press on a sled or seated machine."
                   className="input min-h-[80px] resize-y"
                   value={editDraft.description}
                   onChange={(e) => setEditDraft({ ...editDraft, description: e.target.value })}

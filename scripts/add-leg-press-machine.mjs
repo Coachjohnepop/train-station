@@ -44,7 +44,7 @@ async function ensureLegPressExercise() {
     json: {
       name: LEG_PRESS_NAME,
       description:
-        "Leg press on a sled or seated machine. Hold at the bottom or top of the range, then burnout reps as prescribed.",
+        "Leg press on a sled or seated machine.",
     },
   });
   if (!created.res.ok || !created.body?.id) {
