@@ -9,6 +9,7 @@ export type LegacyWorkoutPrescription = {
   weightTier: WeightTierId;
   restSec: number | null;
   notes: string | null;
+  approachCue: string | null;
 };
 
 function tier(v: string): WeightTierId {
@@ -41,12 +42,15 @@ export function prescriptionToLegacy(
     | "phase2RepKind"
     | "phase2PositionCue"
     | "notes"
+    | "approachCue"
   >,
 ): LegacyWorkoutPrescription {
+  const approachCue = row.approachCue?.trim() || null;
   const base = {
     sets: row.setCount,
     weightTier: tier(row.weightTier),
     restSec: row.restBetweenSetsSec,
+    approachCue,
   };
 
   switch (row.patternType) {

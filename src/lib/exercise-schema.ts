@@ -31,6 +31,7 @@ export const workoutPrescriptionSchema = z
     weightTier: z.enum(tierIds),
     restSec: z.number().int().nonnegative().optional().nullable(),
     notes: z.string().max(500).optional().nullable(),
+    approachCue: z.string().max(200).optional().nullable(),
   })
   .superRefine((data, ctx) => {
     if (!isValidSetCountForApproach(data.sets, data.setScheme)) {

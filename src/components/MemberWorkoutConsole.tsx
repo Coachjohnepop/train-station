@@ -99,6 +99,8 @@ export type MemberExerciseBlock = {
   description: string | null;
   /** Coach note on this workout line only (today's cue). */
   coachNotes?: string | null;
+  /** Replaces the Approach label when the coach typed one. */
+  approachCue?: string | null;
   /** Global library description for the exercise. */
   libraryDescription?: string | null;
   videoUrl: string | null;
@@ -3002,7 +3004,7 @@ export default function MemberWorkoutConsole({
                     <div className="member-exercise-spec__row">
                       <span className="member-exercise-spec__label">Approach</span>
                       <span className="member-exercise-spec__value font-medium text-accent-deep">
-                        {approachLabel(prescription.approach)}
+                        {block.approachCue?.trim() || approachLabel(prescription.approach)}
                       </span>
                     </div>
                     <div className="member-exercise-spec__row">

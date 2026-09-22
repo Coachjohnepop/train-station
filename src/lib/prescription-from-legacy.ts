@@ -10,6 +10,7 @@ type LegacyItem = {
   sets: number | null;
   restSec?: number | null;
   notes: string | null;
+  approachCue?: string | null;
   exercise?: { name?: string };
 };
 
@@ -67,6 +68,7 @@ export function legacyWorkoutItemToPrescriptionDraft(
       phase2RepKind: "",
       phase2PositionCue: "",
       notes: item.notes ?? "",
+      approachCue: item.approachCue ?? "",
     };
   }
 
@@ -110,6 +112,7 @@ export function legacyWorkoutItemToPrescriptionDraft(
     phase2RepKind: repKind(p2?.repKind),
     phase2PositionCue: p2?.positionCue ?? "",
     notes: rx?.notes ?? item.notes ?? "",
+    approachCue: item.approachCue ?? "",
   };
 }
 

@@ -41,6 +41,7 @@ type WorkoutItem = {
   restSec?: number | null;
   weightTier: string | null;
   notes: string | null;
+  approachCue?: string | null;
   exercise: Exercise;
 };
 
@@ -187,6 +188,7 @@ export default function WorkoutBuilder({
         weightTier: legacy.weightTier,
         restSec: legacy.restSec,
         notes: withWarmupBlockNote(legacy.notes, addAsWarmup),
+        approachCue: legacy.approachCue,
       };
 
       const res = await fetch(`/api/workouts/${workoutId}/exercises`, {
@@ -744,7 +746,9 @@ export default function WorkoutBuilder({
                         ) : null}
                       </p>
                       <p className="mt-0.5 text-sm text-[var(--muted)]">
-                        {approachLabel(normalizePrescription(item).approach)} ·{" "}
+                        {item.approachCue?.trim() ||
+                          approachLabel(normalizePrescription(item).approach)}{" "}
+                        ·{" "}
                         {formatPrescriptionSummary(item)} · {weightTierLabel(item.weightTier)}
                       </p>
                       {item.notes && (

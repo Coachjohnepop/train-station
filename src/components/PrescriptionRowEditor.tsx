@@ -70,6 +70,7 @@ export default function PrescriptionRowEditor({
   );
   const [phase2Reps, setPhase2Reps] = useState<number | null>(initial.phase2Reps ?? null);
   const [notes, setNotes] = useState(initial.notes ?? "");
+  const [approachCue, setApproachCue] = useState(initial.approachCue ?? "");
 
   const summary = useMemo(() => {
     const draft = {
@@ -90,6 +91,7 @@ export default function PrescriptionRowEditor({
       phase2RepKind: phase2RepKindForPattern(patternType),
       phase2PositionCue: "",
       notes,
+      approachCue,
       summary: "",
     };
     return buildPrescriptionSummary(draft);
@@ -104,6 +106,7 @@ export default function PrescriptionRowEditor({
     phase2DurationSec,
     phase2Reps,
     notes,
+    approachCue,
     exerciseName,
     initial.id,
   ]);
@@ -131,6 +134,7 @@ export default function PrescriptionRowEditor({
       phase2RepKind: phase2RepKindForPattern(patternType),
       phase2PositionCue: "",
       notes,
+      approachCue,
       summary,
     };
     onConfirm(draft);
@@ -138,6 +142,20 @@ export default function PrescriptionRowEditor({
 
   return (
     <div className="space-y-4 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] p-4">
+      <label className="block text-sm">
+        <span className="font-medium">Approach — what members see</span>
+        <span className="mt-0.5 block text-xs font-normal text-[var(--muted)]">
+          Replaces “Standard sets” on the workout card. Example: Hold 2 count at bottom, 7 count up.
+        </span>
+        <input
+          className="input mt-1"
+          value={approachCue}
+          onChange={(e) => setApproachCue(e.target.value)}
+          placeholder="Hold 2 count at bottom, 7 count up"
+          maxLength={200}
+        />
+      </label>
+
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <p className="text-sm font-semibold">{exerciseName}</p>

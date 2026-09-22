@@ -197,6 +197,8 @@ model WorkoutExercise {
   restBetweenSetsSec   Int?
   blockName            String?
   notes      String?
+  /// Member-facing Approach line. Blank keeps the set-approach label (Standard sets).
+  approachCue String?
   workout    Workout   @relation(fields: [workoutId], references: [id], onDelete: Cascade)
   exercise   Exercise  @relation(fields: [exerciseId], references: [id])
   phases     WorkoutSetPhase[]

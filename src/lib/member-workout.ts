@@ -34,6 +34,7 @@ export function mapItemToBlock(item: {
   sets?: number | null;
   weightTier?: string | null;
   notes?: string | null;
+  approachCue?: string | null;
   restSec?: number | null;
   restBetweenSetsSec?: number | null;
 }) {
@@ -70,6 +71,10 @@ export function mapItemToBlock(item: {
     name,
     description: coachNotes ?? libraryDescription,
     coachNotes,
+    approachCue:
+      typeof item.approachCue === "string" && item.approachCue.trim()
+        ? item.approachCue.trim()
+        : null,
     libraryDescription,
     videoUrl,
     setScheme: cardio ? TIMED_APPROACH_ID : rx.approach,
@@ -138,6 +143,7 @@ async function getMemberWorkoutFromPrisma(
             sets: item.setCount ?? item.sets,
             weightTier: item.weightTier,
             notes: item.notes,
+            approachCue: item.approachCue,
             restSec: item.restSec,
             restBetweenSetsSec: item.restBetweenSetsSec,
           }),
@@ -219,6 +225,7 @@ export async function getMemberWorkoutById(
           sets: item.sets,
           weightTier: item.weightTier,
           notes: item.notes,
+          approachCue: item.approachCue,
           restSec: item.restSec,
           restBetweenSetsSec: item.restBetweenSetsSec,
         }));

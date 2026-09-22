@@ -45,6 +45,8 @@ export type PrescriptionExampleRow = {
   phase2RepKind: RepKindValue;
   phase2PositionCue: string;
   notes: string;
+  /** What members see on the Approach line. Blank keeps the pattern label. */
+  approachCue?: string;
   summary: string;
 };
 
