@@ -43,6 +43,7 @@ type WorkoutItem = {
   notes: string | null;
   approachCue?: string | null;
   approachId?: string | null;
+  approach?: { label: string; description: string } | null;
   exercise: Exercise;
 };
 
@@ -747,12 +748,26 @@ export default function WorkoutBuilder({
                           </span>
                         ) : null}
                       </p>
-                      <p className="mt-0.5 text-sm text-[var(--muted)]">
-                        {item.approachCue?.trim() ||
-                          approachLabel(normalizePrescription(item).approach)}{" "}
-                        ·{" "}
-                        {formatPrescriptionSummary(item)} · {weightTierLabel(item.weightTier)}
-                      </p>
+                      <div className="mt-1 grid gap-2 sm:grid-cols-2">
+                        <div>
+                          <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">
+                            Set prescription
+                          </p>
+                          <p className="text-sm text-[var(--text)]">
+                            {formatPrescriptionSummary(item)} · {weightTierLabel(item.weightTier)}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">
+                            Approach
+                          </p>
+                          <p className="text-sm text-[var(--text)]">
+                            {item.approach?.description?.trim() ||
+                              item.approachCue?.trim() ||
+                              approachLabel(normalizePrescription(item).approach)}
+                          </p>
+                        </div>
+                      </div>
                       {item.notes && (
                         <p
                           className="mt-1 line-clamp-2 text-xs text-violet-300/90"

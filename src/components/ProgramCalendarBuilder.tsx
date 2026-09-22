@@ -125,6 +125,7 @@ type SlotItem = {
   restSec: number | null;
   /** Coach note for this workout line only (not the library exercise). */
   notes: string | null;
+  approachId: string | null;
   sortOrder: number;
 };
 
@@ -305,6 +306,10 @@ export default function ProgramCalendarBuilder({
   const [editorReps, setEditorReps] = useState(DEFAULT_DAY_PRESCRIPTION.defaultReps);
   const [editorRest, setEditorRest] = useState(DEFAULT_DAY_PRESCRIPTION.defaultRestSec);
   const [editorNotes, setEditorNotes] = useState("");
+  const [editorApproachId, setEditorApproachId] = useState("");
+  const [approaches, setApproaches] = useState<
+    { id: string; label: string; description: string }[]
+  >([]);
   const [fastedCardioMinutes, setFastedCardioMinutes] = useState(DEFAULT_FASTED_CARDIO_MINUTES);
   const [workoutPreviews, setWorkoutPreviews] = useState<Record<string, string[]>>({});
   const [workoutTitle, setWorkoutTitle] = useState("");
@@ -772,11 +777,13 @@ export default function ProgramCalendarBuilder({
       setEditorReps(slot.reps ?? rx.defaultReps);
       setEditorRest(slot.restSec ?? rx.defaultRestSec);
       setEditorNotes(slot.notes ?? "");
+      setEditorApproachId(slot.approachId ?? "");
     } else {
       setEditorSets(rx.defaultSets);
       setEditorReps(rx.defaultReps);
       setEditorRest(rx.defaultRestSec);
       setEditorNotes("");
+      setEditorApproachId("");
     }
   }
 
@@ -797,6 +804,15 @@ export default function ProgramCalendarBuilder({
     syncEditorFromSlot(grid[idx], rx);
     if (opts?.focusEditor) focusSetsEditor();
   }
+
+  useEffect(() => {
+    void fetch("/api/admin/approaches", { cache: "no-store" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.approaches) setApproaches(data.approaches);
+      })
+      .catch(() => {});
+  }, []);
 
   const loadSlots = useCallback(async (workoutId: string, rx?: DayPrescription) => {
     setLoadingSlots(true);
@@ -823,6 +839,7 @@ export default function ProgramCalendarBuilder({
         reps: it.reps ?? null,
         restSec: it.restSec ?? null,
         notes: typeof it.notes === "string" ? it.notes : it.notes ?? null,
+        approachId: typeof it.approachId === "string" ? it.approachId : null,
         sortOrder: it.sortOrder ?? 0,
       }));
       items.sort((a, b) => a.sortOrder - b.sortOrder);
@@ -1082,7 +1099,13 @@ export default function ProgramCalendarBuilder({
 
   async function patchExerciseItem(
     itemId: string,
-    data: { sets?: number; reps?: string; restSec?: number; notes?: string | null },
+    data: {
+      sets?: number;
+      reps?: string;
+      restSec?: number;
+      notes?: string | null;
+      approachId?: string | null;
+    },
   ): Promise<{ ok: boolean; error?: string }> {
     if (!focus) return { ok: false, error: "No day selected." };
     const res = await fetch(`/api/workouts/${focus.workoutId}/exercises`, {
@@ -1102,7 +1125,13 @@ export default function ProgramCalendarBuilder({
   /** Persist one exercise field patch; always use event values for notes to avoid stale React state. */
   async function persistExercisePatch(
     slotIdx: number,
-    data: { sets?: number; reps?: string; restSec?: number; notes?: string | null },
+    data: {
+      sets?: number;
+      reps?: string;
+      restSec?: number;
+      notes?: string | null;
+      approachId?: string | null;
+    },
   ): Promise<boolean> {
     if (!focus) return false;
     const slot = slots[slotIdx];
@@ -1123,6 +1152,7 @@ export default function ProgramCalendarBuilder({
           ...(data.reps !== undefined ? { reps: data.reps } : {}),
           ...(data.restSec !== undefined ? { restSec: data.restSec } : {}),
           ...(data.notes !== undefined ? { notes: data.notes } : {}),
+          ...(data.approachId !== undefined ? { approachId: data.approachId } : {}),
         };
       }
       return next;
@@ -1464,6 +1494,7 @@ export default function ProgramCalendarBuilder({
           sets: editorSets,
           reps: editorReps,
           restSec: editorRest,
+          approachId: editorApproachId || null,
         });
         if (result.ok) applied++;
       }
@@ -1980,6 +2011,7 @@ export default function ProgramCalendarBuilder({
         weightTier: "medium",
         restSec: editorRest,
         notes: null,
+        approachId: editorApproachId || null,
         sortOrder: slotIndex,
       }),
     });
@@ -2000,6 +2032,7 @@ export default function ProgramCalendarBuilder({
               reps: created.reps ?? null,
               restSec: created.restSec ?? null,
               notes: created.notes ?? null,
+              approachId: created.approachId ?? null,
               sortOrder: i,
             }
           : slot,
@@ -2898,6 +2931,11 @@ export default function ProgramCalendarBuilder({
                     {slot.sets ?? prescription.defaultSets} × {slot.reps ?? prescription.defaultReps}
                     {slot.restSec != null ? ` · ${slot.restSec}s` : ""}
                     <span className="ml-1 text-accent/80">· edit sets</span>
+                    <span className="mt-0.5 block text-[var(--text)]">
+                      Approach:{" "}
+                      {approaches.find((row) => row.id === slot.approachId)?.description ||
+                        "Pattern default"}
+                    </span>
                   </button>
                 )}
               </div>
@@ -3805,6 +3843,27 @@ export default function ProgramCalendarBuilder({
                       ? slots[selectedSlotIdx]!.name
                       : "Select exercise"}
                   </p>
+                  <label className="min-w-[11rem] flex-1 text-[10px]">
+                    Approach
+                    <select
+                      className="input mt-0.5 h-7 w-full px-1 text-xs"
+                      value={editorApproachId}
+                      disabled={selectedSlotIdx === null}
+                      onChange={(e) => {
+                        const next = e.target.value;
+                        setEditorApproachId(next);
+                        if (selectedSlotIdx === null) return;
+                        void persistExercisePatch(selectedSlotIdx, { approachId: next || null });
+                      }}
+                    >
+                      <option value="">Pattern default</option>
+                      {approaches.map((row) => (
+                        <option key={row.id} value={row.id}>
+                          {row.description || row.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
                   <label className="text-[10px]">
                     Sets
                     <input

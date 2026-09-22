@@ -62,7 +62,7 @@ export async function GET(_request: Request, { params }: Params) {
     include: {
       exercises: {
         orderBy: { sortOrder: "asc" },
-        include: { exercise: true },
+        include: { exercise: true, approach: true },
       },
     },
   });
@@ -230,7 +230,7 @@ export async function PATCH(request: Request, { params }: Params) {
       include: {
         exercises: {
           orderBy: { sortOrder: "asc" },
-          include: { exercise: true },
+          include: { exercise: true, approach: true },
         },
       },
     });
