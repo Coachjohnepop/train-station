@@ -42,6 +42,7 @@ type WorkoutItem = {
   weightTier: string | null;
   notes: string | null;
   approachCue?: string | null;
+  approachId?: string | null;
   exercise: Exercise;
 };
 
@@ -189,6 +190,7 @@ export default function WorkoutBuilder({
         restSec: legacy.restSec,
         notes: withWarmupBlockNote(legacy.notes, addAsWarmup),
         approachCue: legacy.approachCue,
+        approachId: legacy.approachId,
       };
 
       const res = await fetch(`/api/workouts/${workoutId}/exercises`, {

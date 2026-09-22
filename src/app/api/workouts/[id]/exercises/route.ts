@@ -37,6 +37,7 @@ const updateItemSchema = z.object({
   restSec: z.number().int().nonnegative().optional().nullable(),
   notes: z.string().max(500).optional().nullable(),
   approachCue: z.string().max(200).optional().nullable(),
+  approachId: z.string().min(1).max(40).optional().nullable(),
   sortOrder: z.number().int().nonnegative().optional(),
 });
 
@@ -131,6 +132,7 @@ export async function POST(request: Request, { params }: Params) {
             restSec: parsed.data.restSec ?? null,
             notes: parsed.data.notes ?? null,
             approachCue: parsed.data.approachCue ?? null,
+            approachId: parsed.data.approachId ?? null,
             exercise,
           };
           data.workoutExercises.push(newItem);
@@ -214,6 +216,7 @@ export async function POST(request: Request, { params }: Params) {
           restSec: parsed.data.restSec ?? null,
           notes: parsed.data.notes ?? null,
           approachCue: parsed.data.approachCue ?? null,
+          approachId: parsed.data.approachId ?? null,
         },
         include: { exercise: true },
       });
@@ -242,6 +245,7 @@ function demoItemMatchesPatch(we: any, data: Record<string, unknown>): boolean {
   if (data.restSec !== undefined && we.restSec !== data.restSec) return false;
   if (data.notes !== undefined && we.notes !== data.notes) return false;
   if (data.approachCue !== undefined && we.approachCue !== data.approachCue) return false;
+  if (data.approachId !== undefined && we.approachId !== data.approachId) return false;
   if (data.sortOrder !== undefined && we.sortOrder !== data.sortOrder) return false;
   return true;
 }
@@ -348,6 +352,7 @@ export async function PATCH(request: Request, { params }: Params) {
           if (data.restSec !== undefined) we.restSec = data.restSec;
           if (data.notes !== undefined) we.notes = data.notes;
           if (data.approachCue !== undefined) we.approachCue = data.approachCue;
+          if (data.approachId !== undefined) we.approachId = data.approachId;
           if (data.sortOrder !== undefined) we.sortOrder = data.sortOrder;
 
           we.exercise = resolveDemoExercise(we.exerciseId, exList);

@@ -47,6 +47,8 @@ export type PrescriptionExampleRow = {
   notes: string;
   /** What members see on the Approach line. Blank keeps the pattern label. */
   approachCue?: string;
+  /** Row from the Approach table. Blank uses the pattern default. */
+  approachId?: string;
   summary: string;
 };
 

@@ -18,6 +18,7 @@ import { TIMED_APPROACH_ID } from "@/lib/workout-schemes";
 import { DEFAULT_REST_TIMER_SOUND } from "@/lib/rest-timer-sound";
 import { DEFAULT_WARMUP_REST_SECONDS, pinWarmupsFirst } from "@/lib/warmup-group";
 import { getCoachSettings } from "@/lib/coach-settings-store";
+import { approachTextFromCatalog, listApproaches } from "@/lib/approach-catalog";
 
 export function mapItemToBlock(item: {
   id: string;
@@ -122,12 +123,14 @@ async function getMemberWorkoutFromPrisma(
               videoUrl: true,
             },
           },
+          approach: { select: { label: true, description: true, slug: true } },
         },
       },
     },
   });
   if (!workout) return null;
 
+  const catalog = await listApproaches().catch(() => []);
   const exercises = await attachPasts(
     pinWarmupsFirst(
       collapseConsecutiveCloneExercises(
@@ -143,7 +146,12 @@ async function getMemberWorkoutFromPrisma(
             sets: item.setCount ?? item.sets,
             weightTier: item.weightTier,
             notes: item.notes,
-            approachCue: item.approachCue,
+            approachCue: approachTextFromCatalog({
+              linked: item.approach,
+              approachCue: item.approachCue,
+              setScheme: item.setScheme,
+              catalog,
+            }),
             restSec: item.restSec,
             restBetweenSetsSec: item.restBetweenSetsSec,
           }),

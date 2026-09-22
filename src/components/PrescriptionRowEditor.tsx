@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   PATTERN_TYPE_LABELS,
   PRESCRIPTION_PATTERN_TYPES,
@@ -71,6 +71,19 @@ export default function PrescriptionRowEditor({
   const [phase2Reps, setPhase2Reps] = useState<number | null>(initial.phase2Reps ?? null);
   const [notes, setNotes] = useState(initial.notes ?? "");
   const [approachCue, setApproachCue] = useState(initial.approachCue ?? "");
+  const [approachId, setApproachId] = useState(initial.approachId ?? "");
+  const [approaches, setApproaches] = useState<
+    { id: string; label: string; description: string }[]
+  >([]);
+
+  useEffect(() => {
+    void fetch("/api/admin/approaches", { cache: "no-store" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.approaches) setApproaches(data.approaches);
+      })
+      .catch(() => {});
+  }, []);
 
   const summary = useMemo(() => {
     const draft = {
@@ -92,6 +105,7 @@ export default function PrescriptionRowEditor({
       phase2PositionCue: "",
       notes,
       approachCue,
+      approachId,
       summary: "",
     };
     return buildPrescriptionSummary(draft);
@@ -107,6 +121,7 @@ export default function PrescriptionRowEditor({
     phase2Reps,
     notes,
     approachCue,
+    approachId,
     exerciseName,
     initial.id,
   ]);
@@ -135,6 +150,7 @@ export default function PrescriptionRowEditor({
       phase2PositionCue: "",
       notes,
       approachCue,
+      approachId,
       summary,
     };
     onConfirm(draft);
@@ -145,15 +161,20 @@ export default function PrescriptionRowEditor({
       <label className="block text-sm">
         <span className="font-medium">Approach — what members see</span>
         <span className="mt-0.5 block text-xs font-normal text-[var(--muted)]">
-          Replaces “Standard sets” on the workout card. Example: Hold 2 count at bottom, 7 count up.
+          Pick a row from the Approach list. Pattern default uses the matching row, such as Standard sets.
         </span>
-        <input
+        <select
           className="input mt-1"
-          value={approachCue}
-          onChange={(e) => setApproachCue(e.target.value)}
-          placeholder="Hold 2 count at bottom, 7 count up"
-          maxLength={200}
-        />
+          value={approachId}
+          onChange={(e) => setApproachId(e.target.value)}
+        >
+          <option value="">Pattern default</option>
+          {approaches.map((row) => (
+            <option key={row.id} value={row.id}>
+              {row.description || row.label}
+            </option>
+          ))}
+        </select>
       </label>
 
       <div className="flex flex-wrap items-start justify-between gap-2">

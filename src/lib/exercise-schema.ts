@@ -32,6 +32,7 @@ export const workoutPrescriptionSchema = z
     restSec: z.number().int().nonnegative().optional().nullable(),
     notes: z.string().max(500).optional().nullable(),
     approachCue: z.string().max(200).optional().nullable(),
+    approachId: z.string().min(1).max(40).optional().nullable(),
   })
   .superRefine((data, ctx) => {
     if (!isValidSetCountForApproach(data.sets, data.setScheme)) {

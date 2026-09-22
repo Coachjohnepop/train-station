@@ -199,11 +199,27 @@ model WorkoutExercise {
   notes      String?
   /// Member-facing Approach line. Blank keeps the set-approach label (Standard sets).
   approachCue String?
+  approachId String?
+  approach   Approach? @relation(fields: [approachId], references: [id], onDelete: SetNull)
   workout    Workout   @relation(fields: [workoutId], references: [id], onDelete: Cascade)
   exercise   Exercise  @relation(fields: [exerciseId], references: [id])
   phases     WorkoutSetPhase[]
 
   @@index([workoutId, sortOrder])
+  @@index([approachId])
+}
+
+/// Member-facing approach lines. Slug rows are the default for a set pattern.
+model Approach {
+  id          String   @id @default(cuid())
+  slug        String?  @unique
+  label       String
+  description String
+  sortOrder   Int      @default(0)
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  exercises   WorkoutExercise[]
 }
 
 /// Template for what happens inside one working set; repeats for all setCount sets.
