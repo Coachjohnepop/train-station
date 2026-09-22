@@ -1,32 +1,15 @@
-import Link from "next/link";
-import LogoutButton from "@/components/LogoutButton";
+import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { cookies, headers } from "next/headers";
 import { getSessionUser, isStaffRole } from "@/lib/auth";
-import { MEMBER_NAME_COOKIE } from "@/lib/current-user";
-import { resolveDemoUser } from "@/lib/demo-user-directory";
-import ComingSoonPrograms from "@/components/ComingSoonPrograms";
 import LandingConversion from "@/components/LandingConversion";
-import LandingNav from "@/components/LandingNav";
-import LandingServicesSection from "@/components/LandingServicesSection";
-import LandingSiteFooter from "@/components/LandingSiteFooter";
-import LandingWelcomeBanner from "@/components/LandingWelcomeBanner";
-import ThemeAttributesSync from "@/components/ThemeAttributesSync";
 import { getResolvedLandingVideos } from "@/lib/landing-media-server";
-import LandingMemberStatus from "@/components/LandingMemberStatus";
-import {
-  getMemberMembershipSnapshot,
-  isEstablishedMember,
-} from "@/lib/member-membership";
-import { getMemberProfile } from "@/lib/member-profiles-store";
-import { membershipThemeTierFromPlan } from "@/lib/membership-theme";
-import { signupPlanLabel } from "@/lib/signup-plans";
+import { signedInAppPath } from "@/lib/staff-access";
 import { buildRootMetadata } from "@/lib/site-seo-server";
 import { LANDING_RETURN_COOKIE, isLandingReturnCookie } from "@/lib/landing-return-visit";
 import {
   LANDING_AB_COOKIE,
   LANDING_AB_HEADER,
-  landingAbPath,
   parseLandingAbVariant,
   type LandingAbVariant,
 } from "@/lib/landing-ab";
@@ -37,149 +20,23 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 async function resolveLandingVariant(
-  isStaff: boolean,
   cookieStore: Awaited<ReturnType<typeof cookies>>,
 ): Promise<LandingAbVariant> {
   const headerVariant = parseLandingAbVariant((await headers()).get(LANDING_AB_HEADER));
   if (headerVariant) return headerVariant;
-  if (isStaff) return "tour";
   return parseLandingAbVariant(cookieStore.get(LANDING_AB_COOKIE)?.value) || "tour";
 }
 
 export default async function HomePage() {
   const cookieStore = await cookies();
   const session = await getSessionUser();
-  const landingVideos = await getResolvedLandingVideos();
-  const staff = Boolean(session && isStaffRole(session.role));
-  const landingVariant = await resolveLandingVariant(staff, cookieStore);
-
-  // Staff: same public POP landing cold traffic sees — never ticket theater.
-  if (session && isStaffRole(session.role)) {
-    const demoUser = resolveDemoUser(session.id);
-    const displayName =
-      session.name ||
-      demoUser?.name ||
-      cookieStore.get(MEMBER_NAME_COOKIE)?.value ||
-      "Coach";
-    return (
-      <>
-        <div
-          className="force-dark sticky top-0 z-50 border-b border-[#7c3aed]/40 bg-[#1a0b2e]/95 px-3 py-2 text-center backdrop-blur-md sm:px-4"
-          data-force-dark
-        >
-          <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-center gap-2 text-xs sm:justify-between sm:text-sm">
-            <p className="text-white/80">
-              Signed in as <span className="font-semibold text-white">{displayName}</span>
-              <span className="hidden text-white/50 sm:inline">
-                {" "}
-                · this is the public landing members see
-              </span>
-            </p>
-            <div className="flex items-center gap-2">
-              <Link href="/a" className="text-[10px] font-bold uppercase tracking-wide text-white/70 hover:text-white">
-                A
-              </Link>
-              <Link href="/b" className="text-[10px] font-bold uppercase tracking-wide text-white/70 hover:text-white">
-                B
-              </Link>
-              <Link href={landingAbPath("floor")} className="text-[10px] font-bold uppercase tracking-wide text-white/70 hover:text-white">
-                C
-              </Link>
-              <Link href={landingAbPath("class")} className="text-[10px] font-bold uppercase tracking-wide text-white/70 hover:text-white">
-                D
-              </Link>
-              <LogoutButton className="inline-flex h-auto items-center justify-center rounded-full border border-white/30 bg-transparent px-4 py-1.5 text-xs font-bold text-white/90 hover:bg-white/10 hover:text-white" />
-              <Link
-                href="/admin"
-                className="inline-flex items-center rounded-full bg-[#7c3aed] px-4 py-1.5 text-xs font-bold text-white shadow-lg shadow-[#7c3aed]/35 transition hover:bg-[#6d28d9]"
-              >
-                Coach admin →
-              </Link>
-            </div>
-          </div>
-        </div>
-        <LandingConversion
-          welcomeVideoUrl={landingVideos.welcomeVideoUrl}
-          freeChastiseVideoUrl={landingVideos.freeChastiseVideoUrl}
-          heroSlides={landingVideos.heroSlides}
-          returning={false}
-          rememberReturn={false}
-          purchaseAuth={{ signedIn: true, role: session.role }}
-          variant={landingVariant}
-          meetVideoUrl={landingVideos.welcomeVideoUrl}
-        />
-      </>
-    );
-  }
 
   if (session) {
-    const demoUser = resolveDemoUser(session.id);
-    const displayName =
-      session.name ||
-      demoUser?.name ||
-      cookieStore.get(MEMBER_NAME_COOKIE)?.value ||
-      "Member";
-    const email = session.email || demoUser?.email;
-    const profile =
-      session.role === "MEMBER" ? await getMemberProfile(session.id) : null;
-    const membershipPlan = profile?.plan ?? "explorer";
-    const themeTier = membershipThemeTierFromPlan(profile?.plan);
-    const established = isEstablishedMember(profile);
-    let membershipSnapshot: Awaited<ReturnType<typeof getMemberMembershipSnapshot>> = null;
-    if (established && profile) {
-      try {
-        membershipSnapshot = await getMemberMembershipSnapshot(session.id);
-      } catch (e: unknown) {
-        console.error(
-          "[home] membership snapshot failed (showing welcome fallback):",
-          e instanceof Error ? e.message : e,
-        );
-      }
-    }
-
-    return (
-      <div className="min-h-screen app-shell-bg">
-        <ThemeAttributesSync membershipTier={themeTier} />
-        <LandingNav
-          variant="welcome"
-          purchaseAuth={{ signedIn: true, role: session.role }}
-        />
-        {established && membershipSnapshot ? (
-          <LandingMemberStatus
-            membership={membershipSnapshot}
-            displayName={displayName}
-            email={email}
-            welcomeVideoUrl={landingVideos.welcomeVideoUrl}
-          />
-        ) : (
-          <LandingWelcomeBanner
-            displayName={displayName}
-            email={email}
-            isCoach={false}
-            membershipPlan={membershipPlan}
-            membershipPlanLabel={profile ? signupPlanLabel(profile.plan) : null}
-            isEstablishedMember={established}
-            welcomeVideoUrl={landingVideos.welcomeVideoUrl}
-          />
-        )}
-        <ComingSoonPrograms />
-        <LandingServicesSection purchaseAuth={{ signedIn: true, role: session.role }} />
-        {/* No landing ticket grid — plans at /join; ticket art only in onboarding. */}
-        {!established && (
-          <div className="border-t border-[var(--border)] px-4 py-10 text-center">
-            <p className="text-sm text-[var(--muted)]">Ready for a full membership?</p>
-            <Link
-              href="/join"
-              className="mt-3 inline-flex h-11 items-center justify-center rounded-full bg-[#7c3aed] px-6 text-sm font-semibold text-white hover:bg-[#6d28d9]"
-            >
-              View memberships →
-            </Link>
-          </div>
-        )}
-        <LandingSiteFooter />
-      </div>
-    );
+    redirect(isStaffRole(session.role) ? signedInAppPath(session.role) : "/member/today");
   }
+
+  const landingVideos = await getResolvedLandingVideos();
+  const landingVariant = await resolveLandingVariant(cookieStore);
 
   // Cold traffic / SMS — full send POP only (no floating memberships FAB).
   const returning = isLandingReturnCookie(cookieStore.get(LANDING_RETURN_COOKIE)?.value);

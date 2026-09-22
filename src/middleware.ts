@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { verifySessionTokenEdge, SESSION_COOKIE } from "@/lib/auth-session-edge";
-import { isStaffRole, staffAdminRedirect } from "@/lib/staff-access";
+import { isStaffRole, signedInAppPath, staffAdminRedirect } from "@/lib/staff-access";
 import {
   isMemberLandingSidePath,
   memberAppEntryFromGateCookies,
@@ -153,10 +153,10 @@ async function handleLandingAb(request: NextRequest): Promise<NextResponse | nul
 
   const session = await sessionFromRequest(request);
   if (session?.role === "MEMBER") {
-    return nextWithPath(request, pathname);
+    return NextResponse.redirect(new URL(memberEntryFromRequest(request), request.url));
   }
   if (session && isStaffRole(session.role)) {
-    return nextWithLandingVariant(request, pathname, "tour");
+    return NextResponse.redirect(new URL(signedInAppPath(session.role), request.url));
   }
 
   const existing = parseLandingAbVariant(request.cookies.get(LANDING_AB_COOKIE)?.value);

@@ -33,6 +33,13 @@ export function defaultStaffLandingPath(role: UserRole): string {
   return defaultCoachAdminPath();
 }
 
+/** Signed-in open of the public site. Coaches go to Today, not the splash. */
+export function signedInAppPath(role: UserRole): string {
+  if (role === "PLATFORM_ADMIN") return defaultPlatformAdminPath();
+  if (canAccessCoachAdmin(role)) return "/admin/today";
+  return "/member/today";
+}
+
 /** Coaches start on Dashboard (/admin/day). */
 export function normalizeCoachLoginRedirect(redirect: string | null | undefined): string {
   const raw = redirect?.trim();

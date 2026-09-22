@@ -12,7 +12,7 @@ import {
 import { signOutNow } from "@/lib/logout-url";
 import ThemeModeToggle from "@/components/ThemeModeToggle";
 import { type PurchaseAuth } from "@/lib/member-purchase-path";
-import { isStaffRole } from "@/lib/staff-access";
+import { isStaffRole, signedInAppPath } from "@/lib/staff-access";
 import { openFreeQuickTour } from "@/lib/free-quick-tour";
 import { openLandingExplore } from "@/lib/landing-explore";
 import {
@@ -92,7 +92,10 @@ export default function LandingNav({
    *  the hamburger is open, use solid themed chrome so light/dark both read. */
   const cinematic = overHero && !heroSolid && !mobileOpen;
   /** Signed-in members should not re-enter marketing/join surfaces from the nav. */
-  const memberHomeHref = purchaseAuth.role && isStaffRole(purchaseAuth.role) ? "/admin" : "/member/today";
+  const memberHomeHref =
+    purchaseAuth.role && isStaffRole(purchaseAuth.role)
+      ? signedInAppPath(purchaseAuth.role)
+      : "/member/today";
   /** Home logo stays on the landing — Join / Start membership live in the hero only. */
   const brandHref = purchaseAuth.signedIn ? memberHomeHref : "/";
   /** Guest home: no white Join pill, no extra top CTAs. Hero has the three choices. */
