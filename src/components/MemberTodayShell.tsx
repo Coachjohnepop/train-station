@@ -9,6 +9,10 @@ import MemberIntakeIntroCard from "@/components/MemberIntakeIntroCard";
 import MemberFirstHourCard from "@/components/MemberFirstHourCard";
 import MemberWarmupDayNavigator from "@/components/MemberWarmupDayNavigator";
 import MemberTrainingLocationToggle from "@/components/MemberTrainingLocationToggle";
+import {
+  MemberActivityLogButton,
+  MemberActivityLogPanel,
+} from "@/components/MemberActivityLog";
 import MemberWorkoutConsole, { type MemberWorkoutView } from "@/components/MemberWorkoutConsole";
 import type { MemberDaySummary, MemberDayWindowRollup } from "@/lib/member-day-window-types";
 import { scheduleDayHeadline } from "@/lib/workout-day-visibility";
@@ -322,6 +326,7 @@ export default function MemberTodayShell({
   const router = useRouter();
   const searchParams = useSearchParams();
   const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [activityOpen, setActivityOpen] = useState(false);
 
   useEffect(() => {
     try {
@@ -687,14 +692,23 @@ export default function MemberTodayShell({
       {showFullWorkout && workout && (
         <div id="member-today-workout" className="min-w-0 touch-pan-y sm:mx-0">
           {programSlug === "adult" && (
-            <div className="mb-3 flex flex-wrap items-center justify-between gap-2 px-1">
-              <span className="text-xs text-[var(--muted)]">
-                {isLateCatchUp ? "Catch-up track" : "Today's track"}
-              </span>
-              <MemberTrainingLocationToggle
-                programSlug={programSlug}
-                initialLocation={trainingLocation}
-              />
+            <div className="mb-3 space-y-2 px-1">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="text-xs text-[var(--muted)]">
+                  {isLateCatchUp ? "Catch-up track" : "Today's track"}
+                </span>
+                <div className="flex items-center gap-2">
+                  <MemberTrainingLocationToggle
+                    programSlug={programSlug}
+                    initialLocation={trainingLocation}
+                  />
+                  <MemberActivityLogButton
+                    open={activityOpen}
+                    onToggle={() => setActivityOpen((value) => !value)}
+                  />
+                </div>
+              </div>
+              <MemberActivityLogPanel open={activityOpen} />
             </div>
           )}
 

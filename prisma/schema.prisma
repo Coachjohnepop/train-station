@@ -95,6 +95,19 @@ model User {
   acctParties          AcctParty[]
   acctJournalCreated   AcctJournalEntry[] @relation("AcctJournalCreatedBy")
   foodEntries          FoodEntry[]
+  activityEntries      ActivityEntry[]
+}
+
+/// Extra movement that is not a workout. At most 5 score points per day.
+model ActivityEntry {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  loggedOn  String
+  text      String
+  createdAt DateTime @default(now())
+
+  @@index([userId, loggedOn])
 }
 
 /// What a member ate. Calories are an estimate. Weeks start Monday, Pacific.
