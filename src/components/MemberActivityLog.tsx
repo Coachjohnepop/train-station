@@ -21,18 +21,28 @@ export function MemberActivityLogButton({
   onToggle: () => void;
 }) {
   return (
-    <button
-      type="button"
-      className={`rounded-md px-3 py-1.5 text-xs font-medium transition ${
-        open
-          ? "bg-accent text-[var(--text)] shadow-sm"
-          : "text-[var(--muted)] hover:text-[var(--text)]"
-      }`}
-      aria-expanded={open}
-      onClick={onToggle}
-    >
-      Activity Log
-    </button>
+    <div className="inline-flex rounded-lg border border-[var(--border)] bg-[var(--surface-2)] p-0.5 text-xs">
+      <button
+        type="button"
+        className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 font-medium transition ${
+          open
+            ? "bg-accent text-[var(--text)] shadow-sm"
+            : "text-[var(--muted)] hover:text-[var(--text)]"
+        }`}
+        aria-expanded={open}
+        aria-label={open ? "Close activity log" : "Open activity log"}
+        onClick={onToggle}
+      >
+        Activity Log
+        <svg
+          aria-hidden
+          viewBox="0 0 10 6"
+          className={`h-1.5 w-2.5 shrink-0 fill-current transition-transform ${open ? "rotate-180" : ""}`}
+        >
+          <path d="M0 0h10L5 6z" />
+        </svg>
+      </button>
+    </div>
   );
 }
 
