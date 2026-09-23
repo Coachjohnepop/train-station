@@ -2676,6 +2676,11 @@ html[data-free-ticket="open"] .landing-nav .theme-mode-toggle {
     left: 0;
     right: auto;
     width: 18rem;
+    visibility: hidden;
+  }
+
+  .member-nav-nutrition-panel[data-placed="1"] {
+    visibility: visible;
   }
 }
 

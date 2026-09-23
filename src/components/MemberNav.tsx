@@ -186,24 +186,25 @@ export default function MemberNav({
     };
   }, [moreOpen, nutritionOpen]);
 
+  function readNutritionMenu(): { left: number; top: number } | null {
+    const button = nutritionBtnRef.current;
+    const wrap = wrapRef.current;
+    if (!button || !wrap || window.innerWidth < 1024) return null;
+    const buttonBox = button.getBoundingClientRect();
+    const wrapBox = wrap.getBoundingClientRect();
+    return {
+      left: buttonBox.left - wrapBox.left,
+      top: buttonBox.bottom - wrapBox.top + 8,
+    };
+  }
+
   useEffect(() => {
     if (!nutritionOpen) {
       setNutritionMenu(null);
       return;
     }
     function place() {
-      const button = nutritionBtnRef.current;
-      const wrap = wrapRef.current;
-      if (!button || !wrap || window.innerWidth < 1024) {
-        setNutritionMenu(null);
-        return;
-      }
-      const buttonBox = button.getBoundingClientRect();
-      const wrapBox = wrap.getBoundingClientRect();
-      setNutritionMenu({
-        left: buttonBox.left - wrapBox.left,
-        top: buttonBox.bottom - wrapBox.top + 8,
-      });
+      setNutritionMenu(readNutritionMenu());
     }
     place();
     window.addEventListener("resize", place);
@@ -290,7 +291,14 @@ export default function MemberNav({
                 onClick={() => {
                   if (nutritionLocked) return;
                   setMoreOpen(false);
-                  setNutritionOpen((open) => !open);
+                  if (nutritionOpen) {
+                    setNutritionOpen(false);
+                    return;
+                  }
+                  // Measure before the panel paints. The CSS fallback is the
+                  // left edge, which sits under Today for one frame.
+                  setNutritionMenu(readNutritionMenu());
+                  setNutritionOpen(true);
                 }}
                 className={`member-nav-item relative flex min-h-10 flex-1 flex-col items-center justify-center rounded-lg px-1 py-1 text-center text-sm font-semibold leading-tight tracking-tight transition sm:text-base lg:min-h-[2.75rem] lg:flex-none lg:min-w-[4.75rem] lg:px-5 ${tabClass(
                   nutritionActive || nutritionOpen,
@@ -396,11 +404,12 @@ export default function MemberNav({
         })()}
       </nav>
 
-      {nutritionOpen && !nutritionLocked ? (
+      {nutritionOpen && !nutritionLocked && (nutritionMenu || (typeof window !== "undefined" && window.innerWidth < 1024)) ? (
         <div
           id="member-nav-nutrition-panel"
           className="member-nav-more-panel member-nav-nutrition-panel"
           aria-label={nutritionTabLabel}
+          data-placed={nutritionMenu ? "1" : undefined}
           style={
             nutritionMenu
               ? { left: nutritionMenu.left, top: nutritionMenu.top, right: "auto", width: "18rem" }
