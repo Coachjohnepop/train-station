@@ -64,11 +64,13 @@ export default function LandingConversion({
       return true;
     });
     window.setTimeout(() => {
+      const scroller = document.querySelector(".explore-feed-scroller");
+      if (scroller instanceof HTMLElement) scroller.scrollTop = 0;
       document.getElementById("explore-content")?.scrollIntoView({
         behavior: "smooth",
         block: "start",
       });
-    }, 60);
+    }, 520);
   }, []);
 
   const onExplore = useCallback(
@@ -125,25 +127,29 @@ export default function LandingConversion({
       />
       <div
         id="explore-content"
-        className={`grid scroll-mt-16 transition-[grid-template-rows] duration-500 ease-out ${
+        className={`grid scroll-mt-[4.75rem] transition-[grid-template-rows] duration-500 ease-out sm:scroll-mt-[5.25rem] ${
           exploreOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
         }`}
       >
-        <div className="overflow-hidden">
-          <div className="app-shell-bg">
+        <div className="min-h-0 overflow-hidden">
+          <div className="explore-feed-scroller">
             {welcomeVideoUrl?.trim() ? (
-              <div className="border-b border-[var(--border)] px-4 py-4 text-center">
-                <WelcomeVideoPopover
-                  welcomeVideoUrl={welcomeVideoUrl}
-                  buttonClassName="text-sm font-semibold text-[var(--accent-fg)] underline decoration-[var(--accent)]/40 underline-offset-4"
-                >
-                  Watch intro
-                </WelcomeVideoPopover>
+              <div className="sticky top-2 z-20 h-0">
+                <div className="flex justify-center">
+                  <WelcomeVideoPopover
+                    welcomeVideoUrl={welcomeVideoUrl}
+                    buttonClassName="rounded-full bg-black/55 px-3 py-1.5 text-sm font-semibold text-white underline decoration-white/40 underline-offset-4"
+                  >
+                    Watch intro
+                  </WelcomeVideoPopover>
+                </div>
               </div>
             ) : null}
-            <ComingSoonPrograms />
+            <ComingSoonPrograms feed />
             <LandingServicesSection />
-            <LandingSiteFooter />
+            <div className="explore-feed-card explore-feed-card--footer">
+              <LandingSiteFooter />
+            </div>
           </div>
         </div>
       </div>

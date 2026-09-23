@@ -2074,6 +2074,129 @@ body:has([data-admin-chrome]) [data-global-theme-toggle] {
   inset: 0;
 }
 
+/* Explore Content feed: one tall card per snap. Phone is full width. Wide screens cap the column. */
+.explore-feed-scroller {
+  --explore-feed-height: calc(100svh - 4.75rem);
+  --explore-feed-peek: 2.25rem;
+  height: var(--explore-feed-height);
+  overflow-x: hidden;
+  overflow-y: auto;
+  scroll-snap-type: y mandatory;
+  overscroll-behavior-y: auto;
+  background: var(--bg);
+}
+@media (min-width: 640px) {
+  .explore-feed-scroller {
+    --explore-feed-height: calc(100svh - 5.25rem);
+  }
+}
+.explore-feed-card {
+  display: flex;
+  font: inherit;
+  cursor: pointer;
+  flex-direction: column;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 42rem;
+  height: calc(var(--explore-feed-height) - var(--explore-feed-peek));
+  margin: 0 auto;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  overflow: hidden;
+  border: 0;
+  border-radius: 0;
+  background: var(--surface);
+  color: inherit;
+  text-align: left;
+  text-decoration: none;
+}
+@media (min-width: 768px) {
+  .explore-feed-card {
+    width: min(100% - 3rem, 42rem);
+    border: 1px solid var(--border);
+    border-radius: 1.5rem;
+  }
+}
+.explore-feed-media {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  background: #12081c;
+}
+.explore-feed-media img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+}
+.explore-feed-soon-mark {
+  display: flex;
+  height: 100%;
+  align-items: center;
+  justify-content: center;
+  background:
+    radial-gradient(ellipse at 50% 40%, rgba(124, 58, 237, 0.45), transparent 62%),
+    linear-gradient(180deg, #1a0b2e 0%, #0a0612 100%);
+  font-size: clamp(4.5rem, 22vw, 7.5rem);
+  line-height: 1;
+}
+.explore-feed-copy {
+  flex: 0 0 auto;
+  padding: 0.85rem 1.05rem 1rem;
+}
+.explore-feed-kicker {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #c4b5fd;
+}
+.explore-feed-title {
+  margin-top: 0.2rem;
+  font-size: 1.35rem;
+  font-weight: 600;
+  line-height: 1.15;
+  color: var(--text);
+}
+.explore-feed-blurb {
+  margin-top: 0.35rem;
+  font-size: 0.95rem;
+  line-height: 1.4;
+  color: var(--muted);
+}
+.explore-feed-cta {
+  display: inline-block;
+  margin-top: 0.6rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #ddd6fe;
+}
+@media (min-width: 768px) {
+  .explore-feed-title {
+    font-size: 1.7rem;
+  }
+  .explore-feed-blurb,
+  .explore-feed-cta {
+    font-size: 1.05rem;
+  }
+}
+.explore-feed-card--footer {
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+}
+@media (prefers-reduced-motion: reduce) {
+  .explore-feed-scroller {
+    scroll-snap-type: none;
+  }
+  .explore-feed-card {
+    scroll-snap-stop: normal;
+  }
+}
+
 /* See-inside tour — size to the slide, don’t leave a tall empty band on phones */
 .landing-see-inside__stage {
   position: relative;

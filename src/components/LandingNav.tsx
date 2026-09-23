@@ -84,7 +84,7 @@ export default function LandingNav({
     openLandingExplore();
     window.setTimeout(() => {
       document.querySelector(href)?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 80);
+    }, 560);
   }
 
   const isWelcome = variant === "welcome";

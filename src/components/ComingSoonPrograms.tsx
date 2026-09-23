@@ -5,15 +5,105 @@ import { COMING_SOON_PROGRAMS } from "@/lib/landing-tickets";
 import { resolveProgramImage } from "@/lib/program-constants";
 import { TOP_LEVEL_PROGRAMS } from "@/lib/programs";
 
+type LiveProgram = (typeof TOP_LEVEL_PROGRAMS)[number];
+
+function programHref(prog: LiveProgram) {
+  const isSoon = prog.catalogStatus === "coming_soon";
+  const isSpeaking = prog.slug === "speaking";
+  if (isSoon) return `/signup?interest=${encodeURIComponent(prog.slug)}`;
+  if (isSpeaking) return "/signup?plan=speaking_fee&quote=1";
+  return "/join#tickets";
+}
+
+function programCta(prog: LiveProgram) {
+  if (prog.catalogStatus === "coming_soon") return "Notify me →";
+  if (prog.slug === "speaking") return "Book speaking →";
+  return "Board this track →";
+}
+
 /**
  * Landing / join “Programs” section.
  * Live catalog first (Adult, Athletes, Military, Mom & Dads…), then waitlist tracks.
  * Top nav Programs → #programs (also accepts legacy #coming-soon-programs).
+ * `feed` is the Explore Content scroll: one tall card at a time.
  */
-export default function ComingSoonPrograms({ compact = false }: { compact?: boolean }) {
+export default function ComingSoonPrograms({
+  compact = false,
+  feed = false,
+}: {
+  compact?: boolean;
+  feed?: boolean;
+}) {
   const live = TOP_LEVEL_PROGRAMS.filter(
     (p) => p.catalogStatus === "live" || p.catalogStatus === "coming_soon",
   );
+
+  if (feed) {
+    return (
+      <>
+        {live.map((prog, index) => {
+          const img = resolveProgramImage(prog.slug);
+          const isSoon = prog.catalogStatus === "coming_soon";
+          const isSpeaking = prog.slug === "speaking";
+          const badge = isSoon ? "Soon" : isSpeaking ? "Available" : "Live";
+          return (
+            <Link
+              key={prog.slug}
+              id={index === 0 ? "programs" : undefined}
+              href={programHref(prog)}
+              className="explore-feed-card group"
+            >
+              <span className="explore-feed-media">
+                {img ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={img}
+                    alt={isSpeaking ? "Coach Jeremy speaking at a seminar" : ""}
+                  />
+                ) : null}
+                <span
+                  className={`absolute right-3 top-3 rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${
+                    isSoon
+                      ? "bg-[#7c3aed]/80 text-white"
+                      : "bg-emerald-500/85 text-[#042f1a]"
+                  }`}
+                >
+                  {badge}
+                </span>
+              </span>
+              <span className="explore-feed-copy">
+                <span className="explore-feed-kicker">On the platform</span>
+                <h3 className="explore-feed-title">{prog.name}</h3>
+                <p className="explore-feed-blurb">{prog.description}</p>
+                <span className="explore-feed-cta">{programCta(prog)}</span>
+              </span>
+            </Link>
+          );
+        })}
+        {COMING_SOON_PROGRAMS.map((prog, index) => (
+          <Link
+            key={prog.slug}
+            id={index === 0 ? "coming-soon-programs" : undefined}
+            href={`/signup?interest=${encodeURIComponent(prog.slug)}`}
+            className="explore-feed-card group"
+          >
+            <span className="explore-feed-media" aria-hidden>
+              <span className="explore-feed-soon-mark">{prog.emoji}</span>
+              <span className="absolute right-3 top-3 rounded-full bg-[#7c3aed]/80 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white">
+                Soon
+              </span>
+            </span>
+            <span className="explore-feed-copy">
+              <span className="explore-feed-kicker">Coming soon</span>
+              <h3 className="explore-feed-title">{prog.name}</h3>
+              <p className="explore-feed-blurb">{prog.blurb}</p>
+              <span className="explore-feed-cta">Notify me →</span>
+            </span>
+          </Link>
+        ))}
+      </>
+    );
+  }
 
   return (
     <section
@@ -42,16 +132,8 @@ export default function ComingSoonPrograms({ compact = false }: { compact?: bool
             const img = resolveProgramImage(prog.slug);
             const isSoon = prog.catalogStatus === "coming_soon";
             const isSpeaking = prog.slug === "speaking";
-            const href = isSoon
-              ? `/signup?interest=${encodeURIComponent(prog.slug)}`
-              : isSpeaking
-                ? `/signup?plan=speaking_fee&quote=1` // after account → /member/speaking intake
-                : "/join#tickets";
-            const cta = isSoon
-              ? "Notify me →"
-              : isSpeaking
-                ? "Book speaking →"
-                : "Board this track →";
+            const href = programHref(prog);
+            const cta = programCta(prog);
             const badge = isSoon ? "Soon" : isSpeaking ? "Available" : "Live";
             return (
               <Link

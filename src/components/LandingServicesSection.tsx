@@ -17,72 +17,55 @@ export default function LandingServicesSection({
     window.location.href = purchaseHref(plan, purchaseAuth, { quote });
   }
 
-  return (
-    <section id="services" className="scroll-mt-20 bg-[var(--bg)] px-3 py-10 sm:px-6 sm:py-12">
-      <div className="mx-auto max-w-4xl text-center">
-        <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-[#7c3aed]">
-          Services &amp; extras
-        </p>
-        <h2 className="mt-2 text-2xl font-semibold tracking-tight text-[var(--text)] sm:text-3xl">
-          Custom work beyond membership
-        </h2>
-        <p className="mx-auto mt-2 max-w-lg text-sm text-[var(--muted)]">
-          Teams, speaking, bespoke training, and merch — priced per scope or configured by your coach.
-        </p>
-      </div>
+  const altById: Record<string, string> = {
+    speaking_fee: "Coach Jeremy speaking at a seminar",
+    team_consultation: "Coach training a football team on the field",
+    custom_training: "Coach consulting with an athletic director while a volleyball team practices",
+    merchandise: "Affordable home gear — bands, dumbbells, bench, and simple kit",
+  };
 
-      <div className="mx-auto mt-8 grid max-w-4xl gap-3 sm:grid-cols-2">
-        {SERVICE_OFFERS.map((offer) => {
-          const img = resolveProgramImage(offer.id);
-          const isSpeaking = offer.id === "speaking_fee";
-          const altById: Record<string, string> = {
-            speaking_fee: "Coach Jeremy speaking at a seminar",
-            team_consultation: "Coach training a football team on the field",
-            custom_training: "Coach consulting with an athletic director while a volleyball team practices",
-            merchandise: "Affordable home gear — bands, dumbbells, bench, and simple kit",
-          };
-          return (
-            <button
-              key={offer.id}
-              type="button"
-              onClick={() => openOffer(offer.id)}
-              className="overflow-hidden rounded-xl border border-[var(--border)]/80 bg-gradient-to-b from-[#1a1028]/80 to-[#0a0612] text-left transition hover:border-[#7c3aed]/50"
-            >
+  return (
+    <>
+      {SERVICE_OFFERS.map((offer, index) => {
+        const img = resolveProgramImage(offer.id);
+        const isSpeaking = offer.id === "speaking_fee";
+        const cta = isSpeaking
+          ? "Book speaking →"
+          : offer.checkoutMode === "quote"
+            ? "Request quote →"
+            : "Learn more →";
+        return (
+          <button
+            key={offer.id}
+            id={index === 0 ? "services" : undefined}
+            type="button"
+            onClick={() => openOffer(offer.id)}
+            className="explore-feed-card"
+          >
+            <span className="explore-feed-media">
               {img ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={img}
-                  alt={altById[offer.id] || offer.label}
-                  className="aspect-[16/9] w-full object-cover object-center"
-                />
+                <img src={img} alt={altById[offer.id] || offer.label} />
               ) : null}
-              <div className="relative p-4">
-                {isSpeaking ? (
-                  <span className="absolute right-4 top-4 rounded-full bg-emerald-500/20 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-300">
-                    Available
-                  </span>
-                ) : null}
-                <div className="text-[10px] font-bold uppercase tracking-widest text-[#7c3aed]">
-                  {offer.category}
-                </div>
-                <div className="mt-1 pr-16 text-lg font-semibold text-[var(--text)]">{offer.label}</div>
-                <div className="mt-1 text-sm font-medium text-[var(--accent-fg)]">
-                  {offer.priceLabel}
-                  {offer.priceNote ? ` ${offer.priceNote}` : ""}
-                </div>
-                <p className="mt-2 text-xs leading-relaxed text-[var(--muted)]">{offer.description}</p>
-                <span className="mt-3 inline-block text-xs font-semibold text-[#7c3aed]">
-                  {isSpeaking
-                    ? "Book speaking →"
-                    : offer.checkoutMode === "quote"
-                      ? "Request quote →"
-                      : "Learn more →"}
+              {isSpeaking ? (
+                <span className="absolute right-3 top-3 rounded-full bg-emerald-500/85 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-[#042f1a]">
+                  Available
                 </span>
-              </div>
-            </button>
-          );
-        })}
-      </div>
-    </section>
+              ) : null}
+            </span>
+            <span className="explore-feed-copy">
+              <span className="explore-feed-kicker">Services &amp; extras</span>
+              <span className="explore-feed-title block">{offer.label}</span>
+              <span className="mt-1 block text-sm font-semibold text-[var(--accent-fg)]">
+                {offer.priceLabel}
+                {offer.priceNote ? ` ${offer.priceNote}` : ""}
+              </span>
+              <p className="explore-feed-blurb">{offer.description}</p>
+              <span className="explore-feed-cta">{cta}</span>
+            </span>
+          </button>
+        );
+      })}
+    </>
   );
 }
