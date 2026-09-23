@@ -213,7 +213,7 @@ function DaySummaryCard({
 
       {smsOverride && (
         <p className="text-xs text-amber-200">
-          <span className="font-bold uppercase tracking-wide">Class</span>
+          <span className="font-bold uppercase tracking-wide">Live</span>
           {" — "}
           coach set today&apos;s workout.
         </p>

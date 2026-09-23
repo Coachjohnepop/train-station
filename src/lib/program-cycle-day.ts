@@ -40,9 +40,9 @@ export function formatCycleDayFromWeekDay(weekNumber: number, dayNumber: number)
 }
 
 /** Member-facing mark when the coach replaced that day's program workout. */
-export const CLASS_DAY_MARK = "Class";
+export const CLASS_DAY_MARK = "Live";
 
-/** "M1D4" or "M1D4 · Class" */
+/** "M1D4" or "M1D4 · Live" */
 export function memberWorkoutDayLabel(
   weekNumber: number,
   dayNumber: number,

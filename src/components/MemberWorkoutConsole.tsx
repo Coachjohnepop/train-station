@@ -2753,7 +2753,7 @@ export default function MemberWorkoutConsole({
               null;
             const programName = scheduleLabel
               ?.replace(/\s*·\s*M\d+D\d+\s*/gi, " ")
-              .replace(/\s*·\s*Class\s*/gi, " ")
+              .replace(/\s*·\s*(?:Class|Live)\s*/gi, " ")
               .replace(/\s+/g, " ")
               .trim();
             return (
@@ -2764,7 +2764,7 @@ export default function MemberWorkoutConsole({
                       <p className="text-lg font-bold tabular-nums tracking-tight">{cycle}</p>
                       {classOverride ? (
                         <span className="rounded-full border border-amber-400/40 bg-amber-500/15 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-amber-200">
-                          Class
+                          Live
                         </span>
                       ) : customWorkout ? (
                         <span className="rounded-full border border-[#7c3aed]/40 bg-[#7c3aed]/15 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-[#c4b5fd]">
