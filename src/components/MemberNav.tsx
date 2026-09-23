@@ -74,7 +74,7 @@ const moreItems: NavItem[] = [
   },
   {
     href: "/member/byow",
-    label: "My notes",
+    label: "Build Your Own",
     match: (p: string) => p.startsWith("/member/byow"),
   },
   {

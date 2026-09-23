@@ -19,6 +19,25 @@ import { startHowItWorksVoice, stopHowItWorksVoice } from "@/lib/play-how-it-wor
 
 type Path = "today" | "own" | "jeremy" | null;
 
+type OwnMove = { id: string; name: string; sets: string; reps: string };
+
+function blankMove(): OwnMove {
+  return { id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`, name: "", sets: "3", reps: "10" };
+}
+
+function movesToNotes(moves: OwnMove[]): string {
+  const lines: string[] = [];
+  for (const move of moves) {
+    const name = move.name.trim();
+    if (!name) continue;
+    const sets = Math.min(20, Math.max(1, Number.parseInt(move.sets, 10) || 1));
+    const reps = move.reps.trim() || "10";
+    lines.push(name);
+    lines.push(/^\d+$/.test(reps) ? `${sets}x${reps}` : Array.from({ length: sets }, () => reps).join(","));
+  }
+  return lines.join("\n");
+}
+
 const PROGRAM_PREVIEW: HowItWorksStepId[] = ["workout", "program"];
 
 export default function LandingByowFork({
@@ -35,7 +54,7 @@ export default function LandingByowFork({
   const [mounted, setMounted] = useState(false);
   const [path, setPath] = useState<Path>(null);
   const [username, setUsername] = useState("");
-  const [rawText, setRawText] = useState("");
+  const [moves, setMoves] = useState<OwnMove[]>(() => [blankMove(), blankMove()]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [previewBeat, setPreviewBeat] = useState(0);
@@ -90,6 +109,12 @@ export default function LandingByowFork({
   async function start() {
     setBusy(true);
     setError("");
+    const notes = path === "own" ? movesToNotes(moves) : "";
+    if (path === "own" && !notes.trim()) {
+      setError("Add an exercise name.");
+      setBusy(false);
+      return;
+    }
     try {
       const res = await fetch("/api/byow/guest-start", {
         method: "POST",
@@ -97,7 +122,7 @@ export default function LandingByowFork({
         body: JSON.stringify({
           username: path === "own" ? username : undefined,
           path,
-          rawText: path === "own" ? rawText : undefined,
+          rawText: path === "own" ? notes : undefined,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -269,13 +294,93 @@ export default function LandingByowFork({
             <p className="text-center text-[11px] text-white/50">
               No email yet. 7 days on the console. We’ll ask for email later for a weekly recap.
             </p>
-            <textarea
-              required
-              value={rawText}
-              onChange={(e) => setRawText(e.target.value)}
-              placeholder={"Today’s workout — one move per line, sets/reps under it.\n\nAir Squats\n3x10\nRomanian Dead Lift\n3x8"}
-              className="min-h-40 w-full rounded-2xl border border-white/20 bg-white/10 p-3 text-sm text-white placeholder:text-white/35"
-            />
+            <div className="max-h-[46vh] space-y-2 overflow-y-auto pr-1">
+              {moves.map((move, index) => {
+                const setCount = Math.min(20, Math.max(1, Number.parseInt(move.sets, 10) || 1));
+                return (
+                  <div key={move.id} className="rounded-xl border border-white/15 bg-black/25 p-3">
+                    <input
+                      value={move.name}
+                      onChange={(e) =>
+                        setMoves((rows) =>
+                          rows.map((row) => (row.id === move.id ? { ...row, name: e.target.value } : row)),
+                        )
+                      }
+                      placeholder={index === 0 ? "Air Squats" : "Exercise"}
+                      aria-label={`Exercise ${index + 1}`}
+                      className="h-10 w-full rounded-lg border border-white/15 bg-white/10 px-3 text-sm font-semibold text-white placeholder:text-white/35"
+                    />
+                    <div className="member-exercise-spec mt-2 text-sm">
+                      <div className="member-exercise-spec__scheme">
+                        <div className="member-exercise-spec__row">
+                          <span className="member-exercise-spec__label">Prescription</span>
+                          <span className="member-exercise-spec__value font-medium">
+                            {setCount} × {move.reps.trim() || "10"}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="member-exercise-spec__sets">
+                        <div className="member-set-row">
+                          {Array.from({ length: setCount }, (_, setIndex) => (
+                            <span
+                              key={setIndex}
+                              className="member-set-btn text-xs py-0.5"
+                              aria-hidden
+                            >
+                              <span className="member-set-btn__num text-sm">{setIndex + 1}</span>
+                              <span className="member-set-btn__label">Set</span>
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-2 flex gap-2">
+                      <label className="text-[10px] font-semibold uppercase tracking-wide text-white/55">
+                        Sets
+                        <input
+                          inputMode="numeric"
+                          value={move.sets}
+                          onChange={(e) =>
+                            setMoves((rows) =>
+                              rows.map((row) => (row.id === move.id ? { ...row, sets: e.target.value } : row)),
+                            )
+                          }
+                          className="mt-1 h-9 w-16 rounded-lg border border-white/15 bg-white/10 px-2 text-sm font-semibold normal-case tracking-normal text-white"
+                        />
+                      </label>
+                      <label className="text-[10px] font-semibold uppercase tracking-wide text-white/55">
+                        Reps
+                        <input
+                          value={move.reps}
+                          onChange={(e) =>
+                            setMoves((rows) =>
+                              rows.map((row) => (row.id === move.id ? { ...row, reps: e.target.value } : row)),
+                            )
+                          }
+                          className="mt-1 h-9 w-20 rounded-lg border border-white/15 bg-white/10 px-2 text-sm font-semibold normal-case tracking-normal text-white"
+                        />
+                      </label>
+                      {moves.length > 1 ? (
+                        <button
+                          type="button"
+                          className="ml-auto self-end text-xs font-semibold text-white/50"
+                          onClick={() => setMoves((rows) => rows.filter((row) => row.id !== move.id))}
+                        >
+                          Remove
+                        </button>
+                      ) : null}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <button
+              type="button"
+              className="text-sm font-semibold text-white/80"
+              onClick={() => setMoves((rows) => [...rows, blankMove()])}
+            >
+              Add exercise
+            </button>
             {error ? <p className="text-center text-sm text-red-300">{error}</p> : null}
             <button
               type="submit"

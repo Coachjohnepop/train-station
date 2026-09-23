@@ -28,7 +28,7 @@ export default function ByowWeekReportCard({ report }: { report: ByowWeekReport 
         Check off a workout to log it. Report uses Monday–Sunday Pacific time.
       </p>
       <Link href="/member/byow" className="text-xs text-accent hover:underline">
-        Back to my notes
+        Back to Build Your Own
       </Link>
     </section>
   );

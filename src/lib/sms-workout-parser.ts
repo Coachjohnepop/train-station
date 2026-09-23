@@ -34,10 +34,12 @@ const EXERCISE_KEYWORDS =
 
 function isRepLine(line: string) {
   const cleaned = line.replace(/\s/g, "");
-  return REP_ONLY.test(cleaned) || /^\d+(?:,\d+)+\s*(each\s+arm)?$/i.test(line);
+  return REP_ONLY.test(cleaned) || /^\d+x\d+$/i.test(cleaned) || /^\d+(?:,\d+)+\s*(each\s+arm)?$/i.test(line);
 }
 
 function parseRepLine(line: string): { sets: number; reps: string; notes?: string } {
+  const times = line.replace(/\s/g, "").match(/^(\d+)x(\d+)$/i);
+  if (times) return { sets: Number(times[1]), reps: times[2] };
   const eachArm = /each\s+arm/i.test(line);
   const nums = line.match(/\d+/g)?.map(Number) || [];
   const notes = eachArm ? "Each arm" : undefined;

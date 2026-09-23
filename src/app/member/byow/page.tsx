@@ -24,7 +24,7 @@ export default async function MemberByowPage({
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-semibold">My notes workouts</h1>
+      <h1 className="text-xl font-semibold">Build Your Own</h1>
       <div className="flex gap-2">
         <Link
           href="/member/byow"

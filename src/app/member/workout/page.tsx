@@ -116,7 +116,7 @@ export default async function MemberWorkoutPage({ searchParams }: Props) {
   }
 
   const backHref = byow ? "/member/byow" : "/member/today";
-  const backLabel = byow ? "← My notes" : program ? "← Back to program" : "← Dashboard";
+  const backLabel = byow ? "← Build Your Own" : program ? "← Back to program" : "← Dashboard";
 
   // Location + current weather for the member (from onboarding cookies or DB)
   // Used to show in console and for instructor context. Also logged for historical reference.
