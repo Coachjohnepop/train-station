@@ -25,7 +25,7 @@ export default async function MemberNutritionPage({
         <Link href="/member/today" className="text-xs font-semibold text-[var(--accent)] hover:underline">
           ← Back to Today
         </Link>
-        <h1 className="mt-3 text-2xl font-bold">Ideas</h1>
+        <h1 className="mt-3 text-2xl font-bold">Meal Ideas</h1>
         {content.nutritionIntro ? (
           <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">{content.nutritionIntro}</p>
         ) : null}

@@ -2719,6 +2719,13 @@ html[data-free-ticket="open"] .landing-nav .theme-mode-toggle {
   box-shadow: 0 16px 40px color-mix(in srgb, #000 38%, transparent);
 }
 
+.nutrition-ideas-item[data-drop="down"] .nutrition-ideas-sub {
+  top: 100%;
+  left: 0.35rem;
+  right: 0.35rem;
+  width: auto;
+}
+
 @media (hover: hover) and (pointer: fine) {
   .nutrition-ideas-item:hover .nutrition-ideas-sub,
   .nutrition-ideas-item:focus-within .nutrition-ideas-sub {

@@ -136,6 +136,7 @@ export default function MemberNav({
   const [nutritionMenu, setNutritionMenu] = useState<{ left: number; top: number } | null>(null);
   const [scorePoints, setScorePoints] = useState<number | null>(null);
   const [dayCalories, setDayCalories] = useState<number | null>(null);
+  const [ideasDrop, setIdeasDrop] = useState<"right" | "down">("right");
   const [scorePulse, setScorePulse] = useState(false);
   const [textScale, setTextScale] = useState<MemberTextScale>("md");
 
@@ -231,6 +232,19 @@ export default function MemberNav({
     window.addEventListener("resize", place);
     return () => window.removeEventListener("resize", place);
   }, [nutritionOpen]);
+
+  useEffect(() => {
+    if (!nutritionOpen) return;
+    function placeIdeas() {
+      const panel = document.getElementById("member-nav-nutrition-panel");
+      if (!panel) return;
+      const right = panel.getBoundingClientRect().right;
+      setIdeasDrop(right + 232 > window.innerWidth ? "down" : "right");
+    }
+    placeIdeas();
+    window.addEventListener("resize", placeIdeas);
+    return () => window.removeEventListener("resize", placeIdeas);
+  }, [nutritionOpen, nutritionMenu]);
 
   useEffect(() => {
     function onScoreUpdated(e: Event) {
@@ -446,13 +460,13 @@ export default function MemberNav({
           >
             <span>Enter Your Eating</span>
           </Link>
-          <div className="nutrition-ideas-item">
+          <div className="nutrition-ideas-item" data-drop={ideasDrop}>
             <Link
               href="/member/nutrition"
               onClick={() => setNutritionOpen(false)}
               className="member-nav-more-link"
             >
-              <span>Ideas</span>
+              <span>Meal Ideas</span>
             </Link>
             <div className="nutrition-ideas-sub" role="menu" aria-label="Meal ideas">
               {nutritionMeals.map((meal) => (
