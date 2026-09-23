@@ -337,13 +337,11 @@ export default function MemberNav({
                   setNutritionMenu(readNutritionMenu());
                   setNutritionOpen(true);
                 }}
-                className={`member-nav-item relative flex min-h-10 flex-1 flex-col items-center justify-center rounded-lg px-1 py-1 text-center text-sm font-semibold leading-tight tracking-tight transition sm:text-base lg:min-h-[2.75rem] lg:flex-none lg:min-w-[4.75rem] lg:px-5 ${tabClass(
+                className={`member-nav-item member-nav-nutrition-tab relative flex min-h-10 flex-1 flex-row items-center justify-start gap-1 rounded-lg px-1.5 py-1 text-left text-sm font-semibold leading-tight tracking-tight transition sm:text-base lg:min-h-[2.75rem] lg:flex-none lg:min-w-[4.75rem] lg:px-3 ${tabClass(
                   nutritionActive || nutritionOpen,
                   false,
                 )} ${nutritionLocked ? "opacity-75" : ""}`}
               >
-                <span>{nutritionTabLabel}</span>
-                {nutritionLocked ? lockIcon() : null}
                 {dayCalories != null && dayCalories > 0 ? (
                   <span
                     className={`member-nav-score-badge${
@@ -355,6 +353,8 @@ export default function MemberNav({
                     {dayCalories}
                   </span>
                 ) : null}
+                <span>{nutritionTabLabel}</span>
+                {nutritionLocked ? lockIcon() : null}
               </button>
             </Fragment>
           );

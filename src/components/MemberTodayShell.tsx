@@ -37,7 +37,7 @@ import type {
   MaintainWorkoutCard,
 } from "@/lib/member-maintain-workouts";
 
-function ExpiredProgramBlockCard({ blockEndsAt }: { blockEndsAt: string }) {
+function ExpiredProgramBlockCard({ blockEndsAt: _blockEndsAt }: { blockEndsAt: string }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -65,26 +65,17 @@ function ExpiredProgramBlockCard({ blockEndsAt }: { blockEndsAt: string }) {
   }
 
   return (
-    <div className="rounded-xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm">
-      <p className="font-semibold text-amber-200">28-day block complete</p>
-      <p className="mt-1 text-[var(--muted)]">
-        Your last block ended {formatProgramStartOption(blockEndsAt)}. If your membership is
-        current, start the next 28 days.
-      </p>
-      <div className="mt-2 flex flex-wrap items-center gap-3">
-        <button
-          type="button"
-          className="btn-primary text-xs px-3 py-1.5"
-          disabled={busy}
-          onClick={() => void startNextBlock()}
-        >
-          {busy ? "Starting…" : "Start next 28-day block"}
-        </button>
-        <Link href="/member/account" className="text-xs text-accent hover:underline">
-          Account & billing →
-        </Link>
-      </div>
-      {error ? <p className="mt-2 text-xs text-rose-300">{error}</p> : null}
+    <div className="flex items-center justify-between gap-3 text-xs text-[var(--muted)]">
+      <span>Next workouts are ready.</span>
+      <button
+        type="button"
+        className="font-semibold text-[var(--text)] underline decoration-[var(--border)] underline-offset-2"
+        disabled={busy}
+        onClick={() => void startNextBlock()}
+      >
+        {busy ? "…" : "Continue"}
+      </button>
+      {error ? <span className="text-rose-300">{error}</span> : null}
     </div>
   );
 }
@@ -487,7 +478,7 @@ export default function MemberTodayShell({
   return (
     <div
       id="member-today-top"
-      className={`scroll-mt-4 min-w-0 space-y-4 overflow-x-clip ${todayGold ? "member-today-gold-shell" : ""}`}
+      className={`member-today-stack scroll-mt-4 min-w-0 space-y-4 overflow-x-clip ${todayGold ? "member-today-gold-shell" : ""}`}
       onTouchStart={onSwipeTouchStart}
       onTouchEnd={onSwipeTouchEnd}
     >
@@ -502,7 +493,7 @@ export default function MemberTodayShell({
               : programBlock.daysUntilStart > 1
                 ? ` — in ${programBlock.daysUntilStart} days.`
                 : "."}
-            {" "}Your full 28-day calendar is below; workouts unlock on start day.
+            {" "}Workouts unlock on start day.
           </p>
         </div>
       )}
@@ -692,7 +683,7 @@ export default function MemberTodayShell({
       {showFullWorkout && workout && (
         <div id="member-today-workout" className="min-w-0 touch-pan-y sm:mx-0">
           {programSlug === "adult" && (
-            <div className="mb-3 space-y-2 px-1">
+            <div className="mb-1 space-y-1 px-1 sm:mb-3 sm:space-y-2">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="text-xs text-[var(--muted)]">
                   {isLateCatchUp ? "Catch-up track" : "Today's track"}

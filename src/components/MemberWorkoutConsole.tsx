@@ -1,6 +1,28 @@
 "use client";
 
 import { useCallback, useMemo, useState, useEffect, useRef } from "react";
+
+function ExerciseBlurb({ text, className }: { text: string; className: string }) {
+  const [open, setOpen] = useState(false);
+  const long = text.trim().length > 110;
+  return (
+    <div>
+      <p className={`${className}${!open && long ? " line-clamp-3" : ""}`}>{text}</p>
+      {long ? (
+        <button
+          type="button"
+          className="mt-0.5 text-xs font-semibold text-accent"
+          onClick={(event) => {
+            event.stopPropagation();
+            setOpen((value) => !value);
+          }}
+        >
+          {open ? "less" : "more…"}
+        </button>
+      ) : null}
+    </div>
+  );
+}
 import Link from "next/link";
 import {
   approachLabel,
@@ -3033,23 +3055,25 @@ export default function MemberWorkoutConsole({
                 {(block.coachNotes || block.description) && (
                   <div className="member-exercise-note mt-2 space-y-1.5">
                     {block.coachNotes ? (
-                      <p className="rounded-md border border-violet-500/25 bg-violet-500/10 px-2.5 py-1.5 text-sm text-violet-100">
+                      <div className="rounded-md border border-violet-500/25 bg-violet-500/10 px-2.5 py-1.5 text-sm text-violet-100">
                         <span className="mr-1.5 text-[10px] font-semibold uppercase tracking-wide text-violet-300/90">
                           Coach
                         </span>
-                        {block.coachNotes}
-                      </p>
+                        <ExerciseBlurb text={block.coachNotes} className="mt-1 text-sm text-violet-100" />
+                      </div>
                     ) : block.description ? (
-                      <p className="text-sm text-[color-mix(in_srgb,var(--text)_82%,var(--muted))]">
-                        {block.description}
-                      </p>
+                      <ExerciseBlurb
+                        text={block.description}
+                        className="text-sm text-[color-mix(in_srgb,var(--text)_82%,var(--muted))]"
+                      />
                     ) : null}
                     {block.coachNotes &&
                     block.libraryDescription &&
                     block.libraryDescription !== block.coachNotes ? (
-                      <p className="text-sm text-[color-mix(in_srgb,var(--text)_78%,var(--muted))]">
-                        {block.libraryDescription}
-                      </p>
+                      <ExerciseBlurb
+                        text={block.libraryDescription}
+                        className="text-sm text-[color-mix(in_srgb,var(--text)_78%,var(--muted))]"
+                      />
                     ) : null}
                   </div>
                 )}

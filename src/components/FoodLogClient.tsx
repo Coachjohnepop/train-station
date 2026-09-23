@@ -268,7 +268,10 @@ export default function FoodLogClient() {
       </form>
 
       <section className="space-y-2">
-        <h2 className="text-lg font-semibold">Today</h2>
+        <div className="flex items-baseline gap-3">
+          <p className="text-3xl font-bold tabular-nums leading-none">{log?.dayCalories ?? 0}</p>
+          <h2 className="text-lg font-semibold">Today</h2>
+        </div>
         <FoodTable rows={today?.entries ?? []} onRemove={(id) => void remove(id)} busy={busy} />
       </section>
 
@@ -341,22 +344,18 @@ function FoodTable({
       <table className="w-full min-w-[36rem] text-left text-sm">
         <thead className="text-[10px] uppercase tracking-wide text-[var(--muted)]">
           <tr>
+            <th className="px-3 py-2 text-left font-semibold">Cal</th>
             <th className="px-3 py-2 font-semibold">Protein</th>
             <th className="px-3 py-2 font-semibold">Starch</th>
             <th className="px-3 py-2 font-semibold">Butter / oil</th>
             <th className="px-3 py-2 font-semibold">Other</th>
-            <th className="px-3 py-2 font-semibold">Cal</th>
             <th className="px-3 py-2" />
           </tr>
         </thead>
         <tbody>
           {rows.map((row) => (
             <tr key={row.id} className="border-t border-[var(--border)]">
-              <td className="px-3 py-2">{row.protein || "—"}</td>
-              <td className="px-3 py-2">{row.starch || "—"}</td>
-              <td className="px-3 py-2">{row.fat || "—"}</td>
-              <td className="px-3 py-2">{row.extras || "—"}</td>
-              <td className="px-3 py-2 tabular-nums font-semibold">
+              <td className="px-3 py-2 text-left tabular-nums font-semibold">
                 {row.calories}
                 {nutrientLine(row) ? (
                   <span className="mt-0.5 block text-[11px] font-normal normal-case text-[var(--muted)]">
@@ -364,6 +363,10 @@ function FoodTable({
                   </span>
                 ) : null}
               </td>
+              <td className="px-3 py-2">{row.protein || "—"}</td>
+              <td className="px-3 py-2">{row.starch || "—"}</td>
+              <td className="px-3 py-2">{row.fat || "—"}</td>
+              <td className="px-3 py-2">{row.extras || "—"}</td>
               <td className="px-3 py-2 text-right">
                 <button
                   type="button"

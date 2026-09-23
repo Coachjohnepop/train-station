@@ -314,9 +314,9 @@ export default async function MemberTodayPage({ searchParams }: Props) {
       ? `Coach workout scheduled — ${scheduledLabel}`
       : `Today's coach workout — ${scheduledLabel}`
     : programBlock?.status === "pending"
-      ? `Your 28-day program starts ${formatProgramStartOption(programBlock.programStartDate)}`
+      ? `Starts ${formatProgramStartOption(programBlock.programStartDate)}`
       : programBlock?.status === "expired"
-        ? "Your 28-day block has ended — start the next one"
+        ? ""
         : source === "program"
           ? `Program schedule — ${scheduleLabel}`
           : schedulePreview

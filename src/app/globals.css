@@ -901,6 +901,27 @@ table.data.table-sticky-actions td:last-child {
   transition: box-shadow 0.15s, border-color 0.15s;
 }
 
+@media (max-width: 767px) {
+  .member-today-stack.space-y-4 > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 0.3rem;
+  }
+
+  .member-active-card {
+    padding: 0.45rem 0.55rem;
+  }
+
+  .member-exercise-note,
+  .member-exercise-video,
+  .member-exercise-spec {
+    margin-top: 0.3rem;
+  }
+
+  .member-workout-console {
+    padding-top: 0.15rem;
+    padding-bottom: 0.25rem;
+  }
+}
+
 .member-active-card:hover {
   border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
 }
