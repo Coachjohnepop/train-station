@@ -10,6 +10,8 @@ import {
 import { warmupPinnedOrderedIds } from "@/lib/warmup-group";
 import { randomUUID } from "crypto";
 import type { SmsWorkoutStore } from "@/lib/sms-workouts-types";
+import { isDemoMode } from "@/lib/demo-enrollments";
+import { prisma } from "@/lib/prisma";
 
 function pinSmsStoreExercises(
   store: SmsWorkoutStore,
@@ -253,10 +255,48 @@ export async function patchSmsWorkoutExercise(
     reps?: string | null;
     sets?: number | null;
     weightTier?: string;
+    restSec?: number | null;
     notes?: string | null;
+    approachCue?: string | null;
+    approachId?: string | null;
     sortOrder?: number;
   },
 ): Promise<BuilderWorkoutItem | null> {
+  // One row. Rewriting the whole SMS catalog raced when several sets saved
+  // at once: the write stuck, then the read-back check returned an error.
+  if (!isDemoMode()) {
+    const existing = await prisma.workoutExercise.findFirst({
+      where: { id: itemId, workoutId },
+      select: { id: true },
+    });
+    if (!existing) return null;
+    const updated = await prisma.workoutExercise.update({
+      where: { id: itemId },
+      data: {
+        ...(data.exerciseId !== undefined ? { exerciseId: data.exerciseId } : {}),
+        ...(data.setScheme !== undefined ? { setScheme: data.setScheme } : {}),
+        ...(data.repPattern !== undefined ? { repPattern: data.repPattern } : {}),
+        ...(data.reps !== undefined ? { reps: data.reps } : {}),
+        ...(data.sets !== undefined ? { sets: data.sets } : {}),
+        ...(data.weightTier !== undefined ? { weightTier: data.weightTier } : {}),
+        ...(data.restSec !== undefined ? { restSec: data.restSec } : {}),
+        ...(data.notes !== undefined ? { notes: data.notes } : {}),
+        ...(data.approachCue !== undefined ? { approachCue: data.approachCue } : {}),
+        ...(data.approachId !== undefined ? { approachId: data.approachId } : {}),
+        ...(data.sortOrder !== undefined ? { sortOrder: data.sortOrder } : {}),
+      },
+      include: { exercise: true },
+    });
+    await prisma.workout.update({
+      where: { id: workoutId },
+      data: { updatedAt: new Date() },
+    });
+    return itemToBuilder(
+      updated,
+      toBuilderExercise(updated.exercise),
+    );
+  }
+
   await hydrateSmsWorkouts();
   const store = readSmsWorkoutStore();
   const idx = store.workoutExercises.findIndex((we) => we.id === itemId && we.workoutId === workoutId);
