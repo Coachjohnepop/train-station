@@ -490,15 +490,14 @@ export default function MemberChatWorkspace({
 
       {/* Soft tip entry — never mid-workout; gratitude moment near coach 1:1 */}
       {activeReplyThread?.kind === "member" && !asCoach ? (
-        <p className="px-1 text-center text-[11px] text-[var(--muted)]">
-          Grateful for coaching?{" "}
+        <p className="truncate whitespace-nowrap px-1 text-center text-[11px] text-[var(--muted)]">
+          learning something?{" "}
           <Link
             href="/member/account#tip-coach"
             className="font-medium text-accent hover:underline"
           >
             Tip Coach Jeremy
-          </Link>{" "}
-          (optional · Account)
+          </Link>
         </p>
       ) : null}
     </div>
