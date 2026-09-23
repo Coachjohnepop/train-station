@@ -190,7 +190,17 @@ export default function LandingHero({
     <>
       Still here?
       <br />
-      <span className="landing-hero-accent">Pick a seat.</span>
+      <Link
+        href={JOIN_TICKETS_HREF}
+        data-analytics-action="hero-pick-a-seat"
+        onClick={(e) => {
+          markLandingConverted();
+          fireLandingJoinHook(e.currentTarget);
+        }}
+        className="landing-hero-accent landing-hero-seat-link"
+      >
+        Pick a seat.
+      </Link>
     </>
   ) : canRotateCopy ? (
     ROTATING[phraseTick % ROTATING.length]
@@ -339,9 +349,17 @@ export default function LandingHero({
               {returnMode ? (
                 <>
                   You already found us.
-                  <span className="mt-1 block font-medium text-white/72 sm:mt-0 sm:inline sm:before:content-['\00a0']">
+                  <Link
+                    href={JOIN_TICKETS_HREF}
+                    data-analytics-action="hero-board-in-one-tap"
+                    onClick={(e) => {
+                      markLandingConverted();
+                      fireLandingJoinHook(e.currentTarget);
+                    }}
+                    className="landing-hero-seat-link mt-1 block font-medium text-white/72 sm:mt-0 sm:inline sm:before:content-['\00a0']"
+                  >
                     Board in one tap.
-                  </span>
+                  </Link>
                 </>
               ) : (
                 <>

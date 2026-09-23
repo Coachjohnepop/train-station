@@ -1672,6 +1672,19 @@ body:has([data-admin-chrome]) [data-global-theme-toggle] {
 }
 
 /* Rotating 3rd word (Goals / Fire / Purpose / Passion) — soft white edge so it pops on photo */
+/* Gradient text clips a normal underline, so the seat line uses a border. */
+.landing-hero-seat-link {
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: rgba(255, 255, 255, 0.8);
+  text-decoration-thickness: 0.08em;
+  text-underline-offset: 0.16em;
+}
+.landing-hero-accent.landing-hero-seat-link {
+  text-decoration: none;
+  border-bottom: 0.045em solid rgba(255, 255, 255, 0.85);
+}
+
 .landing-hero-accent {
   background: linear-gradient(135deg, #faf5ff 0%, #e9d5ff 25%, #c4b5fd 55%, #a78bfa 100%);
   -webkit-background-clip: text;
