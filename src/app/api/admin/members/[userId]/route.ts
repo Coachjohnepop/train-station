@@ -18,6 +18,7 @@ import {
 } from "@/lib/onboard-path";
 import { formatPhoneInputValue } from "@/lib/sms-phone";
 import { setUserUsername } from "@/lib/byow-guest";
+import { calorieThresholdsAreSet } from "@/lib/food-log";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -161,14 +162,31 @@ export async function PATCH(request: Request, { params }: Params) {
     const min = body.calorieMin ?? null;
     const rangeMax = body.calorieRangeMax ?? null;
     const hardMax = body.calorieHardMax ?? null;
+    const existingProfile = await getMemberProfile(userId);
+    const intakeSigned = Boolean(existingProfile?.coachIntakeCompleteAt);
+    if (intakeSigned && !calorieThresholdsAreSet(min, rangeMax, hardMax)) {
+      return NextResponse.json(
+        {
+          error:
+            "After the intro, keep a minimum, range top, and hard total. Change the numbers anytime — don't clear them.",
+        },
+        { status: 400 },
+      );
+    }
     const setCount = [min, rangeMax, hardMax].filter((value) => value != null).length;
-    if (setCount !== 0 && setCount !== 3) {
+    if (!intakeSigned && setCount !== 0 && setCount !== 3) {
       return NextResponse.json(
         { error: "Set the calorie minimum, range, and hard total together." },
         { status: 400 },
       );
     }
-    if (min != null && rangeMax != null && hardMax != null && !(min < rangeMax && rangeMax < hardMax)) {
+    if (
+      !intakeSigned &&
+      min != null &&
+      rangeMax != null &&
+      hardMax != null &&
+      !calorieThresholdsAreSet(min, rangeMax, hardMax)
+    ) {
       return NextResponse.json(
         { error: "Calorie minimum must be below the range, and the range below the hard total." },
         { status: 400 },

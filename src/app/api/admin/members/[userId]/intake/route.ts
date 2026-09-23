@@ -3,6 +3,7 @@ import { getSessionUser, isStaffRole } from "@/lib/auth";
 import { getMemberProfile, updateMemberProfile } from "@/lib/member-profiles-store";
 import { awardGamificationPoints } from "@/lib/member-gamification-store";
 import { getUserEnrollments } from "@/lib/data/user-data";
+import { calorieThresholdsAreSet } from "@/lib/food-log";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +23,17 @@ export async function POST(_request: Request, { params }: Params) {
   const existing = await getMemberProfile(userId);
   if (!existing) {
     return NextResponse.json({ error: "Member profile not found." }, { status: 404 });
+  }
+  if (
+    !calorieThresholdsAreSet(existing.calorieMin, existing.calorieRangeMax, existing.calorieHardMax)
+  ) {
+    return NextResponse.json(
+      {
+        error:
+          "Set the daily calorie minimum, range top, and hard total before signing off the 15-minute intro.",
+      },
+      { status: 400 },
+    );
   }
 
   const completedAt = new Date().toISOString();

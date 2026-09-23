@@ -4,6 +4,7 @@ import { getSessionUser, isStaffRole } from "@/lib/auth";
 import { listSelfRegisteredAccounts } from "@/lib/member-accounts-store";
 import { listMemberProfiles } from "@/lib/member-profiles-store";
 import { signupPlanLabel } from "@/lib/signup-plans";
+import { calorieThresholdsAreSet } from "@/lib/food-log";
 import { sortBusinessUpgradeQueue } from "@/lib/business-upgrade";
 import {
   onboardGenderLabel,
@@ -93,6 +94,11 @@ export async function GET() {
       createdAt: account.createdAt,
       completedAt: profile?.completedAt ?? null,
       coachIntakeCompleteAt: profile?.coachIntakeCompleteAt ?? null,
+      calorieThresholdsReady: calorieThresholdsAreSet(
+        profile?.calorieMin,
+        profile?.calorieRangeMax,
+        profile?.calorieHardMax,
+      ),
       introBookedAt: profile?.introBookedAt ?? null,
       coachMeetingRequestedAt: profile?.coachMeetingRequestedAt ?? null,
       coachMeetingRequestNote: profile?.coachMeetingRequestNote ?? null,

@@ -4,6 +4,7 @@ import { listSelfRegisteredAccounts } from "@/lib/member-accounts-store";
 import { listMemberProfiles } from "@/lib/member-profiles-store";
 import { signupPlanLabel } from "@/lib/signup-plans";
 import { isCoachQueueNoise } from "@/lib/coach-queue-noise";
+import { calorieThresholdsAreSet } from "@/lib/food-log";
 
 export { isCoachQueueNoise };
 
@@ -19,6 +20,7 @@ export type CoachQueueItem = {
   reason: string;
   action: QueueAction;
   meetingNote: string | null;
+  calorieThresholdsReady: boolean;
 };
 
 function isPaidPlan(plan: string): boolean {
@@ -54,6 +56,11 @@ export async function listCoachQueueItems(): Promise<CoachQueueItem[]> {
       plan: profile.plan,
       planLabel: signupPlanLabel(profile.plan),
       meetingNote: profile.coachMeetingRequestNote ?? null,
+      calorieThresholdsReady: calorieThresholdsAreSet(
+        profile.calorieMin,
+        profile.calorieRangeMax,
+        profile.calorieHardMax,
+      ),
     };
 
     if (profile.approvalStatus === "pending" && profile.onboardingComplete) {
@@ -71,7 +78,13 @@ export async function listCoachQueueItems(): Promise<CoachQueueItem[]> {
     }
 
     if (profile.onboardingComplete && !profile.coachIntakeCompleteAt) {
-      queue.push({ ...base, reason: "Needs intake sign-off", action: "intake" });
+      queue.push({
+        ...base,
+        reason: base.calorieThresholdsReady
+          ? "Needs intake sign-off"
+          : "15-min intro — set calorie thresholds",
+        action: "intake",
+      });
       continue;
     }
 

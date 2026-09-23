@@ -222,22 +222,49 @@ export default function AdminMemberCard({ userId }: { userId: string }) {
       }),
     });
     const data = await res.json().catch(() => ({}));
+    setSaving(false);
     if (!res.ok) {
       setError(data.error || "Could not save member card.");
-    } else {
-      const next = data as CardPayload;
-      setCard(next);
-      setForm(formFromCard(next));
-      setSavedAt(new Date().toISOString());
-      setSaveFlash((n) => n + 1);
+      return false;
     }
-    setSaving(false);
+    const next = data as CardPayload;
+    setCard(next);
+    setForm(formFromCard(next));
+    setSavedAt(new Date().toISOString());
+    setSaveFlash((n) => n + 1);
+    return true;
   }, [form, userId]);
 
+  function calorieThresholdsReady() {
+    const min = Number(form.calorieMin);
+    const rangeMax = Number(form.calorieRangeMax);
+    const hardMax = Number(form.calorieHardMax);
+    return (
+      form.calorieMin.trim() !== "" &&
+      form.calorieRangeMax.trim() !== "" &&
+      form.calorieHardMax.trim() !== "" &&
+      min < rangeMax &&
+      rangeMax < hardMax
+    );
+  }
+
   async function signOffIntake() {
+    if (!calorieThresholdsReady()) {
+      setError(
+        "Set the daily calorie minimum, range top, and hard total before signing off the 15-minute intro.",
+      );
+      return;
+    }
     setIntakeSigning(true);
-    setError("");
-    if (dirty) await saveCard();
+    if (dirty) {
+      const saved = await saveCard();
+      if (!saved) {
+        setIntakeSigning(false);
+        return;
+      }
+    } else {
+      setError("");
+    }
     const res = await fetch(`/api/admin/members/${encodeURIComponent(userId)}/intake`, {
       method: "POST",
     });
@@ -652,36 +679,6 @@ export default function AdminMemberCard({ userId }: { userId: string }) {
                     />
                   ) : null}
                 </Field>
-                <Field label="Daily calorie minimum">
-                  <input
-                    className={inputClass}
-                    inputMode="numeric"
-                    value={form.calorieMin}
-                    onChange={(e) => patchForm("calorieMin", e.target.value.replace(/[^\d]/g, ""))}
-                    placeholder="1200"
-                  />
-                </Field>
-                <Field label="Daily calorie range top">
-                  <input
-                    className={inputClass}
-                    inputMode="numeric"
-                    value={form.calorieRangeMax}
-                    onChange={(e) => patchForm("calorieRangeMax", e.target.value.replace(/[^\d]/g, ""))}
-                    placeholder="1800"
-                  />
-                </Field>
-                <Field label="Daily calorie hard total">
-                  <input
-                    className={inputClass}
-                    inputMode="numeric"
-                    value={form.calorieHardMax}
-                    onChange={(e) => patchForm("calorieHardMax", e.target.value.replace(/[^\d]/g, ""))}
-                    placeholder="2200"
-                  />
-                </Field>
-                <p className="text-xs text-[var(--muted)]">
-                  Under the minimum the Nutrition number keeps a gold outline. Through the range top it is emerald. Over that, deep orange. Past the hard total, red.
-                </p>
                 <Field label="Fat-loss target">
                   <input
                     className={inputClass}
@@ -705,6 +702,61 @@ export default function AdminMemberCard({ userId }: { userId: string }) {
                   </select>
                 </Field>
               </div>
+            </div>
+
+            <div
+              className={`rounded-xl border p-4 ${
+                !intakeDone && !calorieThresholdsReady()
+                  ? "border-amber-400/50"
+                  : "border-[var(--border)]"
+              }`}
+            >
+              <h2 className="mb-1 text-[10px] font-semibold uppercase tracking-[0.28em] text-[var(--ramp-gold-light)]">
+                Calorie thresholds
+              </h2>
+              <p className="mb-3 text-xs text-[var(--muted)]">
+                Set these on the 15-minute intro. Save anytime after to change them. Under the minimum the Nutrition number keeps a gold outline. Through the range top it is emerald. Over that, deep orange. Past the hard total, red.
+              </p>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <Field label="Daily minimum">
+                  <input
+                    className={inputClass}
+                    inputMode="numeric"
+                    value={form.calorieMin}
+                    onChange={(e) => patchForm("calorieMin", e.target.value.replace(/[^\d]/g, ""))}
+                    placeholder="1200"
+                  />
+                </Field>
+                <Field label="Range top">
+                  <input
+                    className={inputClass}
+                    inputMode="numeric"
+                    value={form.calorieRangeMax}
+                    onChange={(e) => patchForm("calorieRangeMax", e.target.value.replace(/[^\d]/g, ""))}
+                    placeholder="1800"
+                  />
+                </Field>
+                <Field label="Hard total">
+                  <input
+                    className={inputClass}
+                    inputMode="numeric"
+                    value={form.calorieHardMax}
+                    onChange={(e) => patchForm("calorieHardMax", e.target.value.replace(/[^\d]/g, ""))}
+                    placeholder="2200"
+                  />
+                </Field>
+              </div>
+              {!calorieThresholdsReady() ? (
+                <p className="mt-2 text-xs text-amber-300">
+                  {form.calorieMin || form.calorieRangeMax || form.calorieHardMax
+                    ? "Minimum, then range top, then hard total — each number higher than the one before."
+                    : "Required on the 15-minute intro. Save still changes them later."}
+                </p>
+              ) : !intakeDone ? (
+                <p className="mt-2 text-xs text-emerald-300">
+                  Ready to sign off. Save anytime after to change them.
+                </p>
+              ) : null}
             </div>
 
             <div>
@@ -750,8 +802,13 @@ export default function AdminMemberCard({ userId }: { userId: string }) {
               <button
                 type="button"
                 onClick={() => void signOffIntake()}
-                disabled={intakeSigning}
-                className="btn-ghost text-xs px-4 py-2 ring-1 ring-sky-500/40 text-sky-300"
+                disabled={intakeSigning || !calorieThresholdsReady()}
+                title={
+                  calorieThresholdsReady()
+                    ? "Sign off the 15-minute intro"
+                    : "Set calorie thresholds first"
+                }
+                className="btn-ghost text-xs px-4 py-2 ring-1 ring-sky-500/40 text-sky-300 disabled:opacity-50"
               >
                 {intakeSigning ? "…" : "Sign off intake"}
               </button>

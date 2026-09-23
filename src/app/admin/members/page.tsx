@@ -52,6 +52,7 @@ type MemberRow = {
   createdAt: string;
   completedAt: string | null;
   coachIntakeCompleteAt: string | null;
+  calorieThresholdsReady?: boolean;
   introBookedAt: string | null;
   coachMeetingRequestedAt: string | null;
   coachMeetingRequestNote: string | null;
@@ -504,7 +505,8 @@ export default function AdminMembersPage() {
           <p className="text-sm text-[var(--muted)]">
             Self-registered ticket signups — open a{" "}
             <strong className="font-semibold text-[var(--text)]">member card</strong> during the
-            15-minute intro to capture phone, goals, and notes. Approve, mark paid, or{" "}
+            15-minute intro to capture phone, goals, calorie thresholds, and notes. Approve, mark
+            paid, or{" "}
             <strong className="font-semibold text-[var(--text)]">Staff grant</strong> a tier
             (Coach / Business / 1st Class) without Stripe. Staff grants need reapproval each{" "}
             <strong className="font-semibold text-[var(--text)]">1st of the month</strong> (you +
@@ -879,8 +881,13 @@ export default function AdminMembersPage() {
                         <button
                           type="button"
                           onClick={() => void completeIntake(member.userId)}
-                          disabled={intakeSigning === member.userId}
-                          className="btn-ghost text-xs px-3 py-1.5 ring-1 ring-sky-500/40 text-sky-300"
+                          disabled={intakeSigning === member.userId || !member.calorieThresholdsReady}
+                          title={
+                            member.calorieThresholdsReady
+                              ? "Sign off the 15-minute intro"
+                              : "Open the member card and set calorie thresholds first"
+                          }
+                          className="btn-ghost text-xs px-3 py-1.5 ring-1 ring-sky-500/40 text-sky-300 disabled:opacity-50"
                         >
                           {intakeSigning === member.userId ? "…" : "Sign off intake"}
                         </button>

@@ -68,6 +68,24 @@ export type CalorieThresholds = {
   hardMax: number;
 };
 
+/** All three set, and minimum < range top < hard total. */
+export function calorieThresholdsAreSet(
+  min: number | null | undefined,
+  rangeMax: number | null | undefined,
+  hardMax: number | null | undefined,
+): boolean {
+  return (
+    typeof min === "number" &&
+    typeof rangeMax === "number" &&
+    typeof hardMax === "number" &&
+    Number.isFinite(min) &&
+    Number.isFinite(rangeMax) &&
+    Number.isFinite(hardMax) &&
+    min < rangeMax &&
+    rangeMax < hardMax
+  );
+}
+
 /** Gold outline, emerald range, deep orange, then red past the hard total. */
 export function calorieBand(
   calories: number,

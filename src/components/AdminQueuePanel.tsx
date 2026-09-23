@@ -18,6 +18,7 @@ type QueueItem = {
   reason: string;
   action: QueueAction;
   meetingNote: string | null;
+  calorieThresholdsReady?: boolean;
 };
 
 export default function AdminQueuePanel() {
@@ -162,8 +163,13 @@ export default function AdminQueuePanel() {
             <button
               type="button"
               onClick={() => void completeIntake(item.userId)}
-              disabled={intakeSigning === item.userId}
-              className="btn-ghost text-xs px-3 py-1.5 ring-1 ring-sky-500/40 text-sky-300"
+              disabled={intakeSigning === item.userId || !item.calorieThresholdsReady}
+              title={
+                item.calorieThresholdsReady
+                  ? "Sign off the 15-minute intro"
+                  : "Open the member card and set calorie thresholds first"
+              }
+              className="btn-ghost text-xs px-3 py-1.5 ring-1 ring-sky-500/40 text-sky-300 disabled:opacity-50"
             >
               {intakeSigning === item.userId ? "…" : "Accept intake"}
             </button>
