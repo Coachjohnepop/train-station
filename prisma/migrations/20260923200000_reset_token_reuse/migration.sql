@@ -1,0 +1,1 @@
+ALTER TABLE "PasswordResetToken" ADD COLUMN IF NOT EXISTS "rawToken" TEXT;

@@ -918,6 +918,9 @@ model OAuthIdentity {
 model PasswordResetToken {
   tokenHash String   @id
   email     String
+  /// Same secret that was emailed, so a second request can resend this link
+  /// instead of minting a new one and killing the first.
+  rawToken  String?
   expiresAt DateTime
   createdAt DateTime @default(now())
 

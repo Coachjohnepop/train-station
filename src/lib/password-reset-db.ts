@@ -3,22 +3,33 @@ import "server-only";
 import type { StoredResetToken } from "@/lib/password-reset-types";
 import { prisma } from "@/lib/prisma";
 
+export async function findLivePasswordResetRawToken(email: string): Promise<string | null> {
+  const row = await prisma.passwordResetToken.findFirst({
+    where: {
+      email,
+      expiresAt: { gt: new Date() },
+      rawToken: { not: null },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+  return row?.rawToken ?? null;
+}
+
 export async function issuePasswordResetTokenToDb(
   email: string,
   tokenHash: string,
   entry: StoredResetToken,
+  rawToken: string,
 ): Promise<void> {
-  await prisma.$transaction([
-    prisma.passwordResetToken.deleteMany({ where: { email } }),
-    prisma.passwordResetToken.create({
-      data: {
-        tokenHash,
-        email,
-        expiresAt: new Date(entry.expiresAt),
-        createdAt: new Date(entry.createdAt),
-      },
-    }),
-  ]);
+  await prisma.passwordResetToken.create({
+    data: {
+      tokenHash,
+      email,
+      rawToken,
+      expiresAt: new Date(entry.expiresAt),
+      createdAt: new Date(entry.createdAt),
+    },
+  });
 }
 
 export async function lookupPasswordResetTokenFromDb(

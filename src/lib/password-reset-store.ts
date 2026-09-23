@@ -11,6 +11,7 @@ import {
 import { hydrateJsonStore, persistJsonStore } from "@/lib/demo-json-blob";
 import { isDemoMode } from "@/lib/demo-enrollments";
 import {
+  findLivePasswordResetRawToken,
   issuePasswordResetTokenToDb,
   lookupPasswordResetTokenFromDb,
   revokePasswordResetTokenFromDb,
@@ -63,6 +64,19 @@ async function saveStore(store: ResetStore): Promise<{ blobSaved: boolean }> {
   });
 }
 
+function liveRawTokenInStore(store: ResetStore, email: string): string | null {
+  const now = Date.now();
+  let found: { raw: string; createdAt: string } | null = null;
+  for (const existing of Object.values(store)) {
+    if (existing.email !== email || !existing.rawToken) continue;
+    if (new Date(existing.expiresAt).getTime() <= now) continue;
+    if (!found || existing.createdAt > found.createdAt) {
+      found = { raw: existing.rawToken, createdAt: existing.createdAt };
+    }
+  }
+  return found?.raw ?? null;
+}
+
 async function upsertTokenForEmailInBlob(
   email: string,
   key: string,
@@ -74,9 +88,8 @@ async function upsertTokenForEmailInBlob(
     const next: ResetStore = { ...latest };
 
     for (const [existingKey, existing] of Object.entries(next)) {
-      if (existing.email === email) {
-        delete next[existingKey];
-      }
+      if (existing.email !== email) continue;
+      if (new Date(existing.expiresAt).getTime() <= Date.now()) delete next[existingKey];
     }
 
     next[key] = entry;
@@ -102,9 +115,27 @@ async function mirrorTokenToDb(
   email: string,
   key: string,
   entry: StoredResetToken,
+  rawToken: string,
 ): Promise<void> {
   if (!writesToDatabase(STORE_KEY) || isDemoMode()) return;
-  await issuePasswordResetTokenToDb(email, key, entry);
+  await issuePasswordResetTokenToDb(email, key, entry, rawToken);
+}
+
+/** The link already emailed, if it is still inside the hour. */
+export async function findLivePasswordResetToken(email: string): Promise<string | null> {
+  if (!isDemoMode() && readsFromDatabase(STORE_KEY)) {
+    try {
+      const fromDb = await findLivePasswordResetRawToken(email);
+      if (fromDb) return fromDb;
+      if (!blobReadFallbackEnabled(STORE_KEY)) return null;
+    } catch (error) {
+      if (!blobReadFallbackEnabled(STORE_KEY)) throw error;
+      console.warn("[migration] password-reset live lookup failed, falling back to blob", error);
+    }
+  }
+
+  const store = await getStore({ preferFresh: true });
+  return liveRawTokenInStore(store, email);
 }
 
 export async function issuePasswordResetToken(
@@ -115,6 +146,7 @@ export async function issuePasswordResetToken(
   const now = Date.now();
   const entry: StoredResetToken = {
     email,
+    rawToken: token,
     createdAt: new Date(now).toISOString(),
     expiresAt: new Date(now + TOKEN_TTL_MS).toISOString(),
   };
@@ -132,7 +164,7 @@ export async function issuePasswordResetToken(
 
   if (writesToDatabase(STORE_KEY) && !isDemoMode()) {
     try {
-      await mirrorTokenToDb(email, key, entry);
+      await mirrorTokenToDb(email, key, entry, token);
       if (!writesToBlob(STORE_KEY)) {
         persisted = true;
       }
@@ -178,7 +210,11 @@ export async function lookupPasswordResetToken(
     }
     return null;
   }
-  return entry;
+  return {
+    email: entry.email,
+    expiresAt: entry.expiresAt,
+    createdAt: entry.createdAt,
+  };
 }
 
 export async function revokePasswordResetToken(token: string): Promise<void> {

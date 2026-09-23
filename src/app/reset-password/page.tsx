@@ -40,8 +40,16 @@ export default async function ResetPasswordPage({
         <Suspense fallback={<div className="card text-sm text-[var(--muted)]">Loading…</div>}>
           {requesting ? (
             <ResetPasswordRequestForm initialEmail={accountEmail || ""} />
-          ) : (
+          ) : tokenEntry ? (
             <ResetPasswordForm token={token} accountEmail={accountEmail} />
+          ) : (
+            <div className="card space-y-3 text-sm text-[var(--muted)]">
+              <p>This reset link is invalid or has expired.</p>
+              <p>If you still have the first email and it is less than an hour old, use the Reset password button in it. Asking again does not replace that link.</p>
+              <Link href="/reset-password" className="text-accent hover:underline">
+                Request a reset link
+              </Link>
+            </div>
           )}
         </Suspense>
 
