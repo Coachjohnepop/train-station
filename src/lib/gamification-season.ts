@@ -56,11 +56,13 @@ export async function recomputeUserSeasonScore(
   const L = levers ?? (await getGamificationLevers());
   const seasonKey = currentSeasonKey(L.seasonDays);
   const { start, end } = seasonWindow(seasonKey, L.seasonDays);
+  const resetAt = L.scoresResetAt ? new Date(L.scoresResetAt) : null;
+  const from = resetAt && resetAt > start ? resetAt : start;
 
   const events = await prisma.gamificationEvent.findMany({
     where: {
       userId,
-      at: { gte: start, lte: end },
+      at: { gte: from, lte: end },
     },
     select: { points: true, at: true },
     orderBy: { at: "asc" },

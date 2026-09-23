@@ -17,7 +17,7 @@ import {
 import { prisma } from "@/lib/prisma";
 import { getGamificationLevers } from "@/lib/gamification-config-store";
 import { currentSeasonKey, recomputeUserSeasonScore } from "@/lib/gamification-season";
-import { divisionForPlan } from "@/lib/gamification-levers";
+import { countsTowardScore, divisionForPlan } from "@/lib/gamification-levers";
 import { getMemberProfile } from "@/lib/member-profiles-store";
 import {
   ensureUserBlobImported,
@@ -97,9 +97,15 @@ function rowToEvent(row: {
   };
 }
 
-async function getUserGamificationDb(userId: string): Promise<UserGamification> {
+async function getUserGamificationDb(
+  userId: string,
+  resetAt: string | null = null,
+): Promise<UserGamification> {
   const rows = await prisma.gamificationEvent.findMany({
-    where: { userId },
+    where: {
+      userId,
+      ...(resetAt ? { at: { gte: new Date(resetAt) } } : {}),
+    },
     orderBy: { at: "asc" },
   });
   const events = rows.map(rowToEvent);
@@ -117,13 +123,16 @@ export async function getUserGamification(userId: string): Promise<UserGamificat
   if (isDatabaseConfigured()) {
     try {
       // Lazy one-shot import of legacy Blob ledger so cutover doesn't zero the board.
+      const resetAt = (await getGamificationLevers()).scoresResetAt;
       if (!blobImportAttempted.has(userId)) {
         blobImportAttempted.add(userId);
         await ensureUserBlobImported(userId);
       }
-      const db = await getUserGamificationDb(userId);
+      const db = await getUserGamificationDb(userId, resetAt);
       // Union with any remaining blob-only events (read path safety net).
-      const blobEvents = await loadBlobUserEvents(userId);
+      const blobEvents = (await loadBlobUserEvents(userId)).filter((event) =>
+        countsTowardScore(event.at, resetAt),
+      );
       if (blobEvents.length) {
         const events = mergeGamificationEvents(db.events, blobEvents);
         return {
@@ -156,7 +165,11 @@ export async function listAllGamification(): Promise<UserGamification[]> {
         await importBlobGamificationToDb();
       }
 
-      const rows = await prisma.gamificationEvent.findMany({ orderBy: { at: "asc" } });
+      const resetAt = (await getGamificationLevers()).scoresResetAt;
+      const rows = await prisma.gamificationEvent.findMany({
+        where: resetAt ? { at: { gte: new Date(resetAt) } } : {},
+        orderBy: { at: "asc" },
+      });
       const byUser = new Map<string, GamificationEvent[]>();
       for (const row of rows) {
         const list = byUser.get(row.userId) || [];
@@ -169,9 +182,10 @@ export async function listAllGamification(): Promise<UserGamification[]> {
         const store = await getStore({ preferFresh: true });
         for (const [userId, raw] of Object.entries(store)) {
           const blobUser = normalizeUser(raw, userId);
-          if (!blobUser.events.length) continue;
+          const fresh = blobUser.events.filter((event) => countsTowardScore(event.at, resetAt));
+          if (!fresh.length) continue;
           const existing = byUser.get(userId) || [];
-          byUser.set(userId, mergeGamificationEvents(existing, blobUser.events));
+          byUser.set(userId, mergeGamificationEvents(existing, fresh));
         }
       } catch {
         /* ignore blob merge failures */

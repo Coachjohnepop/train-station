@@ -10,6 +10,7 @@ import {
 } from "@/lib/gamification-types";
 import { currentSeasonKey } from "@/lib/gamification-season";
 import { getGamificationLevers } from "@/lib/gamification-config-store";
+import { countsTowardScore } from "@/lib/gamification-levers";
 import { writeGamificationAudit } from "@/lib/gamification-audit";
 
 const BLOB_PATH = "demo/member-gamification.json";
@@ -87,6 +88,10 @@ export async function importBlobGamificationToDb(opts?: {
     users += 1;
 
     for (const ev of user.events) {
+      if (!countsTowardScore(ev.at || new Date(), levers.scoresResetAt)) {
+        skipped += 1;
+        continue;
+      }
       try {
         await prisma.gamificationEvent.create({
           data: {
@@ -129,6 +134,7 @@ export async function ensureUserBlobImported(userId: string): Promise<number> {
     const seasonKey = currentSeasonKey(levers.seasonDays);
     let n = 0;
     for (const ev of user.events) {
+      if (!countsTowardScore(ev.at || new Date(), levers.scoresResetAt)) continue;
       try {
         await prisma.gamificationEvent.create({
           data: {

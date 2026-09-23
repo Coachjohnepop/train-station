@@ -25,6 +25,8 @@ export type GamificationLevers = {
    * Default off. ACH not used. Does not charge until they upgrade.
    */
   freeRequiresPaymentMethod: boolean;
+  /** Points before this instant do not count. Null means no reset. */
+  scoresResetAt: string | null;
 };
 
 export const DEFAULT_GAMIFICATION_LEVERS: GamificationLevers = {
@@ -45,6 +47,7 @@ export const DEFAULT_GAMIFICATION_LEVERS: GamificationLevers = {
   anonymizeRivals: false,
   featureEnabled: true,
   freeRequiresPaymentMethod: false,
+  scoresResetAt: null,
 };
 
 function clampInt(raw: unknown, min: number, max: number, fallback: number): number {
@@ -84,7 +87,24 @@ export function normalizeGamificationLevers(raw: unknown): GamificationLevers {
     anonymizeRivals: o.anonymizeRivals === true,
     featureEnabled: o.featureEnabled === false ? false : true,
     freeRequiresPaymentMethod: o.freeRequiresPaymentMethod === true,
+    scoresResetAt: scoreResetInstant(o.scoresResetAt),
   };
+}
+
+function scoreResetInstant(raw: unknown): string | null {
+  if (typeof raw !== "string" || !raw.trim()) return null;
+  const t = Date.parse(raw);
+  if (!Number.isFinite(t)) return null;
+  return new Date(t).toISOString();
+}
+
+/** Ledger rows strictly before the reset do not count toward anyone's score. */
+export function countsTowardScore(at: string | Date, resetAt: string | null | undefined): boolean {
+  if (!resetAt) return true;
+  const eventAt = new Date(at).getTime();
+  const reset = Date.parse(resetAt);
+  if (!Number.isFinite(eventAt) || !Number.isFinite(reset)) return true;
+  return eventAt >= reset;
 }
 
 /** Map membership plan → scoreboard division. */
