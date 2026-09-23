@@ -1330,6 +1330,16 @@ export default function MemberWorkoutConsole({
 
   const resolveSecondsForBlock = useCallback(
     (block: MemberExerciseBlock): number | null => {
+      const hit = resolveHitInterval({
+        setScheme: block.setScheme,
+        name: block.name,
+        notes: block.coachNotes || block.description,
+        reps: block.reps,
+        setCount: block.setCount,
+        restSec: block.restSec,
+      });
+      // HIIT rest is the interval (20s on / 20s off), not the 45s between-set timer.
+      if (hit) return hit.restSec;
       const rest = restSettingsRef.current;
       if (rest.enabled === false) return null;
       const idx = workout.exercises.findIndex((e) => e.id === block.id);
@@ -1898,12 +1908,27 @@ export default function MemberWorkoutConsole({
           playSetCheckPop();
         }
         const block = workout.exercises.find((e) => e.id === blockId);
+        const hit = block
+          ? resolveHitInterval({
+              setScheme: block.setScheme,
+              name: block.name,
+              notes: block.coachNotes || block.description,
+              reps: block.reps,
+              setCount: block.setCount,
+              restSec: block.restSec,
+            })
+          : null;
         if (block && isHitApproach(block.setScheme)) {
           return;
         }
         // Hold / timed cue: green "Time of Exercise" first, then rest. Else rest only.
         const holdSec = block ? exerciseHoldDurationSec(block) : null;
-        if (holdSec) {
+        if (hit) {
+          maybeStartRestTimer(blockId, setNum, {
+            phase: "rest",
+            secondsOverride: hit.restSec,
+          });
+        } else if (holdSec) {
           maybeStartRestTimer(blockId, setNum, {
             phase: "exercise",
             secondsOverride: holdSec,
