@@ -446,19 +446,28 @@ export default function MemberNav({
           >
             <span>Enter Your Eating</span>
           </Link>
-          <p className="px-3 pb-0.5 pt-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#c4b5fd]">
-            Ideas
-          </p>
-          {nutritionMeals.map((meal) => (
+          <div className="nutrition-ideas-item">
             <Link
-              key={meal.id}
-              href={`/member/nutrition#${meal.id}`}
+              href="/member/nutrition"
               onClick={() => setNutritionOpen(false)}
-              className="member-nav-more-link pl-5"
+              className="member-nav-more-link"
             >
-              <span>{meal.label}</span>
+              <span>Ideas</span>
             </Link>
-          ))}
+            <div className="nutrition-ideas-sub" role="menu" aria-label="Meal ideas">
+              {nutritionMeals.map((meal) => (
+                <Link
+                  key={meal.id}
+                  href={`/member/nutrition?meal=${meal.id}`}
+                  onClick={() => setNutritionOpen(false)}
+                  className="member-nav-more-link"
+                  role="menuitem"
+                >
+                  <span>{meal.label}</span>
+                </Link>
+              ))}
+            </div>
+          </div>
           <Link
             href="/member/nutrition/list"
             onClick={() => setNutritionOpen(false)}

@@ -1977,8 +1977,8 @@ body:has([data-admin-chrome]) [data-global-theme-toggle] {
 
 .landing-b-start-btns .landing-hero-explore-cta,
 .landing-b-start-btns .landing-hero-explore-cta:hover {
-  color: #111111 !important;
-  -webkit-text-fill-color: #111111 !important;
+  color: #ffd24a !important;
+  -webkit-text-fill-color: #ffd24a !important;
   -webkit-text-stroke: 1.35px #ffffff;
   paint-order: stroke fill;
   text-shadow: none;
@@ -2699,6 +2699,31 @@ html[data-free-ticket="open"] .landing-nav .theme-mode-toggle {
 .member-nav-more-link:hover,
 .member-nav-more-link:focus-visible {
   background: var(--surface-2);
+}
+
+.nutrition-ideas-item {
+  position: relative;
+}
+
+.nutrition-ideas-sub {
+  display: none;
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  left: calc(100% - 0.35rem);
+  width: 14rem;
+  padding: 0.35rem;
+  border-radius: 0.85rem;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: 0 16px 40px color-mix(in srgb, #000 38%, transparent);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .nutrition-ideas-item:hover .nutrition-ideas-sub,
+  .nutrition-ideas-item:focus-within .nutrition-ideas-sub {
+    display: block;
+  }
 }
 
 .member-nav-more-link--active {
