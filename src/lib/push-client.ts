@@ -119,6 +119,16 @@ export async function getPushPermission(): Promise<NotificationPermission | "uns
 export async function enablePushAlerts(opts?: {
   forceResubscribe?: boolean;
 }): Promise<{ ok: boolean; error?: string; standalone?: boolean }> {
+  // iOS drops the permission prompt if anything is awaited first. Ask in this turn.
+  let permissionRequest: Promise<NotificationPermission> | null = null;
+  if (
+    typeof Notification !== "undefined" &&
+    Notification.permission === "default" &&
+    isPushSupported()
+  ) {
+    permissionRequest = Notification.requestPermission();
+  }
+
   const standalone = isStandalonePwa();
   // iOS Safari in a tab has no PushManager. Delivery only works from the Home Screen app.
   if (!standalone && (isIosDevice() || !isPushSupported())) {
@@ -145,13 +155,25 @@ export async function enablePushAlerts(opts?: {
     const reg = await ensureServiceWorker();
     if (!reg) return { ok: false, error: "Could not register service worker.", standalone };
 
-    // Wait briefly for active worker (iOS can be slow after update)
     if (!reg.active) {
-      await new Promise((r) => setTimeout(r, 400));
+      await new Promise<void>((resolve) => {
+        const worker = reg.installing || reg.waiting;
+        if (!worker) {
+          window.setTimeout(resolve, 800);
+          return;
+        }
+        const done = () => {
+          if (worker.state === "activated" || worker.state === "redundant") resolve();
+        };
+        worker.addEventListener("statechange", done);
+        window.setTimeout(resolve, 4000);
+      });
     }
 
     let permission = Notification.permission;
-    if (permission === "default") {
+    if (permissionRequest) {
+      permission = await permissionRequest;
+    } else if (permission === "default") {
       permission = await Notification.requestPermission();
     }
     if (permission !== "granted") {

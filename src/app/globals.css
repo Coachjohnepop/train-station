@@ -2719,8 +2719,8 @@ html[data-free-ticket="open"] .landing-nav .theme-mode-toggle {
 .member-nav-more-link.member-nav-eating-link:focus-visible {
   background: #ffd24a;
   color: #4c1d95;
-  -webkit-text-fill-color: #ffd24a;
-  -webkit-text-stroke: 1.35px #4c1d95;
+  -webkit-text-fill-color: #4c1d95;
+  -webkit-text-stroke: 1.25px #fff;
   paint-order: stroke fill;
   font-weight: 800;
 }

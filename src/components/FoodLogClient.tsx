@@ -137,9 +137,9 @@ export default function FoodLogClient() {
     if (!file) return;
     setBusy(true);
     setError("");
-    setNote("");
+    setNote("Reading that photo…");
     try {
-      const image = await readPhoto(file);
+      const image = await fileToJpegDataUrl(file);
       const res = await fetch("/api/member/food/photo", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -147,6 +147,7 @@ export default function FoodLogClient() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.draft) {
+        setNote("");
         setError(typeof data.error === "string" ? data.error : "Could not read that photo.");
         return;
       }
@@ -156,6 +157,11 @@ export default function FoodLogClient() {
         fat: data.draft.fat || "",
         extras: data.draft.extras || "",
       };
+      if (!next.protein && !next.starch && !next.fat && !next.extras) {
+        setNote("");
+        setError("Could not read that photo. Try the nutrition label, closer, or type the food.");
+        return;
+      }
       setForm(next);
       setPhotoDraft({ ...data.draft, ...next });
       const label = nutrientLine(data.draft);
@@ -164,6 +170,9 @@ export default function FoodLogClient() {
           ? `Label read. ${data.draft.calories} calories. ${label} Check it, then save.`
           : `Photo read. About ${data.draft.calories} calories. Check the four lines, then save.`,
       );
+    } catch {
+      setNote("");
+      setError("That photo did not go through. Try again, or take it as a JPEG.");
     } finally {
       setBusy(false);
     }
@@ -233,20 +242,26 @@ export default function FoodLogClient() {
           <button type="submit" className="btn-primary px-4 py-2 text-sm font-semibold" disabled={busy}>
             {busy ? "Saving…" : "Save meal"}
           </button>
-          <label className="cursor-pointer text-sm font-semibold text-[var(--accent)]">
-            Photo
-            <input
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              className="sr-only"
-              disabled={busy}
-              onChange={(event) => {
-                const file = event.target.files?.[0] ?? null;
-                event.target.value = "";
-                void onPhoto(file);
-              }}
-            />
-          </label>
+          <button
+            type="button"
+            className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm font-semibold"
+            disabled={busy}
+            onClick={() => document.getElementById("food-photo-input")?.click()}
+          >
+            {busy ? "Reading…" : "Photo"}
+          </button>
+          <input
+            id="food-photo-input"
+            type="file"
+            accept="image/*"
+            className="hidden"
+            disabled={busy}
+            onChange={(event) => {
+              const file = event.target.files?.[0] ?? null;
+              event.target.value = "";
+              void onPhoto(file);
+            }}
+          />
         </div>
         {error ? <p className="text-sm text-rose-300">{error}</p> : null}
         {note ? <p className="text-sm text-[var(--muted)]">{note}</p> : null}
@@ -398,11 +413,30 @@ function NutrientTotals({ rows }: { rows: FoodNutrients[] }) {
   );
 }
 
-function readPhoto(file: File): Promise<string> {
+function fileToJpegDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result || ""));
-    reader.onerror = () => reject(new Error("read"));
-    reader.readAsDataURL(file);
+    const url = URL.createObjectURL(file);
+    const image = new Image();
+    image.onload = () => {
+      const max = 1600;
+      const scale = Math.min(1, max / Math.max(image.width, image.height));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(image.width * scale));
+      canvas.height = Math.max(1, Math.round(image.height * scale));
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        URL.revokeObjectURL(url);
+        reject(new Error("canvas"));
+        return;
+      }
+      ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+      URL.revokeObjectURL(url);
+      resolve(canvas.toDataURL("image/jpeg", 0.82));
+    };
+    image.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("image"));
+    };
+    image.src = url;
   });
 }

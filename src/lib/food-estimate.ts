@@ -17,7 +17,8 @@ ${NUTRIENT_JSON}
 - protein: meats, eggs, fish, dairy protein
 - starch: bread, rice, potato, tortilla, oats
 - fat: butter, oil, ghee, the cooking fat
-- extras: peanut butter, garlic, sauces, jam, honey, vegetables that are not the main protein or starch
+- extras: peanut butter, garlic, sauces, jam, honey, vegetables, and drinks (beer, IPA, wine, soda)
+- A can of Belching Beaver is 1 pint (16 oz). A pint of IPA is about 280 calories, not zero. A 12 oz beer is about 150, a 12 oz IPA about 210. Put the drink in extras and set calories.
 - fiberG, sugarG, addedSugarG, saturatedFatG are grams
 - sodiumMg and cholesterolMg are milligrams
 - serving is a short amount, such as "2 eggs" 
@@ -34,6 +35,21 @@ ${NUTRIENT_JSON}
 - sodiumMg and cholesterolMg are milligrams
 - serving is the printed serving size, such as "2/3 cup (55g)"
 Use null when that line is not on the label.`;
+
+/** Drinks the kitchen guess must not drop. A Belching Beaver can is a pint. */
+export function drinkCalories(text: string): number {
+  if (!/beer|ipa|\bale\b|lager|stout|porter|pilsner|cider|wine|seltzer/i.test(text)) return 0;
+  const count = leadingCount(text);
+  const pint = /pint|16\s?oz|belching beaver/i.test(text);
+  const ipa = /\bipa\b|double ipa|imperial/i.test(text);
+  if (/wine/i.test(text) && !/beer|\bipa\b|\bale\b|lager|stout/i.test(text)) {
+    return Math.round(count * 125);
+  }
+  if (pint && ipa) return Math.round(count * 280);
+  if (pint) return Math.round(count * 210);
+  if (ipa) return Math.round(count * 210);
+  return Math.round(count * 150);
+}
 
 function leadingCount(text: string): number {
   const match = text.match(/(\d+(?:\.\d+)?)/);
@@ -58,7 +74,10 @@ export function roughFoodEstimate(parts: FoodParts): FoodEstimate {
   else if (fat.trim()) calories += 100;
   if (/peanut butter/i.test(extras)) calories += 190;
   if (/garlic/i.test(extras)) calories += 10;
-  if (extras.trim() && !/peanut butter|garlic/i.test(extras)) calories += 40;
+  const drinkText = [protein, starch, fat, extras].filter(Boolean).join(" ");
+  const drinks = drinkCalories(drinkText);
+  if (drinks > 0) calories += drinks;
+  else if (extras.trim() && !/peanut butter|garlic/i.test(extras)) calories += 40;
   return {
     protein,
     starch,
@@ -161,8 +180,19 @@ export async function estimateFoodParts(parts: FoodParts): Promise<FoodEstimate>
     .filter(Boolean)
     .join("\n");
   const raw = await xaiJson(text);
-  if (!raw) return fallback;
-  return parseEstimateJson(raw, parts) ?? fallback;
+  const drinks = drinkCalories([parts.protein, parts.starch, parts.fat, parts.extras].filter(Boolean).join(" "));
+  if (!raw) {
+    if (drinks > 0 && fallback.calories < drinks) fallback.calories = drinks;
+    if (drinks > 0 && !fallback.serving) fallback.serving = /pint|belching beaver/i.test([parts.protein, parts.starch, parts.fat, parts.extras].join(" ")) ? "1 pint" : "";
+    return fallback;
+  }
+  const parsed = parseEstimateJson(raw, parts);
+  if (!parsed) return drinks > 0 ? { ...fallback, calories: Math.max(fallback.calories, drinks) } : fallback;
+  if (drinks > 0 && parsed.calories < drinks) parsed.calories = drinks;
+  if (drinks > 0 && !parsed.serving && /pint|belching beaver/i.test([parts.protein, parts.starch, parts.fat, parts.extras].join(" "))) {
+    parsed.serving = "1 pint";
+  }
+  return parsed;
 }
 
 export async function estimateFoodPhoto(dataUrl: string): Promise<FoodEstimate | { error: string }> {
