@@ -428,6 +428,15 @@ html[data-ts-text-scale="xl"] {
   z-index: 1;
 }
 
+.member-app[data-member-view="messages"] > main {
+  padding-top: 0.35rem;
+  padding-bottom: 0.2rem;
+}
+
+.member-app[data-member-view="messages"] .member-aux-hints {
+  display: none;
+}
+
 /* Coach-is-live: no full-width opaque bar — just Join on the right, under menus. */
 .member-live-strip__join-slot {
   display: flex;
@@ -912,6 +921,10 @@ table.data.table-sticky-actions td:last-child {
   }
 
   .member-app .member-aux-hints:not(:has(*)) {
+    display: none;
+  }
+
+  .member-app[data-member-view="messages"] .member-aux-hints {
     display: none;
   }
 
@@ -2583,7 +2596,33 @@ html[data-free-ticket="open"] .landing-nav .theme-mode-toggle {
 /* Member top nav — daily tabs + More hamburger. */
 .member-nav {
   min-height: 2.75rem;
+  align-items: flex-end;
+  gap: 0.2rem;
   overflow: visible;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0;
+}
+
+/* File-cabinet tabs: inactive folders sit on the rail, the open one joins the page. */
+.member-folder-tab {
+  border: 1px solid var(--border);
+  border-bottom: 1px solid transparent;
+  border-radius: 0.7rem 0.7rem 0 0;
+  background: color-mix(in srgb, var(--surface-2) 88%, var(--bg));
+  margin-bottom: -1px;
+  box-shadow: none;
+}
+
+.member-folder-tab.nav-tab-active,
+.member-folder-tab.nav-tab-ramp-active {
+  z-index: 1;
+  background: var(--bg);
+  border-bottom-color: var(--bg);
+  box-shadow: none;
+}
+
+.member-folder-tab.nav-tab-ramp:not(.nav-tab-ramp-active) {
+  background: color-mix(in srgb, var(--ramp-gold) 14%, var(--surface-2));
 }
 
 .member-nav > a,

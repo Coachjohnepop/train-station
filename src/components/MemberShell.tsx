@@ -49,6 +49,7 @@ export default function MemberShell({
   needsIntroBooking = false,
   needsMeasurements = false,
   measurementCount = 0,
+  hideLiveStrip = false,
 }: {
   children: React.ReactNode;
   tierLabel?: string;
@@ -69,13 +70,18 @@ export default function MemberShell({
   needsMeasurements?: boolean;
   /** Check-ins on file — shown as the measurements badge number. */
   measurementCount?: number;
+  /** Messages uses the whole screen under the header — no live-class bar. */
+  hideLiveStrip?: boolean;
 }) {
   const tierLabel = MEMBERSHIP_THEME_LABELS[membershipTier] || tierLabelProp || "Member";
   const hideMemberNav = setupMode || newbieMode || paymentGateActive;
   const showContinueSetup = newbieMode && !setupMode && !paymentGateActive;
 
   return (
-    <div className="app-shell-bg member-app flex min-h-screen flex-col">
+    <div
+      className="app-shell-bg member-app flex min-h-screen flex-col"
+      data-member-view={hideLiveStrip ? "messages" : undefined}
+    >
       <MemberGateCookieSync />
       <SiteSeenLatch established={!newbieMode} />
       <DisablePullToRefresh />
@@ -220,7 +226,7 @@ export default function MemberShell({
         ) : null}
 
         {/* Live Class strip is noise during first-time onboard on a phone */}
-        {!setupMode && !paymentGateActive ? (
+        {!setupMode && !paymentGateActive && !hideLiveStrip ? (
           <div className="member-live-strip">
             <Suspense fallback={null}>
               <MemberLiveZoomStrip

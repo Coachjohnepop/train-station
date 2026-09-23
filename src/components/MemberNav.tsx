@@ -284,7 +284,7 @@ export default function MemberNav({
   return (
     <div ref={wrapRef} className="member-nav-wrap relative">
       <nav
-        className="member-nav mx-auto flex w-full max-w-lg items-stretch gap-1 px-2 pb-2.5 md:max-w-3xl md:px-6 lg:max-w-6xl lg:justify-center lg:px-8 xl:max-w-7xl"
+        className="member-nav mx-auto flex w-full max-w-lg items-end gap-1 px-2 pb-0 md:max-w-3xl md:px-6 lg:max-w-6xl lg:justify-center lg:px-8 xl:max-w-7xl"
         aria-label="Member dashboard"
       >
         {(() => {
@@ -304,7 +304,7 @@ export default function MemberNav({
                   e.preventDefault();
                   goMemberTodayHome(router);
                 }}
-                className={`member-nav-today relative flex min-h-10 flex-[1.05] items-center justify-center rounded-xl border px-1.5 py-1 text-center text-[13px] font-semibold transition lg:min-h-[2.75rem] lg:min-w-[4.75rem] lg:flex-none lg:px-5 ${
+                className={`member-folder-tab member-nav-today relative flex min-h-10 flex-[1.05] items-center justify-center px-1.5 py-1 text-center text-[13px] font-semibold transition lg:min-h-[2.75rem] lg:min-w-[4.75rem] lg:flex-none lg:px-5 ${
                   active ? "nav-tab-ramp-active" : "nav-tab-ramp"
                 } ${locked ? "opacity-80" : ""}`}
               >
@@ -337,7 +337,7 @@ export default function MemberNav({
                   setNutritionMenu(readNutritionMenu());
                   setNutritionOpen(true);
                 }}
-                className={`member-nav-item member-nav-nutrition-tab relative flex min-h-10 flex-1 flex-col items-center justify-center rounded-lg px-1 py-1 text-center text-sm font-semibold leading-tight tracking-tight transition sm:text-base lg:min-h-[2.75rem] lg:flex-none lg:min-w-[4.75rem] lg:px-5 ${tabClass(
+                className={`member-folder-tab member-nav-item member-nav-nutrition-tab relative flex min-h-10 flex-1 flex-col items-center justify-center px-1 py-1 text-center text-sm font-semibold leading-tight tracking-tight transition sm:text-base lg:min-h-[2.75rem] lg:flex-none lg:min-w-[4.75rem] lg:px-5 ${tabClass(
                   nutritionActive || nutritionOpen,
                   false,
                 )} ${nutritionLocked ? "opacity-75" : ""}`}
@@ -369,7 +369,7 @@ export default function MemberNav({
               id="member-nav-scores"
               href={href}
               title={locked ? "Complete your ticket to unlock" : undefined}
-              className={`member-nav-scores member-nav-item relative flex min-h-10 flex-[1.15] flex-col items-center justify-center rounded-lg px-1 py-1 text-center text-sm font-semibold leading-tight tracking-tight transition sm:text-base lg:min-h-[2.75rem] lg:min-w-[5.5rem] lg:px-5 ${tabClass(
+              className={`member-folder-tab member-nav-scores member-nav-item relative flex min-h-10 flex-[1.15] flex-col items-center justify-center px-1 py-1 text-center text-sm font-semibold leading-tight tracking-tight transition sm:text-base lg:min-h-[2.75rem] lg:min-w-[5.5rem] lg:px-5 ${tabClass(
                 active,
                 false,
               )} ${scorePulse ? "member-nav-score-pulse" : ""} ${locked ? "opacity-75" : ""}`}
@@ -398,7 +398,7 @@ export default function MemberNav({
             setNutritionOpen(false);
             setMoreOpen((open) => !open);
           }}
-          className={`member-nav-more member-nav-item relative flex min-h-11 min-w-11 flex-none flex-col items-center justify-center rounded-lg px-2 py-1 text-center text-sm font-semibold leading-tight tracking-tight transition sm:text-base lg:min-h-[2.75rem] lg:min-w-[4.25rem] lg:px-4 ${tabClass(
+          className={`member-folder-tab member-nav-more member-nav-item relative flex min-h-11 min-w-11 flex-none flex-col items-center justify-center px-2 py-1 text-center text-sm font-semibold leading-tight tracking-tight transition sm:text-base lg:min-h-[2.75rem] lg:min-w-[4.25rem] lg:px-4 ${tabClass(
             moreActive || moreOpen,
             false,
           )}`}
@@ -439,7 +439,7 @@ export default function MemberNav({
             <Link
               id="member-nav-messages"
               href={href}
-              className={`member-nav-messages member-nav-item relative flex min-h-10 flex-none flex-col items-center justify-center rounded-lg px-2 py-1 text-center text-sm font-semibold leading-tight tracking-tight transition sm:text-base lg:min-h-[2.75rem] lg:min-w-[5.25rem] lg:px-5 ${tabClass(
+              className={`member-folder-tab member-nav-messages member-nav-item relative flex min-h-10 flex-none flex-col items-center justify-center px-2 py-1 text-center text-sm font-semibold leading-tight tracking-tight transition sm:text-base lg:min-h-[2.75rem] lg:min-w-[5.25rem] lg:px-5 ${tabClass(
                 active,
                 false,
               )} ${locked ? "opacity-75" : ""}`}

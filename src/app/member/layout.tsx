@@ -173,6 +173,7 @@ export default async function MemberLayout({
       needsIntroBooking={memberNeedsIntroBooking(profile)}
       needsMeasurements={needsMeasurements}
       measurementCount={measurementCount}
+      hideLiveStrip={pathOnly.startsWith("/member/chat")}
     >
       {children}
     </MemberShell>

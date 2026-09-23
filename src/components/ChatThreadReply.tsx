@@ -218,7 +218,7 @@ export default function ChatThreadReply({
         </div>
       )}
 
-      <div className="flex items-end gap-2">
+      <div className="flex items-end gap-1.5">
         <input
           ref={fileInputRef}
           type="file"
@@ -226,23 +226,11 @@ export default function ChatThreadReply({
           className="hidden"
           onChange={handleFileChange}
         />
-        <button
-          type="button"
-          className="shrink-0 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-2.5 py-2.5 text-sm text-[var(--muted)] transition hover:border-accent hover:text-[var(--text)] disabled:opacity-40"
-          title="Attach photo (or paste into the box)"
-          aria-label="Attach photo"
-          disabled={uploading || sending}
-          onClick={() => fileInputRef.current?.click()}
-        >
-          📷
-        </button>
         <textarea
-          className="input min-h-[44px] max-h-28 flex-1 resize-y text-sm lg:max-h-48"
+          className="input min-h-[44px] max-h-28 min-w-0 flex-1 resize-y text-base lg:max-h-48"
           placeholder={
             placeholder ||
-            (role === "coach"
-              ? "Reply… paste a screenshot or photo"
-              : "Message your coach… paste a photo")
+            (role === "coach" ? "Reply" : "Message your coach")
           }
           value={message}
           onChange={(e) => setMessage(e.target.value)}
@@ -257,7 +245,17 @@ export default function ChatThreadReply({
         />
         <button
           type="button"
-          className={`shrink-0 rounded-lg px-4 py-2.5 text-sm font-semibold text-[var(--text)] transition disabled:opacity-40 ${
+          className="shrink-0 rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-2 py-2.5 text-sm text-[var(--muted)] transition hover:border-accent hover:text-[var(--text)] disabled:opacity-40"
+          title="Attach photo (or paste into the box)"
+          aria-label="Attach photo"
+          disabled={uploading || sending}
+          onClick={() => fileInputRef.current?.click()}
+        >
+          📷
+        </button>
+        <button
+          type="button"
+          className={`shrink-0 rounded-lg px-3 py-2.5 text-sm font-semibold text-[var(--text)] transition disabled:opacity-40 ${
             role === "coach"
               ? "bg-violet-600 hover:bg-violet-500"
               : "btn-primary"
@@ -268,11 +266,9 @@ export default function ChatThreadReply({
           {sending ? "..." : uploading ? "…" : "Send"}
         </button>
       </div>
-      <p className="mt-1.5 text-[10px] text-[var(--muted)]">
-        Paste an image (Ctrl/⌘+V) or tap 📷 · JPEG/PNG/WebP/GIF · max 5&nbsp;MB
-        {role === "coach"
-          ? " · Member gets an in-app badge (and home-screen badge if they installed the app)"
-          : ""}
+      <p className="mt-1 hidden text-[10px] text-[var(--muted)] sm:block">
+        Paste a photo or tap the camera
+        {role === "coach" ? " · Member gets a badge" : ""}
       </p>
       {error && <p className="mt-1 text-xs text-red-400">{error}</p>}
     </div>

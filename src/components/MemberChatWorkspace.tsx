@@ -286,7 +286,7 @@ export default function MemberChatWorkspace({
       : "Message as coach..."
     : activeReplyThread?.kind === "cohort"
       ? "Comment on this post..."
-      : "Message your coach...";
+      : "Message your coach";
   const replyDestination = asCoach
     ? activeReplyThread?.kind === "cohort"
       ? "Posting as coach · Group feed"
@@ -339,7 +339,7 @@ export default function MemberChatWorkspace({
               </span>
             ) : null}
           </p>
-          <p className="text-[10px] text-[var(--muted)]">
+          <p className="hidden text-[10px] text-[var(--muted)] sm:block">
             {totalUnread > 0 ? "Tap the red bean" : "All groups on one row"}
           </p>
         </div>
@@ -470,7 +470,7 @@ export default function MemberChatWorkspace({
                 threadId={replyThreadId}
                 role={replyRole}
                 threadKind={activeReplyThread?.kind}
-                destinationLabel={replyDestination}
+                destinationLabel={asCoach || activeReplyThread?.kind === "cohort" ? replyDestination : undefined}
                 placeholder={replyPlaceholder}
                 onSent={(message) => {
                   if (!message) return;
