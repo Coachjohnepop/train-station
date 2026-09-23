@@ -339,9 +339,6 @@ export default function MemberChatWorkspace({
               </span>
             ) : null}
           </p>
-          <p className="hidden text-[10px] text-[var(--muted)] sm:block">
-            {totalUnread > 0 ? "Tap the red bean" : "All groups on one row"}
-          </p>
         </div>
         {/*
           True jelly beans: wrap (no side-scroll). New members see every group + per-bean
