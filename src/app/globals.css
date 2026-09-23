@@ -1732,6 +1732,24 @@ body:has([data-admin-chrome]) [data-global-theme-toggle] {
     0 2px 10px rgba(0, 0, 0, 0.75);
 }
 
+/* One screen of hero. Clip the videos so a scaled frame cannot paint into the feed. */
+.landing-hero {
+  overflow: clip;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+}
+
+html:has([data-landing-explore="open"]) {
+  scroll-snap-type: y proximity;
+}
+
+#explore-content {
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  scroll-margin-top: var(--landing-nav-h, 4.5rem);
+  background: #050208;
+}
+
 .landing-hero-slide {
   opacity: 0;
   transform: scale(1.08);
@@ -2089,19 +2107,14 @@ body:has([data-admin-chrome]) [data-global-theme-toggle] {
 
 /* Explore Content feed: one tall card per snap. Phone is full width. Wide screens cap the column. */
 .explore-feed-scroller {
-  --explore-feed-height: calc(100svh - 4.75rem);
+  --explore-feed-height: calc(100svh - var(--landing-nav-h, 4.5rem));
   --explore-feed-peek: 2.25rem;
   height: var(--explore-feed-height);
   overflow-x: hidden;
   overflow-y: auto;
   scroll-snap-type: y mandatory;
   overscroll-behavior-y: auto;
-  background: var(--bg);
-}
-@media (min-width: 640px) {
-  .explore-feed-scroller {
-    --explore-feed-height: calc(100svh - 5.25rem);
-  }
+  background: #050208;
 }
 .explore-feed-card {
   display: flex;

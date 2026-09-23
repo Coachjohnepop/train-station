@@ -110,7 +110,11 @@ export default function LandingConversion({
   }, [revealExplore]);
 
   return (
-    <div className="relative min-h-screen bg-black" data-landing-variant={variant}>
+    <div
+      className="relative min-h-screen bg-black"
+      data-landing-variant={variant}
+      data-landing-explore={exploreOpen ? "open" : "closed"}
+    >
       <SiteSeenLatch />
       <ThemeAttributesSync membershipTier="explorer" />
       {/* Transparent nav over hero so SMS open is full-bleed athletes, not a grey header */}
@@ -127,7 +131,7 @@ export default function LandingConversion({
       />
       <div
         id="explore-content"
-        className={`grid scroll-mt-[4.75rem] transition-[grid-template-rows] duration-500 ease-out sm:scroll-mt-[5.25rem] ${
+        className={`grid transition-[grid-template-rows] duration-500 ease-out ${
           exploreOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
         }`}
       >

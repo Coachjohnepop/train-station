@@ -41,14 +41,40 @@ export default function LandingNav({
   const purchaseAuth = usePurchaseAuth(purchaseAuthProp);
 
   useEffect(() => {
+    const el = document.querySelector("[data-landing-nav]");
+    if (!(el instanceof HTMLElement)) return;
+    const apply = () => {
+      document.documentElement.style.setProperty(
+        "--landing-nav-h",
+        `${Math.ceil(el.getBoundingClientRect().height)}px`,
+      );
+    };
+    apply();
+    const observer = new ResizeObserver(apply);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
     if (!overHero) {
       setHeroSolid(false);
       return;
     }
-    const sync = () => setHeroSolid(window.scrollY > 56);
+    const hero = document.querySelector(".landing-hero");
+    const nav = document.querySelector("[data-landing-nav]");
+    if (!(hero instanceof HTMLElement) || !(nav instanceof HTMLElement)) return;
+    const sync = () => {
+      const navBottom = nav.getBoundingClientRect().bottom;
+      const heroBottom = hero.getBoundingClientRect().bottom;
+      setHeroSolid(heroBottom <= navBottom + 8);
+    };
     sync();
     window.addEventListener("scroll", sync, { passive: true });
-    return () => window.removeEventListener("scroll", sync);
+    window.addEventListener("resize", sync);
+    return () => {
+      window.removeEventListener("scroll", sync);
+      window.removeEventListener("resize", sync);
+    };
   }, [overHero]);
 
   function noteMenuItem() {

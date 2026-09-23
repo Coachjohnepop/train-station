@@ -210,7 +210,7 @@ export default function LandingHero({
 
   return (
     <section
-      className="landing-hero force-dark relative z-0 isolate min-h-[100dvh] min-h-[100svh] w-full overflow-hidden bg-black"
+      className="landing-hero force-dark relative z-0 isolate min-h-[100dvh] min-h-[100svh] w-full bg-black"
       data-force-dark
       aria-label="The Train Station"
     >
