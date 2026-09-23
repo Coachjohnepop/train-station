@@ -1,4 +1,4 @@
-/** Sign out and land on login with switch-account flow; preserve return path for staff/member areas. */
+/** Sign out and land on the public home page, signed out. */
 export function logoutUrl(): string {
   if (typeof window === "undefined") return "/api/auth/logout";
   const path = window.location.pathname;

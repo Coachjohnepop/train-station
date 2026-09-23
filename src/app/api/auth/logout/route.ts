@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { clearSessionCookies, getSessionUser } from "@/lib/auth";
-import { safeRelativePath } from "@/lib/api-auth";
 import { isStaffRole } from "@/lib/auth-session";
 import { MEMBER_COOKIE } from "@/lib/current-user";
 import { resolveDemoUser } from "@/lib/demo-user-directory";
@@ -42,21 +41,13 @@ function noStore(res: NextResponse) {
   return res;
 }
 
-async function logoutRedirect(
-  request: Request,
-  nextParam: string | null,
-  redirectAfter: string | null,
-) {
+async function logoutRedirect(request: Request) {
   const email = await emailToRememberOnLogout();
   const reqUrl = new URL(request.url);
-  const loginUrl = new URL("/login", reqUrl.origin);
-  loginUrl.searchParams.set("switch", "1");
-  const safeRedirectAfter = safeRelativePath(redirectAfter);
-  if (safeRedirectAfter) {
-    loginUrl.searchParams.set("redirect", safeRedirectAfter);
-  }
-  const safeNext = safeRelativePath(nextParam);
-  const destination = safeNext ? new URL(safeNext, reqUrl.origin) : loginUrl;
+  // Public landing, not the account and not the login page. Login was
+  // starting Face ID and signing them straight back in.
+  const destination = new URL("/", reqUrl.origin);
+  destination.searchParams.set("signedout", "1");
   const res = NextResponse.redirect(destination, 303);
   await rememberEmailOnLogout(res, email);
   clearSessionCookies(res);
@@ -64,25 +55,9 @@ async function logoutRedirect(
 }
 
 export async function POST(request: Request) {
-  let nextParam: string | null = null;
-  let redirectAfter: string | null = null;
-  const contentType = request.headers.get("content-type") || "";
-  if (
-    contentType.includes("application/x-www-form-urlencoded") ||
-    contentType.includes("multipart/form-data")
-  ) {
-    const form = await request.formData();
-    nextParam = String(form.get("next") || "") || null;
-    redirectAfter = String(form.get("redirect") || "") || null;
-  }
-  return logoutRedirect(request, nextParam, redirectAfter);
+  return logoutRedirect(request);
 }
 
 export async function GET(request: Request) {
-  const reqUrl = new URL(request.url);
-  return logoutRedirect(
-    request,
-    reqUrl.searchParams.get("next"),
-    reqUrl.searchParams.get("redirect"),
-  );
+  return logoutRedirect(request);
 }

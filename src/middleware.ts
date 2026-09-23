@@ -139,6 +139,7 @@ async function handleLandingAb(request: NextRequest): Promise<NextResponse | nul
 
   if (pathname === "/" && fromQuery && forced) {
     const dest = NextResponse.redirect(new URL(landingAbPath(forced), request.url));
+    dest.headers.set("Cache-Control", "no-store");
     return applyLandingCookie(dest, forced);
   }
 
@@ -153,10 +154,14 @@ async function handleLandingAb(request: NextRequest): Promise<NextResponse | nul
 
   const session = await sessionFromRequest(request);
   if (session?.role === "MEMBER") {
-    return NextResponse.redirect(new URL(memberEntryFromRequest(request), request.url));
+    const dest = NextResponse.redirect(new URL(memberEntryFromRequest(request), request.url));
+    dest.headers.set("Cache-Control", "no-store, no-cache, must-revalidate, private");
+    return dest;
   }
   if (session && isStaffRole(session.role)) {
-    return NextResponse.redirect(new URL(signedInAppPath(session.role), request.url));
+    const dest = NextResponse.redirect(new URL(signedInAppPath(session.role), request.url));
+    dest.headers.set("Cache-Control", "no-store, no-cache, must-revalidate, private");
+    return dest;
   }
 
   const existing = parseLandingAbVariant(request.cookies.get(LANDING_AB_COOKIE)?.value);

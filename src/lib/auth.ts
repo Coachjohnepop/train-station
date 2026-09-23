@@ -225,17 +225,52 @@ export function applySessionCookies(
   res.cookies.set(MEMBER_NAME_COOKIE, user.name, memberCookieOptions());
 }
 
-export function clearSessionCookies(
-  res: { cookies: { set: (name: string, value: string, opts?: object) => void } },
+const SESSION_COOKIE_NAMES = [
+  SESSION_COOKIE,
+  MEMBER_COOKIE,
+  MEMBER_NAME_COOKIE,
+  NEEDS_ONBOARD_COOKIE,
+  SIGNUP_PLAN_COOKIE,
+  NEEDS_PAYMENT_COOKIE,
+  "ts_needs_free_pm",
+  PENDING_APPROVAL_COOKIE,
+] as const;
+
+/**
+ * Next's cookie jar keeps one Set-Cookie per name, so a domain clear
+ * overwrites the host-only clear and the other copy of the session survives.
+ * Append every variant after the jar is done writing.
+ */
+function appendExpiredCookie(
+  res: { headers: { append: (name: string, value: string) => void } },
+  name: string,
+  domain?: string,
+  httpOnly = false,
+  secure = false,
 ) {
-  expireCookie(res, SESSION_COOKIE);
-  expireCookie(res, MEMBER_COOKIE);
-  expireCookie(res, MEMBER_NAME_COOKIE);
-  expireCookie(res, NEEDS_ONBOARD_COOKIE);
-  expireCookie(res, SIGNUP_PLAN_COOKIE);
-  expireCookie(res, NEEDS_PAYMENT_COOKIE);
-  expireCookie(res, NEEDS_FREE_PM_COOKIE);
-  expireCookie(res, PENDING_APPROVAL_COOKIE);
+  const parts = [
+    `${name}=`,
+    "Path=/",
+    "Max-Age=0",
+    "Expires=Thu, 01 Jan 1970 00:00:00 GMT",
+    "SameSite=Lax",
+  ];
+  if (httpOnly) parts.push("HttpOnly");
+  if (secure) parts.push("Secure");
+  if (domain) parts.push(`Domain=${domain}`);
+  res.headers.append("set-cookie", parts.join("; "));
+}
+
+export function clearSessionCookies(res: {
+  headers: { append: (name: string, value: string) => void };
+}) {
+  const domains = [undefined, ".thetrainstation.co", "thetrainstation.co", "www.thetrainstation.co"];
+  for (const name of SESSION_COOKIE_NAMES) {
+    for (const domain of domains) {
+      appendExpiredCookie(res, name, domain, false, false);
+      appendExpiredCookie(res, name, domain, true, true);
+    }
+  }
 }
 
 export function applyNewMemberOnboardingCookie(
