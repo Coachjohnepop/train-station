@@ -135,6 +135,7 @@ export default function MemberNav({
   const nutritionBtnRef = useRef<HTMLButtonElement>(null);
   const [nutritionMenu, setNutritionMenu] = useState<{ left: number; top: number } | null>(null);
   const [scorePoints, setScorePoints] = useState<number | null>(null);
+  const [dayCalories, setDayCalories] = useState<number | null>(null);
   const [scorePulse, setScorePulse] = useState(false);
   const [textScale, setTextScale] = useState<MemberTextScale>("md");
 
@@ -158,6 +159,26 @@ export default function MemberNav({
   useEffect(() => {
     void refreshScore();
   }, [refreshScore]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetch("/api/member/food", { cache: "no-store" })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (cancelled || !data || typeof data.dayCalories !== "number") return;
+        setDayCalories(data.dayCalories);
+      })
+      .catch(() => {});
+    function onFood(event: Event) {
+      const total = (event as CustomEvent<{ dayCalories?: number }>).detail?.dayCalories;
+      if (typeof total === "number") setDayCalories(total);
+    }
+    window.addEventListener("food-calories-updated", onFood);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("food-calories-updated", onFood);
+    };
+  }, [pathname]);
 
   useEffect(() => {
     setMoreOpen(false);
@@ -233,7 +254,6 @@ export default function MemberNav({
   const nutritionLocked = paymentGateActive;
   const nutritionMeals = nutritionDesk ? nutritionMealNav(nutritionDesk) : [...NUTRITION_MEALS];
   const nutritionTabLabel = nutritionDesk?.pageTitle?.trim() || "Nutrition";
-  const advisoryLabel = nutritionDesk?.advisoryCta || "Book a nutrition appointment";
 
   function tabClass(active: boolean, rampHighlight: boolean) {
     if (rampHighlight) {
@@ -305,8 +325,11 @@ export default function MemberNav({
                   false,
                 )} ${nutritionLocked ? "opacity-75" : ""}`}
               >
-                {nutritionTabLabel}
+                <span>{nutritionTabLabel}</span>
                 {nutritionLocked ? lockIcon() : null}
+                {dayCalories != null && dayCalories > 0 ? (
+                  <span className="member-nav-score-badge">{dayCalories}</span>
+                ) : null}
               </button>
             </Fragment>
           );
@@ -416,12 +439,22 @@ export default function MemberNav({
               : undefined
           }
         >
+          <Link
+            href="/member/nutrition/log"
+            onClick={() => setNutritionOpen(false)}
+            className="member-nav-more-link"
+          >
+            <span>Enter Your Eating</span>
+          </Link>
+          <p className="px-3 pb-0.5 pt-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#c4b5fd]">
+            Ideas
+          </p>
           {nutritionMeals.map((meal) => (
             <Link
               key={meal.id}
               href={`/member/nutrition#${meal.id}`}
               onClick={() => setNutritionOpen(false)}
-              className="member-nav-more-link"
+              className="member-nav-more-link pl-5"
             >
               <span>{meal.label}</span>
             </Link>
@@ -431,14 +464,15 @@ export default function MemberNav({
             onClick={() => setNutritionOpen(false)}
             className="member-nav-more-link"
           >
-            <span>Shopping list</span>
+            <span>Enter Shopping List</span>
           </Link>
           <Link
             href="/member/book?purpose=nutrition"
             onClick={() => setNutritionOpen(false)}
+            title="Weight Loss and Gaining Strength Stars in the Kitchen"
             className="member-nav-more-link member-nav-nutrition-advisory"
           >
-            <span>{advisoryLabel}</span>
+            <span>Book Nutrition Meeting</span>
           </Link>
         </div>
       ) : null}

@@ -94,6 +94,27 @@ model User {
   auditEventsAsActor AuditEvent[]        @relation("AuditActor")
   acctParties          AcctParty[]
   acctJournalCreated   AcctJournalEntry[] @relation("AcctJournalCreatedBy")
+  foodEntries          FoodEntry[]
+}
+
+/// What a member ate. Calories are an estimate. Weeks start Monday, Pacific.
+model FoodEntry {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  eatenOn   String
+  protein   String   @default("")
+  starch    String   @default("")
+  fat       String   @default("")
+  extras    String   @default("")
+  calories  Int
+  proteinG  Int?
+  carbG     Int?
+  fatG      Int?
+  source    String   @default("manual")
+  createdAt DateTime @default(now())
+
+  @@index([userId, eatenOn])
 }
 
 model SubscriptionTier {
