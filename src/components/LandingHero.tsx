@@ -296,7 +296,7 @@ export default function LandingHero({
               />
             ) : (
               <>
-            <div className="w-full max-w-sm">
+            <div className="landing-b-start-btns w-full max-w-md">
               <EasyPathChoices
                 kicker=""
                 hint={
@@ -312,7 +312,7 @@ export default function LandingHero({
                     markLandingConverted();
                     fireLandingJoinHook(e.currentTarget);
                   }}
-                  className="landing-hero-early-signup inline-flex h-[3.5rem] w-full items-center justify-center rounded-full px-8 text-[17px] font-extrabold tracking-tight transition-transform active:scale-[0.98] sm:h-14 sm:text-lg"
+                  className={`${primaryCta} min-h-[4.05rem] text-[23.5px] sm:min-h-[4.05rem] sm:text-[24px]`}
                 >
                   Grab Your Ticket
                 </Link>
@@ -320,7 +320,7 @@ export default function LandingHero({
                   type="button"
                   data-analytics-action={returnMode ? "hero-free-tour-return" : "hero-free-tour"}
                   onClick={() => setTourOpen(true)}
-                  className="landing-hero-secondary-cta inline-flex h-[3.5rem] w-full items-center justify-center rounded-full px-8 text-[17px] font-extrabold tracking-tight transition-transform active:scale-[0.98] sm:h-14 sm:text-lg"
+                  className={`${secondaryCta} min-h-[4.05rem] text-[22.5px] sm:min-h-[4.05rem] sm:text-[23.2px]`}
                 >
                   How it Works
                 </button>
@@ -330,7 +330,7 @@ export default function LandingHero({
                   aria-expanded={exploreOpen}
                   aria-controls="explore-content"
                   onClick={(e) => onExplore?.(e.currentTarget)}
-                  className="landing-hero-explore-cta inline-flex h-[3.25rem] w-full items-center justify-center gap-2.5 rounded-full px-8 text-[16px] font-extrabold tracking-tight transition-transform active:scale-[0.98] sm:h-14 sm:text-lg"
+                  className="landing-hero-explore-cta inline-flex min-h-[3.45rem] w-full items-center justify-center gap-2.5 rounded-full px-8 text-[21px] font-bold tracking-tight sm:min-h-[3.7rem] sm:text-[21.6px]"
                 >
                   Explore Content
                   <span
@@ -341,35 +341,49 @@ export default function LandingHero({
               </EasyPathChoices>
             </div>
 
-            <h1 className="landing-hero-headline mt-8 mb-3 text-[clamp(2.85rem,12.5vw,3.85rem)] font-semibold leading-[0.88] tracking-[-0.04em] text-white sm:mt-10 sm:mb-4 sm:text-6xl sm:tracking-[-0.05em] md:text-7xl">
-              {headline}
-            </h1>
-
-            <p className="landing-hero-subhead max-w-[18.5rem] text-[15px] font-semibold leading-snug text-white sm:max-w-sm sm:text-xl">
-              {returnMode ? (
-                <>
-                  You already found us.
-                  <Link
-                    href={JOIN_TICKETS_HREF}
-                    data-analytics-action="hero-board-in-one-tap"
-                    onClick={(e) => {
-                      markLandingConverted();
-                      fireLandingJoinHook(e.currentTarget);
-                    }}
-                    className="landing-hero-seat-link mt-1 block font-medium text-white/72 sm:mt-0 sm:inline sm:before:content-['\00a0']"
-                  >
-                    Board in one tap.
-                  </Link>
-                </>
-              ) : (
-                <>
-                  Coach Jeremy. Real programs.
-                  <span className="mt-1 block font-medium text-white/72 sm:mt-0 sm:inline sm:before:content-['\00a0']">
-                    On your phone.
-                  </span>
-                </>
-              )}
+            <p className="mt-8 mb-2 text-[14px] font-extrabold uppercase tracking-[0.28em] text-amber-200 drop-shadow-[0_2px_14px_rgba(0,0,0,0.95)] sm:mt-10 sm:text-[15px] sm:tracking-[0.32em]">
+              First Day Free
             </p>
+            {returnMode ? (
+              <h1 className="landing-hero-headline mb-3 text-[clamp(2.15rem,10vw,3.2rem)] font-semibold leading-[0.92] tracking-[-0.04em] text-white sm:text-6xl">
+                {headline}
+              </h1>
+            ) : (
+              <button
+                type="button"
+                data-analytics-action="hero-explore-content-headline"
+                onClick={(e) => onExplore?.(e.currentTarget)}
+                className="landing-hero-headline mb-3 cursor-pointer border-0 bg-transparent p-0 text-center text-[clamp(2.15rem,10vw,3.2rem)] font-semibold leading-[0.92] tracking-[-0.04em] text-white sm:text-6xl"
+              >
+                {headline}
+              </button>
+            )}
+
+            {returnMode ? (
+              <p className="landing-hero-subhead max-w-[22.5rem] text-[15px] font-semibold leading-snug text-white sm:max-w-md sm:text-xl">
+                You already found us.
+                <Link
+                  href={JOIN_TICKETS_HREF}
+                  data-analytics-action="hero-board-in-one-tap"
+                  onClick={(e) => {
+                    markLandingConverted();
+                    fireLandingJoinHook(e.currentTarget);
+                  }}
+                  className="landing-hero-seat-link mt-1 block font-medium text-white/72 sm:mt-0 sm:inline sm:before:content-['\00a0']"
+                >
+                  Board in one tap.
+                </Link>
+              </p>
+            ) : (
+              <button
+                type="button"
+                data-analytics-action="hero-free-tour-subhead"
+                onClick={() => setTourOpen(true)}
+                className="landing-hero-subhead max-w-[22.5rem] cursor-pointer border-0 bg-transparent p-0 text-center text-[15px] font-semibold leading-snug text-white sm:max-w-md sm:text-xl"
+              >
+                Coach Jeremy. Real programs. On your phone.
+              </button>
+            )}
               </>
             )}
           </div>
@@ -496,17 +510,27 @@ function JeremyHeroStack({
           />
         </div>
       ) : null}
-      <p className="mt-8 mb-2 text-[11px] font-extrabold uppercase tracking-[0.28em] text-amber-200 drop-shadow-[0_2px_14px_rgba(0,0,0,0.95)] sm:mt-10 sm:text-xs sm:tracking-[0.32em]">
+      <p className="mt-8 mb-2 text-[14px] font-extrabold uppercase tracking-[0.28em] text-amber-200 drop-shadow-[0_2px_14px_rgba(0,0,0,0.95)] sm:mt-10 sm:text-[15px] sm:tracking-[0.32em]">
         First Day Free
       </p>
-      <h1 className="landing-hero-headline mb-3 text-[clamp(2.15rem,10vw,3.2rem)] font-semibold leading-[0.92] tracking-[-0.04em] text-white sm:text-6xl">
+      <button
+        type="button"
+        data-analytics-action="hero-b-headline-track"
+        onClick={() => onTour("today")}
+        className="landing-hero-headline mb-3 cursor-pointer border-0 bg-transparent p-0 text-center text-[clamp(2.15rem,10vw,3.2rem)] font-semibold leading-[0.92] tracking-[-0.04em] text-white sm:text-6xl"
+      >
         Use Your Workout
         <br />
         <span className="landing-hero-accent">or Ours</span>
-      </h1>
-      <p className="landing-hero-subhead max-w-[22.5rem] text-[15px] font-semibold leading-snug text-white sm:max-w-md sm:text-xl">
+      </button>
+      <button
+        type="button"
+        data-analytics-action="hero-b-subhead-program"
+        onClick={() => onTour("jeremy")}
+        className="landing-hero-subhead max-w-[22.5rem] cursor-pointer border-0 bg-transparent p-0 text-center text-[15px] font-semibold leading-snug text-white sm:max-w-md sm:text-xl"
+      >
         Start by seeing how the application works for you and use your own workout or one of ours.
-      </p>
+      </button>
     </>
   );
 }

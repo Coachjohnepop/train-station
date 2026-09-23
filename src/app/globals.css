@@ -1926,7 +1926,7 @@ body:has([data-admin-chrome]) [data-global-theme-toggle] {
 .landing-b-start-btns .landing-hero-early-signup:hover {
   color: #ffd24a !important;
   -webkit-text-fill-color: #ffd24a !important;
-  -webkit-text-stroke: 1.6px #4c1d95;
+  -webkit-text-stroke: 1.6px #000;
   paint-order: stroke fill;
   text-shadow: none;
 }
@@ -1979,7 +1979,7 @@ body:has([data-admin-chrome]) [data-global-theme-toggle] {
 .landing-b-start-btns .landing-hero-explore-cta:hover {
   color: #ffd24a !important;
   -webkit-text-fill-color: #ffd24a !important;
-  -webkit-text-stroke: 1.35px #ffffff;
+  -webkit-text-stroke: 1.35px #000;
   paint-order: stroke fill;
   text-shadow: none;
 }
