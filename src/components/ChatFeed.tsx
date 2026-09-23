@@ -521,8 +521,8 @@ export default function ChatFeed({
             {archiveMode
               ? "Cleared slate — read-only. New notes stay on Coach / group tabs."
               : thread.kind === "cohort"
-                ? `Group feed · names on every post · ${COMMUNITY_NO_BROADCAST_NOTE}`
-                : "Direct messages with your coach"}
+                ? `DM with group · ${COMMUNITY_NO_BROADCAST_NOTE}`
+                : "DM with Coach"}
             {" · "}
             <span className="text-[var(--muted)]">Coach left · you / group right</span>
           </p>

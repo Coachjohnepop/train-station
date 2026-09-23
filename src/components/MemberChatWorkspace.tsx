@@ -287,13 +287,8 @@ export default function MemberChatWorkspace({
     : activeReplyThread?.kind === "cohort"
       ? "Comment on this post..."
       : "Message your coach";
-  const replyDestination = asCoach
-    ? activeReplyThread?.kind === "cohort"
-      ? "Posting as coach · Group feed"
-      : "Posting as coach · Direct thread"
-    : activeReplyThread?.kind === "cohort"
-      ? "Posting to · Community feed"
-      : "Posting to · Direct message with coach";
+  const replyDestination =
+    activeReplyThread?.kind === "cohort" ? "DM with group" : "DM with Coach";
 
   const totalUnread = Object.values(unreadByThread).reduce((n, c) => n + c, 0);
   const chromeOffset = useMemberChromeOffset();
@@ -467,7 +462,7 @@ export default function MemberChatWorkspace({
                 threadId={replyThreadId}
                 role={replyRole}
                 threadKind={activeReplyThread?.kind}
-                destinationLabel={asCoach || activeReplyThread?.kind === "cohort" ? replyDestination : undefined}
+                destinationLabel={replyDestination}
                 placeholder={replyPlaceholder}
                 onSent={(message) => {
                   if (!message) return;
