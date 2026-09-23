@@ -814,6 +814,12 @@ model MemberProfile {
   weightLossGoal              String?
   /// Target window, e.g. "12 weeks" (women onboard).
   weightLossTimeline          String?
+  /// Daily calories below this stay a gold outline on the Nutrition badge.
+  calorieMin                  Int?
+  /// Top of the on-target calorie range. Badge is emerald through this number.
+  calorieRangeMax             Int?
+  /// Hard daily total. Deep orange until this, red after it.
+  calorieHardMax              Int?
   /// Main training goal chip (lose-fat, tone, gain-muscle, …).
   primaryGoal                 String?
   /// How often they train now (starting, 1-2, 3-4, 5+).

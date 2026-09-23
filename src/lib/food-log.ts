@@ -61,3 +61,21 @@ export function cleanFoodText(value: unknown, max = 400): string {
 export function foodPartsFilled(parts: FoodParts): boolean {
   return Boolean(parts.protein || parts.starch || parts.fat || parts.extras);
 }
+
+export type CalorieThresholds = {
+  min: number;
+  rangeMax: number;
+  hardMax: number;
+};
+
+/** Gold outline, emerald range, deep orange, then red past the hard total. */
+export function calorieBand(
+  calories: number,
+  thresholds: CalorieThresholds | null,
+): "low" | "range" | "over" | "hard" | null {
+  if (!thresholds) return null;
+  if (calories < thresholds.min) return "low";
+  if (calories <= thresholds.rangeMax) return "range";
+  if (calories <= thresholds.hardMax) return "over";
+  return "hard";
+}

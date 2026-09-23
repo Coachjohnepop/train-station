@@ -4,6 +4,7 @@ import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { NUTRITION_MEALS, nutritionMealNav, type NutritionDesk } from "@/lib/nutrition-meals";
+import { calorieBand, type CalorieThresholds } from "@/lib/food-log";
 import ChatNavBadge from "@/components/ChatNavBadge";
 import UserBicepAvatar from "@/components/UserBicepAvatar";
 import { goMemberTodayHome } from "@/lib/member-today-home";
@@ -136,6 +137,7 @@ export default function MemberNav({
   const [nutritionMenu, setNutritionMenu] = useState<{ left: number; top: number } | null>(null);
   const [scorePoints, setScorePoints] = useState<number | null>(null);
   const [dayCalories, setDayCalories] = useState<number | null>(null);
+  const [calorieThresholds, setCalorieThresholds] = useState<CalorieThresholds | null>(null);
   const [ideasDrop, setIdeasDrop] = useState<"right" | "down">("right");
   const [scorePulse, setScorePulse] = useState(false);
   const [textScale, setTextScale] = useState<MemberTextScale>("md");
@@ -168,6 +170,7 @@ export default function MemberNav({
       .then((data) => {
         if (cancelled || !data || typeof data.dayCalories !== "number") return;
         setDayCalories(data.dayCalories);
+        setCalorieThresholds(data.thresholds ?? null);
       })
       .catch(() => {});
     function onFood(event: Event) {
@@ -342,7 +345,15 @@ export default function MemberNav({
                 <span>{nutritionTabLabel}</span>
                 {nutritionLocked ? lockIcon() : null}
                 {dayCalories != null && dayCalories > 0 ? (
-                  <span className="member-nav-score-badge">{dayCalories}</span>
+                  <span
+                    className={`member-nav-score-badge${
+                      calorieBand(dayCalories, calorieThresholds)
+                        ? ` member-nav-score-badge--cal-${calorieBand(dayCalories, calorieThresholds)}`
+                        : ""
+                    }`}
+                  >
+                    {dayCalories}
+                  </span>
                 ) : null}
               </button>
             </Fragment>

@@ -40,6 +40,9 @@ const patchSchema = z.object({
   weightLossTimeline: z.string().max(80).nullable().optional(),
   primaryGoal: z.string().max(120).nullable().optional(),
   workoutSchedule: z.string().max(40).nullable().optional(),
+  calorieMin: z.number().int().min(0).max(20000).nullable().optional(),
+  calorieRangeMax: z.number().int().min(0).max(20000).nullable().optional(),
+  calorieHardMax: z.number().int().min(0).max(20000).nullable().optional(),
   notes: nullableString,
   city: z.string().max(80).nullable().optional(),
   state: z.string().max(40).nullable().optional(),
@@ -153,6 +156,26 @@ export async function PATCH(request: Request, { params }: Params) {
     });
   }
 
+  const calorieFields = [body.calorieMin, body.calorieRangeMax, body.calorieHardMax];
+  if (calorieFields.some((value) => value !== undefined)) {
+    const min = body.calorieMin ?? null;
+    const rangeMax = body.calorieRangeMax ?? null;
+    const hardMax = body.calorieHardMax ?? null;
+    const setCount = [min, rangeMax, hardMax].filter((value) => value != null).length;
+    if (setCount !== 0 && setCount !== 3) {
+      return NextResponse.json(
+        { error: "Set the calorie minimum, range, and hard total together." },
+        { status: 400 },
+      );
+    }
+    if (min != null && rangeMax != null && hardMax != null && !(min < rangeMax && rangeMax < hardMax)) {
+      return NextResponse.json(
+        { error: "Calorie minimum must be below the range, and the range below the hard total." },
+        { status: 400 },
+      );
+    }
+  }
+
   await ensureMemberProfile({
     userId,
     email: accountRow.email,
@@ -184,6 +207,9 @@ export async function PATCH(request: Request, { params }: Params) {
       : {}),
     ...(primaryGoal !== undefined ? { primaryGoal } : {}),
     ...(workoutSchedule !== undefined ? { workoutSchedule } : {}),
+    ...(body.calorieMin !== undefined ? { calorieMin: body.calorieMin } : {}),
+    ...(body.calorieRangeMax !== undefined ? { calorieRangeMax: body.calorieRangeMax } : {}),
+    ...(body.calorieHardMax !== undefined ? { calorieHardMax: body.calorieHardMax } : {}),
     ...(body.notes !== undefined ? { notes: blankToNull(body.notes) ?? null } : {}),
     ...(body.city !== undefined ? { city: blankToNull(body.city) ?? null } : {}),
     ...(body.state !== undefined ? { state: blankToNull(body.state) ?? null } : {}),

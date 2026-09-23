@@ -10,7 +10,9 @@ import {
   pacificDateIso,
   weekDates,
   weekdayLabel,
+  type CalorieThresholds,
 } from "@/lib/food-log";
+import { getMemberProfile } from "@/lib/member-profiles-store";
 
 export const dynamic = "force-dynamic";
 
@@ -74,12 +76,24 @@ export async function GET(request: Request) {
     };
   });
   const today = byDay.find((day) => day.date === eatenOn) ?? byDay[0];
+  const profile = await getMemberProfile(userId);
+  const thresholds: CalorieThresholds | null =
+    profile?.calorieMin != null &&
+    profile.calorieRangeMax != null &&
+    profile.calorieHardMax != null
+      ? {
+          min: profile.calorieMin,
+          rangeMax: profile.calorieRangeMax,
+          hardMax: profile.calorieHardMax,
+        }
+      : null;
   return NextResponse.json({
     eatenOn,
     monday: days[0],
     sunday: addIsoDays(days[0], 6),
     dayCalories: today?.calories ?? 0,
     weekCalories: byDay.reduce((sum, day) => sum + day.calories, 0),
+    thresholds,
     days: byDay,
   });
 }

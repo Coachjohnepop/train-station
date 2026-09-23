@@ -46,6 +46,9 @@ type FormState = {
   workoutSchedule: string;
   weightLossGoal: string;
   weightLossTimeline: string;
+  calorieMin: string;
+  calorieRangeMax: string;
+  calorieHardMax: string;
   dailyReminderTime: string;
   smsReminderCadence: "consistent" | "minimum" | "";
   notes: string;
@@ -66,6 +69,9 @@ function emptyForm(): FormState {
     workoutSchedule: "",
     weightLossGoal: "",
     weightLossTimeline: "",
+    calorieMin: "",
+    calorieRangeMax: "",
+    calorieHardMax: "",
     dailyReminderTime: "",
     smsReminderCadence: "",
     notes: "",
@@ -88,6 +94,9 @@ function formFromCard(card: CardPayload): FormState {
     workoutSchedule: p.workoutSchedule || "",
     weightLossGoal: p.weightLossGoal || "",
     weightLossTimeline: p.weightLossTimeline || "",
+    calorieMin: p.calorieMin != null ? String(p.calorieMin) : "",
+    calorieRangeMax: p.calorieRangeMax != null ? String(p.calorieRangeMax) : "",
+    calorieHardMax: p.calorieHardMax != null ? String(p.calorieHardMax) : "",
     dailyReminderTime: p.dailyReminderTime || "",
     smsReminderCadence: p.smsReminderCadence || "",
     notes: p.notes || "",
@@ -204,6 +213,9 @@ export default function AdminMemberCard({ userId }: { userId: string }) {
         workoutSchedule: form.workoutSchedule || null,
         weightLossGoal: form.weightLossGoal.trim() || null,
         weightLossTimeline: form.weightLossTimeline || null,
+        calorieMin: form.calorieMin.trim() ? Number(form.calorieMin) : null,
+        calorieRangeMax: form.calorieRangeMax.trim() ? Number(form.calorieRangeMax) : null,
+        calorieHardMax: form.calorieHardMax.trim() ? Number(form.calorieHardMax) : null,
         dailyReminderTime: form.dailyReminderTime || null,
         smsReminderCadence: form.smsReminderCadence || null,
         notes: form.notes.trim() || null,
@@ -640,6 +652,36 @@ export default function AdminMemberCard({ userId }: { userId: string }) {
                     />
                   ) : null}
                 </Field>
+                <Field label="Daily calorie minimum">
+                  <input
+                    className={inputClass}
+                    inputMode="numeric"
+                    value={form.calorieMin}
+                    onChange={(e) => patchForm("calorieMin", e.target.value.replace(/[^\d]/g, ""))}
+                    placeholder="1200"
+                  />
+                </Field>
+                <Field label="Daily calorie range top">
+                  <input
+                    className={inputClass}
+                    inputMode="numeric"
+                    value={form.calorieRangeMax}
+                    onChange={(e) => patchForm("calorieRangeMax", e.target.value.replace(/[^\d]/g, ""))}
+                    placeholder="1800"
+                  />
+                </Field>
+                <Field label="Daily calorie hard total">
+                  <input
+                    className={inputClass}
+                    inputMode="numeric"
+                    value={form.calorieHardMax}
+                    onChange={(e) => patchForm("calorieHardMax", e.target.value.replace(/[^\d]/g, ""))}
+                    placeholder="2200"
+                  />
+                </Field>
+                <p className="text-xs text-[var(--muted)]">
+                  Under the minimum the Nutrition number keeps a gold outline. Through the range top it is emerald. Over that, deep orange. Past the hard total, red.
+                </p>
                 <Field label="Fat-loss target">
                   <input
                     className={inputClass}

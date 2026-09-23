@@ -1,0 +1,3 @@
+ALTER TABLE "MemberProfile" ADD COLUMN IF NOT EXISTS "calorieMin" INTEGER;
+ALTER TABLE "MemberProfile" ADD COLUMN IF NOT EXISTS "calorieRangeMax" INTEGER;
+ALTER TABLE "MemberProfile" ADD COLUMN IF NOT EXISTS "calorieHardMax" INTEGER;

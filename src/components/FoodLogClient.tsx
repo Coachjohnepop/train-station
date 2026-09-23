@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { calorieBand, type CalorieThresholds } from "@/lib/food-log";
 
 type FoodRow = {
   id: string;
@@ -25,6 +26,7 @@ type LogResponse = {
   eatenOn: string;
   dayCalories: number;
   weekCalories: number;
+  thresholds: CalorieThresholds | null;
   days: DayBucket[];
 };
 
@@ -147,7 +149,17 @@ export default function FoodLogClient() {
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="card p-4">
           <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--muted)]">Today</p>
-          <p className="mt-1 text-3xl font-bold tabular-nums">{log?.dayCalories ?? 0}</p>
+          <p
+            className={`mt-1 inline-flex min-w-16 justify-center rounded-full border px-3 py-1 text-3xl font-bold tabular-nums member-nav-score-badge${
+              log
+                ? calorieBand(log.dayCalories, log.thresholds)
+                  ? ` member-nav-score-badge--cal-${calorieBand(log.dayCalories, log.thresholds)}`
+                  : ""
+                : ""
+            }`}
+          >
+            {log?.dayCalories ?? 0}
+          </p>
           <p className="text-xs text-[var(--muted)]">calories</p>
         </div>
         <div className="card p-4">

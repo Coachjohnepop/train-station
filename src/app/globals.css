@@ -3880,6 +3880,34 @@ html[data-free-ticket="open"] .landing-nav .theme-mode-toggle {
   }
 }
 
+.member-nav-score-badge--cal-low {
+  background: transparent;
+  color: #ffd24a;
+  border-color: #ffd24a;
+  box-shadow: none;
+}
+
+.member-nav-score-badge--cal-range {
+  background: #047857;
+  color: #ecfdf5;
+  border-color: #6ee7b7;
+  box-shadow: none;
+}
+
+.member-nav-score-badge--cal-over {
+  background: #c2410c;
+  color: #fff7ed;
+  border-color: #fdba74;
+  box-shadow: none;
+}
+
+.member-nav-score-badge--cal-hard {
+  background: #b91c1c;
+  color: #fff;
+  border-color: #fecaca;
+  box-shadow: none;
+}
+
 .member-nav-score-badge--pulse {
   animation: member-score-badge-pop 0.9s cubic-bezier(0.22, 1, 0.36, 1);
 }

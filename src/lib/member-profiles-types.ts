@@ -20,6 +20,9 @@ export type MemberProfile = {
   weightLossTimeline: string | null;
   primaryGoal: string | null;
   workoutSchedule: string | null;
+  calorieMin: number | null;
+  calorieRangeMax: number | null;
+  calorieHardMax: number | null;
   notes: string | null;
   city: string | null;
   state: string | null;
@@ -80,6 +83,9 @@ export type MemberProfilePatch = Partial<
     | "weightLossTimeline"
     | "primaryGoal"
     | "workoutSchedule"
+    | "calorieMin"
+    | "calorieRangeMax"
+    | "calorieHardMax"
     | "notes"
     | "city"
     | "state"

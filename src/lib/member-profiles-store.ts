@@ -62,6 +62,9 @@ function emptyProfile(userId: string, email: string, plan: SignupPlan): MemberPr
     weightLossTimeline: null,
     primaryGoal: null,
     workoutSchedule: null,
+    calorieMin: null,
+    calorieRangeMax: null,
+    calorieHardMax: null,
     notes: null,
     city: null,
     state: null,
@@ -106,6 +109,11 @@ function emptyProfile(userId: string, email: string, plan: SignupPlan): MemberPr
   };
 }
 
+function calorieThresholdNumber(raw: unknown): number | null {
+  if (typeof raw !== "number" || !Number.isFinite(raw) || raw < 0 || raw > 20000) return null;
+  return Math.round(raw);
+}
+
 function normalizePaymentMethod(raw: unknown): PaymentMethod | null {
   const v = typeof raw === "string" ? raw.trim().toLowerCase() : "";
   if (
@@ -145,6 +153,9 @@ function normalizeProfile(raw: unknown, userId: string): MemberProfile | null {
     primaryGoal: typeof data.primaryGoal === "string" ? data.primaryGoal : null,
     workoutSchedule:
       typeof data.workoutSchedule === "string" ? data.workoutSchedule : null,
+    calorieMin: calorieThresholdNumber(data.calorieMin),
+    calorieRangeMax: calorieThresholdNumber(data.calorieRangeMax),
+    calorieHardMax: calorieThresholdNumber(data.calorieHardMax),
     notes: data.notes ?? null,
     city: data.city ?? null,
     state: data.state ?? null,
