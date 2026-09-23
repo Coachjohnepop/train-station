@@ -225,21 +225,12 @@ export function applySessionCookies(
   res.cookies.set(MEMBER_NAME_COOKIE, user.name, memberCookieOptions());
 }
 
-const SESSION_COOKIE_NAMES = [
-  SESSION_COOKIE,
-  MEMBER_COOKIE,
-  MEMBER_NAME_COOKIE,
-  NEEDS_ONBOARD_COOKIE,
-  SIGNUP_PLAN_COOKIE,
-  NEEDS_PAYMENT_COOKIE,
-  "ts_needs_free_pm",
-  PENDING_APPROVAL_COOKIE,
-] as const;
-
 /**
  * Next's cookie jar keeps one Set-Cookie per name, so a domain clear
  * overwrites the host-only clear and the other copy of the session survives.
  * Append every variant after the jar is done writing.
+ * Names are read inside the function: listing them at import time hits
+ * MEMBER_COOKIE before current-user finishes loading and 500s the site.
  */
 function appendExpiredCookie(
   res: { headers: { append: (name: string, value: string) => void } },
@@ -264,8 +255,18 @@ function appendExpiredCookie(
 export function clearSessionCookies(res: {
   headers: { append: (name: string, value: string) => void };
 }) {
+  const names = [
+    SESSION_COOKIE,
+    MEMBER_COOKIE,
+    MEMBER_NAME_COOKIE,
+    NEEDS_ONBOARD_COOKIE,
+    SIGNUP_PLAN_COOKIE,
+    NEEDS_PAYMENT_COOKIE,
+    NEEDS_FREE_PM_COOKIE,
+    PENDING_APPROVAL_COOKIE,
+  ];
   const domains = [undefined, ".thetrainstation.co", "thetrainstation.co", "www.thetrainstation.co"];
-  for (const name of SESSION_COOKIE_NAMES) {
+  for (const name of names) {
     for (const domain of domains) {
       appendExpiredCookie(res, name, domain, false, false);
       appendExpiredCookie(res, name, domain, true, true);
