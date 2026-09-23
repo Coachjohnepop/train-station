@@ -287,9 +287,14 @@ export default function FoodLogClient() {
               <p className="tabular-nums text-sm font-semibold">{day.calories} cal</p>
             </div>
             {day.entries.length > 0 ? (
-              <ul className="mt-2 space-y-1 text-sm text-[var(--muted)]">
+              <ul className="mt-2 space-y-1 text-sm">
                 {day.entries.map((row) => (
-                  <li key={row.id}>{lineSummary(row)}</li>
+                  <li key={row.id} className="flex items-start gap-3">
+                    <span className="w-14 shrink-0 text-left font-bold tabular-nums text-[var(--text)]">
+                      {row.calories}
+                    </span>
+                    <span className="min-w-0 flex-1 text-[var(--muted)]">{foodLine(row)}</span>
+                  </li>
                 ))}
               </ul>
             ) : (
@@ -340,55 +345,34 @@ function FoodTable({
     return <p className="text-sm text-[var(--muted)]">Nothing logged today yet.</p>;
   }
   return (
-    <div className="card overflow-x-auto">
-      <table className="w-full min-w-[36rem] text-left text-sm">
-        <thead className="text-[10px] uppercase tracking-wide text-[var(--muted)]">
-          <tr>
-            <th className="px-3 py-2 text-left font-semibold">Cal</th>
-            <th className="px-3 py-2 font-semibold">Protein</th>
-            <th className="px-3 py-2 font-semibold">Starch</th>
-            <th className="px-3 py-2 font-semibold">Butter / oil</th>
-            <th className="px-3 py-2 font-semibold">Other</th>
-            <th className="px-3 py-2" />
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <tr key={row.id} className="border-t border-[var(--border)]">
-              <td className="px-3 py-2 text-left tabular-nums font-semibold">
-                {row.calories}
-                {nutrientLine(row) ? (
-                  <span className="mt-0.5 block text-[11px] font-normal normal-case text-[var(--muted)]">
-                    {nutrientLine(row)}
-                  </span>
-                ) : null}
-              </td>
-              <td className="px-3 py-2">{row.protein || "—"}</td>
-              <td className="px-3 py-2">{row.starch || "—"}</td>
-              <td className="px-3 py-2">{row.fat || "—"}</td>
-              <td className="px-3 py-2">{row.extras || "—"}</td>
-              <td className="px-3 py-2 text-right">
-                <button
-                  type="button"
-                  className="text-xs font-semibold text-[var(--muted)] hover:text-[var(--text)]"
-                  disabled={busy}
-                  onClick={() => onRemove(row.id)}
-                >
-                  Remove
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <ul className="card divide-y divide-[var(--border)]">
+      {rows.map((row) => (
+        <li key={row.id} className="flex items-start gap-3 px-3 py-2">
+          <span className="w-14 shrink-0 text-left text-base font-bold tabular-nums leading-5">
+            {row.calories}
+          </span>
+          <span className="min-w-0 flex-1 text-sm">
+            <span className="block">{foodLine(row)}</span>
+            {nutrientLine(row) ? (
+              <span className="mt-0.5 block text-[11px] text-[var(--muted)]">{nutrientLine(row)}</span>
+            ) : null}
+          </span>
+          <button
+            type="button"
+            className="shrink-0 text-xs font-semibold text-[var(--muted)] hover:text-[var(--text)]"
+            disabled={busy}
+            onClick={() => onRemove(row.id)}
+          >
+            Remove
+          </button>
+        </li>
+      ))}
+    </ul>
   );
 }
 
-function lineSummary(row: FoodRow): string {
-  const food = [row.protein, row.starch, row.fat, row.extras].filter(Boolean).join(" · ") || "Meal";
-  const detail = nutrientLine(row);
-  return detail ? `${food} — ${detail}` : food;
+function foodLine(row: FoodRow): string {
+  return [row.protein, row.starch, row.fat, row.extras].filter(Boolean).join(" · ") || "Meal";
 }
 
 function nutrientLine(row: FoodNutrients): string {
