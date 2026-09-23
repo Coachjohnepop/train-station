@@ -20,7 +20,7 @@ export async function GET(request: Request) {
   const unreadOnly = !readOnly;
   const kindRaw = searchParams.get("kind");
   const kind =
-    kindRaw === "signup" || kindRaw === "booking" || kindRaw === "zoom"
+    kindRaw === "signup" || kindRaw === "booking" || kindRaw === "zoom" || kindRaw === "workout"
       ? (kindRaw as CoachInboxKind)
       : undefined;
 

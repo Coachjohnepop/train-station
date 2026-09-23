@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 
 type InboxItem = {
   id: string;
-  kind: "signup" | "booking" | "zoom";
+  kind: "signup" | "booking" | "zoom" | "workout";
   title: string;
   body: string;
   href: string | null;
@@ -19,12 +19,14 @@ const KIND_LABEL: Record<InboxItem["kind"], string> = {
   signup: "Signup",
   booking: "Calendly / booking",
   zoom: "Zoom request",
+  workout: "Workout logged",
 };
 
 const KIND_HREF: Record<InboxItem["kind"], string> = {
   signup: "/admin/members",
   booking: "/admin/bookings",
   zoom: "/admin/today",
+  workout: "/admin/today",
 };
 
 function whenLabel(iso: string): string {
@@ -91,6 +93,7 @@ export default function AdminCoachInbox() {
   }
 
   async function markAll() {
+    setError("");
     const res = await fetch("/api/admin/inbox", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -101,15 +104,20 @@ export default function AdminCoachInbox() {
       return;
     }
     window.dispatchEvent(new Event("coach-inbox-refresh"));
+    setItems([]);
+    setUnread(0);
     setFilter("read");
   }
 
+  const canMarkAll = filter !== "read" && (unread > 0 || items.length > 0);
+
   const filters: Array<"all" | "read" | InboxItem["kind"]> = [
     "all",
+    "read",
     "signup",
     "booking",
     "zoom",
-    "read",
+    "workout",
   ];
 
   return (
@@ -132,7 +140,7 @@ export default function AdminCoachInbox() {
         <button
           type="button"
           className="ml-auto text-xs font-semibold text-[var(--accent)] underline"
-          disabled={filter === "read" || unread <= 0}
+          disabled={!canMarkAll}
           onClick={() => void markAll()}
         >
           Mark all read

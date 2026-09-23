@@ -109,10 +109,10 @@ export default function CoachHelpAssistant() {
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="coach-help-fab fixed z-40 hidden -translate-x-1/2 items-center gap-2 rounded-full border border-[color-mix(in_srgb,var(--accent)_45%,var(--border))] bg-[color-mix(in_srgb,var(--surface)_92%,var(--bg))] px-4 py-3 text-sm font-semibold text-accent shadow-lg backdrop-blur-md transition hover:border-accent xl:flex"
+          className="coach-help-fab fixed z-40 hidden items-center gap-2 rounded-full border border-[color-mix(in_srgb,var(--accent)_45%,var(--border))] bg-[color-mix(in_srgb,var(--surface)_92%,var(--bg))] px-4 py-3 text-sm font-semibold text-accent shadow-lg backdrop-blur-md transition hover:border-accent xl:flex"
           style={{
-            left: "50%",
-            bottom: "max(1rem, env(safe-area-inset-bottom))",
+            left: "1rem",
+            bottom: "max(5.75rem, calc(env(safe-area-inset-bottom) + 4.75rem))",
           }}
           aria-label="Ask Grok for help using this app"
         >

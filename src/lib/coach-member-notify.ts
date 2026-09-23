@@ -35,7 +35,6 @@ const FORCE_IN_APP_EVENTS: ReadonlySet<CoachAlertEvent> = new Set([
   "programStartChosen",
   "messagesOpened",
   "warmupStarted",
-  "workoutLogged",
   "intakeScheduled",
 ]);
 
@@ -155,6 +154,8 @@ export async function notifyCoachForMemberEvent(params: {
   }
   if (FORCE_IN_APP_EVENTS.has(params.event)) channels.inApp = true;
   if (FORCE_SMS_EVENTS.has(params.event)) channels.sms = true;
+  // A finished workout is an alert, not a thread that needs a reply.
+  if (params.event === "workoutLogged") channels.inApp = false;
 
   const link = params.deepLink || `${appBaseUrl()}/admin/members`;
   const result = { inApp: false, email: false, sms: false, push: false };
@@ -770,6 +771,7 @@ export async function notifyCoachWorkoutLogged(params: {
     memberUserId: params.userId,
     memberName: params.name,
     memberEmail: params.email,
+    inboxClaimKey: `workout:${params.userId}:${params.sessionDate}:${params.workoutId}`,
     subject: `${params.name} finished: ${params.workoutName}`,
     message:
       `${kind}: ${params.workoutName}\n` +
@@ -814,7 +816,7 @@ export async function notifyMemberWorkoutLogged(params: {
     `${params.workoutName}\n` +
     `Date: ${params.sessionDate} · ${progressLabel}` +
     lateLine +
-    `Jeremy can see this in Messages. Day Complete is on for today. Come back tomorrow.\n\n` +
+    `Jeremy can see this on Alerts. Day Complete is on for today. Come back tomorrow.\n\n` +
     `${BRAND_NAME}\n` +
     todayUrl;
 

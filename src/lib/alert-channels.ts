@@ -39,7 +39,7 @@ export function defaultCoachAlertPrefs(): CoachAlertPrefs {
     messagesOpened: { inApp: true, sms: false, email: false },
     warmupStarted: { inApp: true, sms: false, email: false },
     intakeScheduled: { inApp: true, sms: false, email: true },
-    workoutLogged: { inApp: true, sms: false, email: false },
+    workoutLogged: { inApp: false, sms: false, email: false },
   };
 }
 

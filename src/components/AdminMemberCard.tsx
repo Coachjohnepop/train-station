@@ -681,7 +681,7 @@ export default function AdminMemberCard({ userId }: { userId: string }) {
             <button
               type="button"
               onClick={() => void saveCard()}
-              disabled={saving || !dirty}
+              disabled={saving}
               className="btn-primary text-xs px-4 py-2"
             >
               {saving ? "Saving…" : "Save card"}

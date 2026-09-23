@@ -2,7 +2,7 @@ import "server-only";
 
 import { isDatabaseConfigured } from "@/lib/database-config";
 
-export type CoachInboxKind = "signup" | "booking" | "zoom";
+export type CoachInboxKind = "signup" | "booking" | "zoom" | "workout";
 
 export type CoachInboxItemDto = {
   id: string;
@@ -18,7 +18,7 @@ export type CoachInboxItemDto = {
 };
 
 function asKind(raw: string): CoachInboxKind {
-  if (raw === "booking" || raw === "zoom") return raw;
+  if (raw === "booking" || raw === "zoom" || raw === "workout") return raw;
   return "signup";
 }
 
@@ -149,5 +149,6 @@ export function inboxKindFromCoachEvent(
   if (event === "newMember") return "signup";
   if (event === "intakeScheduled") return "booking";
   if (event === "zoomWaiting") return "zoom";
+  if (event === "workoutLogged") return "workout";
   return null;
 }
