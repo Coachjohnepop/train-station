@@ -269,7 +269,7 @@ export default function LandingSeeInsideTour({
   return createPortal(
     <>
     <div
-      className="landing-see-inside force-dark relative fixed inset-0 z-[100] flex flex-col bg-[#07040f]" data-force-dark
+      className="landing-see-inside force-dark fixed inset-0 z-[100] flex flex-col bg-[#07040f]" data-force-dark
       role="dialog"
       aria-modal="true"
       aria-labelledby="see-inside-title"

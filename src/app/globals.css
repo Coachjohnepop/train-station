@@ -2066,6 +2066,14 @@ body:has([data-admin-chrome]) [data-global-theme-toggle] {
   }
 }
 
+/* Covers the viewport. Tailwind emits `relative` after `fixed`, so a `relative`
+   class on this portal wins, drops the tour below the fold, and body scroll
+   lock makes the How it Works tap look like a no-op. */
+.landing-see-inside {
+  position: fixed;
+  inset: 0;
+}
+
 /* See-inside tour — size to the slide, don’t leave a tall empty band on phones */
 .landing-see-inside__stage {
   position: relative;
