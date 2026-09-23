@@ -3,18 +3,37 @@ import "server-only";
 import { xaiApiKey, defaultXaiChatModel } from "@/lib/xai-chat";
 import {
   cleanFoodText,
+  EMPTY_NUTRIENTS,
   type FoodEstimate,
+  type FoodNutrients,
   type FoodParts,
 } from "@/lib/food-log";
 
-const ESTIMATE_PROMPT = `You estimate a home-cooked meal for a coaching app. Split the food into four buckets and estimate calories.
+const NUTRIENT_JSON = `{"calories":number,"proteinG":number,"carbG":number,"fatG":number,"saturatedFatG":number,"fiberG":number,"sugarG":number,"addedSugarG":number,"sodiumMg":number,"cholesterolMg":number,"serving":"","protein":"","starch":"","fat":"","extras":""}`;
+
+const ESTIMATE_PROMPT = `You estimate a home-cooked meal for a coaching app. Split the food into four buckets and estimate the numbers.
 Return only JSON:
-{"calories":number,"proteinG":number,"carbG":number,"fatG":number,"protein":"","starch":"","fat":"","extras":""}
+${NUTRIENT_JSON}
 - protein: meats, eggs, fish, dairy protein
 - starch: bread, rice, potato, tortilla, oats
 - fat: butter, oil, ghee, the cooking fat
 - extras: peanut butter, garlic, sauces, jam, honey, vegetables that are not the main protein or starch
-Keep the member's words. Do not invent foods they did not mention. Calories are an estimate for the amounts given.`;
+- fiberG, sugarG, addedSugarG, saturatedFatG are grams
+- sodiumMg and cholesterolMg are milligrams
+- serving is a short amount, such as "2 eggs" 
+Use null for a number you cannot estimate. Keep the member's words. Do not invent foods they did not mention.`;
+
+const LABEL_PROMPT = `You read a food photo for a coaching app.
+If it is a Nutrition Facts label, copy the printed numbers for one serving. Do not round them into a guess and do not invent a line that is not printed.
+If it is a plate or package front with no label, estimate the meal instead.
+Return only JSON:
+${NUTRIENT_JSON}
+- protein: the product name, or the protein foods on the plate
+- starch, fat, extras: only what you can see. Leave them empty on a label if they are not separate foods.
+- fiberG, sugarG, addedSugarG, saturatedFatG are grams
+- sodiumMg and cholesterolMg are milligrams
+- serving is the printed serving size, such as "2/3 cup (55g)"
+Use null when that line is not on the label.`;
 
 function leadingCount(text: string): number {
   const match = text.match(/(\d+(?:\.\d+)?)/);
@@ -49,6 +68,7 @@ export function roughFoodEstimate(parts: FoodParts): FoodEstimate {
     proteinG: null,
     carbG: null,
     fatG: null,
+    ...EMPTY_NUTRIENTS,
     source: "rough",
   };
 }
@@ -65,10 +85,20 @@ function parseEstimateJson(raw: string, fallback: FoodParts): FoodEstimate | nul
   }
   const calories = Number(data.calories);
   if (!Number.isFinite(calories) || calories < 0 || calories > 8000) return null;
-  const grams = (key: string) => {
+  const grams = (key: string, max = 500) => {
+    if (data[key] == null || data[key] === "") return null;
     const n = Number(data[key]);
-    if (!Number.isFinite(n) || n < 0 || n > 500) return null;
+    if (!Number.isFinite(n) || n < 0 || n > max) return null;
     return Math.round(n);
+  };
+  const nutrients: FoodNutrients = {
+    saturatedFatG: grams("saturatedFatG"),
+    fiberG: grams("fiberG", 150),
+    sugarG: grams("sugarG"),
+    addedSugarG: grams("addedSugarG"),
+    sodiumMg: grams("sodiumMg", 20000),
+    cholesterolMg: grams("cholesterolMg", 3000),
+    serving: cleanFoodText(data.serving, 80),
   };
   return {
     protein: cleanFoodText(data.protein) || fallback.protein,
@@ -79,12 +109,14 @@ function parseEstimateJson(raw: string, fallback: FoodParts): FoodEstimate | nul
     proteinG: grams("proteinG"),
     carbG: grams("carbG"),
     fatG: grams("fatG"),
+    ...nutrients,
     source: "ai",
   };
 }
 
 async function xaiJson(
   content: string | Array<{ type: string; text?: string; image_url?: { url: string } }>,
+  system = ESTIMATE_PROMPT,
 ): Promise<string | null> {
   const apiKey = xaiApiKey();
   if (!apiKey) return null;
@@ -92,10 +124,10 @@ async function xaiJson(
   const body: Record<string, unknown> = {
     model,
     temperature: 0.2,
-    max_completion_tokens: 500,
+    max_completion_tokens: 700,
     response_format: { type: "json_object" },
     messages: [
-      { role: "system", content: ESTIMATE_PROMPT },
+      { role: "system", content: system },
       { role: "user", content },
     ],
   };
@@ -139,13 +171,16 @@ export async function estimateFoodPhoto(dataUrl: string): Promise<FoodEstimate |
   }
   if (dataUrl.length > 5_500_000) return { error: "Photo is too large. Try one under 4 MB." };
   const empty: FoodParts = { protein: "", starch: "", fat: "", extras: "" };
-  const raw = await xaiJson([
-    {
-      type: "text",
-      text: "Read this plate. Split it into protein, starch, cooking fat, and extras, then estimate calories.",
-    },
-    { type: "image_url", image_url: { url: dataUrl } },
-  ]);
+  const raw = await xaiJson(
+    [
+      {
+        type: "text",
+        text: "Read this photo. If it is a Nutrition Facts label, copy that label. If it is a plate, estimate the meal.",
+      },
+      { type: "image_url", image_url: { url: dataUrl } },
+    ],
+    LABEL_PROMPT,
+  );
   if (!raw) {
     return { error: "Could not read that photo. Type the meal instead." };
   }

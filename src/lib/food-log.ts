@@ -45,13 +45,45 @@ export type FoodParts = {
   extras: string;
 };
 
-export type FoodEstimate = FoodParts & {
-  calories: number;
-  proteinG: number | null;
-  carbG: number | null;
-  fatG: number | null;
-  source: "ai" | "rough";
+export type FoodNutrients = {
+  saturatedFatG: number | null;
+  fiberG: number | null;
+  sugarG: number | null;
+  addedSugarG: number | null;
+  sodiumMg: number | null;
+  cholesterolMg: number | null;
+  serving: string;
 };
+
+export const EMPTY_NUTRIENTS: FoodNutrients = {
+  saturatedFatG: null,
+  fiberG: null,
+  sugarG: null,
+  addedSugarG: null,
+  sodiumMg: null,
+  cholesterolMg: null,
+  serving: "",
+};
+
+export type FoodEstimate = FoodParts &
+  FoodNutrients & {
+    calories: number;
+    proteinG: number | null;
+    carbG: number | null;
+    fatG: number | null;
+    source: "ai" | "rough";
+  };
+
+export function sumFoodNutrient<K extends keyof FoodNutrients>(
+  rows: FoodNutrients[],
+  key: K,
+): number {
+  if (key === "serving") return 0;
+  return rows.reduce((sum, row) => {
+    const value = row[key];
+    return sum + (typeof value === "number" ? value : 0);
+  }, 0);
+}
 
 export function cleanFoodText(value: unknown, max = 400): string {
   if (typeof value !== "string") return "";

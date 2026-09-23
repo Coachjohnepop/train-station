@@ -3,9 +3,15 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { armCalorieHorn, playCalorieRedAlert } from "@/lib/calorie-red-alert";
-import { calorieBand, shouldFlashHardCalorieAlert, type CalorieThresholds } from "@/lib/food-log";
+import {
+  calorieBand,
+  shouldFlashHardCalorieAlert,
+  sumFoodNutrient,
+  type CalorieThresholds,
+  type FoodNutrients,
+} from "@/lib/food-log";
 
-type FoodRow = {
+type FoodRow = FoodNutrients & {
   id: string;
   eatenOn: string;
   protein: string;
@@ -13,6 +19,9 @@ type FoodRow = {
   fat: string;
   extras: string;
   calories: number;
+  proteinG: number | null;
+  carbG: number | null;
+  fatG: number | null;
   source: string;
 };
 
@@ -31,6 +40,17 @@ type LogResponse = {
   days: DayBucket[];
 };
 
+type PhotoDraft = FoodNutrients & {
+  protein: string;
+  starch: string;
+  fat: string;
+  extras: string;
+  calories: number;
+  proteinG: number | null;
+  carbG: number | null;
+  fatG: number | null;
+};
+
 const EMPTY = { protein: "", starch: "", fat: "", extras: "" };
 
 export default function FoodLogClient() {
@@ -39,6 +59,7 @@ export default function FoodLogClient() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [note, setNote] = useState("");
+  const [photoDraft, setPhotoDraft] = useState<PhotoDraft | null>(null);
 
   const load = useCallback(async () => {
     const res = await fetch("/api/member/food", { cache: "no-store" });
@@ -70,18 +91,38 @@ export default function FoodLogClient() {
       const res = await fetch("/api/member/food", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          ...form,
+          nutrients:
+            photoDraft &&
+            photoDraft.protein === form.protein &&
+            photoDraft.starch === form.starch &&
+            photoDraft.fat === form.fat &&
+            photoDraft.extras === form.extras
+              ? photoDraft
+              : undefined,
+        }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
         setError(typeof data.error === "string" ? data.error : "Could not save that meal.");
         return;
       }
+      const keptLabel = Boolean(
+        photoDraft &&
+          photoDraft.protein === form.protein &&
+          photoDraft.starch === form.starch &&
+          photoDraft.fat === form.fat &&
+          photoDraft.extras === form.extras,
+      );
       setForm(EMPTY);
+      setPhotoDraft(null);
       setNote(
         data.entry?.source === "rough"
           ? "Saved with a rough calorie guess. The AI estimate was unavailable."
-          : "Saved. Calories are an estimate.",
+          : keptLabel
+            ? "Saved the label numbers."
+            : "Saved. Calories are an estimate.",
       );
       const next = await load();
       if (next && shouldFlashHardCalorieAlert(beforeCalories, next.dayCalories, next.thresholds)) {
@@ -109,14 +150,19 @@ export default function FoodLogClient() {
         setError(typeof data.error === "string" ? data.error : "Could not read that photo.");
         return;
       }
-      setForm({
+      const next = {
         protein: data.draft.protein || "",
         starch: data.draft.starch || "",
         fat: data.draft.fat || "",
         extras: data.draft.extras || "",
-      });
+      };
+      setForm(next);
+      setPhotoDraft({ ...data.draft, ...next });
+      const label = nutrientLine(data.draft);
       setNote(
-        `Photo read. About ${data.draft.calories} calories. Check the four lines, then save.`,
+        label
+          ? `Label read. ${data.draft.calories} calories. ${label} Check it, then save.`
+          : `Photo read. About ${data.draft.calories} calories. Check the four lines, then save.`,
       );
     } finally {
       setBusy(false);
@@ -149,7 +195,8 @@ export default function FoodLogClient() {
         <h1 className="mt-3 text-2xl font-bold">Enter your eating</h1>
         <p className="mt-2 text-sm text-[var(--muted)]">
           Protein, starch, and the butter or oil you cooked with. Garlic, peanut butter, and the rest go in Other.
-          Calories are an estimate. The week starts Monday.
+          A photo of the plate or the nutrition label works. Fiber, sugar, and sodium are kept with the meal.
+          The week starts Monday.
         </p>
       </div>
 
@@ -168,6 +215,7 @@ export default function FoodLogClient() {
             {log?.dayCalories ?? 0}
           </p>
           <p className="text-xs text-[var(--muted)]">calories</p>
+          <NutrientTotals rows={today?.entries ?? []} />
         </div>
         <div className="card p-4">
           <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--muted)]">This week</p>
@@ -293,7 +341,14 @@ function FoodTable({
               <td className="px-3 py-2">{row.starch || "—"}</td>
               <td className="px-3 py-2">{row.fat || "—"}</td>
               <td className="px-3 py-2">{row.extras || "—"}</td>
-              <td className="px-3 py-2 tabular-nums font-semibold">{row.calories}</td>
+              <td className="px-3 py-2 tabular-nums font-semibold">
+                {row.calories}
+                {nutrientLine(row) ? (
+                  <span className="mt-0.5 block text-[11px] font-normal normal-case text-[var(--muted)]">
+                    {nutrientLine(row)}
+                  </span>
+                ) : null}
+              </td>
               <td className="px-3 py-2 text-right">
                 <button
                   type="button"
@@ -313,7 +368,34 @@ function FoodTable({
 }
 
 function lineSummary(row: FoodRow): string {
-  return [row.protein, row.starch, row.fat, row.extras].filter(Boolean).join(" · ") || "Meal";
+  const food = [row.protein, row.starch, row.fat, row.extras].filter(Boolean).join(" · ") || "Meal";
+  const detail = nutrientLine(row);
+  return detail ? `${food} — ${detail}` : food;
+}
+
+function nutrientLine(row: FoodNutrients): string {
+  const bits = [
+    row.fiberG != null ? `Fiber ${row.fiberG}g` : "",
+    row.sugarG != null ? `Sugar ${row.sugarG}g` : "",
+    row.addedSugarG != null ? `Added sugar ${row.addedSugarG}g` : "",
+    row.saturatedFatG != null ? `Sat fat ${row.saturatedFatG}g` : "",
+    row.sodiumMg != null ? `Sodium ${row.sodiumMg}mg` : "",
+    row.cholesterolMg != null ? `Chol ${row.cholesterolMg}mg` : "",
+  ].filter(Boolean);
+  if (!row.serving && bits.length === 0) return "";
+  return [row.serving ? `Per ${row.serving}` : "", bits.join(" · ")].filter(Boolean).join(" · ");
+}
+
+function NutrientTotals({ rows }: { rows: FoodNutrients[] }) {
+  const fiber = sumFoodNutrient(rows, "fiberG");
+  const sugar = sumFoodNutrient(rows, "sugarG");
+  const sodium = sumFoodNutrient(rows, "sodiumMg");
+  if (fiber + sugar + sodium === 0) return null;
+  return (
+    <p className="mt-2 text-xs text-[var(--muted)]">
+      Fiber {fiber}g · Sugar {sugar}g · Sodium {sodium}mg
+    </p>
+  );
 }
 
 function readPhoto(file: File): Promise<string> {

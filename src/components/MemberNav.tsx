@@ -467,7 +467,7 @@ export default function MemberNav({
           <Link
             href="/member/nutrition/log"
             onClick={() => setNutritionOpen(false)}
-            className="member-nav-more-link"
+            className="member-nav-more-link member-nav-eating-link"
           >
             <span>Enter Your Eating</span>
           </Link>

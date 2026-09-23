@@ -120,11 +120,18 @@ model FoodEntry {
   starch    String   @default("")
   fat       String   @default("")
   extras    String   @default("")
-  calories  Int
-  proteinG  Int?
-  carbG     Int?
-  fatG      Int?
-  source    String   @default("manual")
+  calories      Int
+  proteinG      Int?
+  carbG         Int?
+  fatG          Int?
+  saturatedFatG Int?
+  fiberG        Int?
+  sugarG        Int?
+  addedSugarG   Int?
+  sodiumMg      Int?
+  cholesterolMg Int?
+  serving       String @default("")
+  source        String @default("manual")
   createdAt DateTime @default(now())
 
   @@index([userId, eatenOn])

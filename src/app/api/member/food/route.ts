@@ -5,12 +5,14 @@ import { estimateFoodParts } from "@/lib/food-estimate";
 import {
   addIsoDays,
   cleanFoodText,
+  EMPTY_NUTRIENTS,
   foodPartsFilled,
   mondayOfIso,
   pacificDateIso,
   weekDates,
   weekdayLabel,
   type CalorieThresholds,
+  type FoodNutrients,
 } from "@/lib/food-log";
 import { getMemberProfile } from "@/lib/member-profiles-store";
 
@@ -33,6 +35,13 @@ function rowOut(row: {
   proteinG: number | null;
   carbG: number | null;
   fatG: number | null;
+  saturatedFatG: number | null;
+  fiberG: number | null;
+  sugarG: number | null;
+  addedSugarG: number | null;
+  sodiumMg: number | null;
+  cholesterolMg: number | null;
+  serving: string;
   source: string;
   createdAt: Date;
 }) {
@@ -47,8 +56,47 @@ function rowOut(row: {
     proteinG: row.proteinG,
     carbG: row.carbG,
     fatG: row.fatG,
+    saturatedFatG: row.saturatedFatG,
+    fiberG: row.fiberG,
+    sugarG: row.sugarG,
+    addedSugarG: row.addedSugarG,
+    sodiumMg: row.sodiumMg,
+    cholesterolMg: row.cholesterolMg,
+    serving: row.serving,
     source: row.source,
     createdAt: row.createdAt.toISOString(),
+  };
+}
+
+function readCount(value: unknown, max: number): number | null {
+  if (value == null || value === "") return null;
+  const n = Number(value);
+  if (!Number.isFinite(n) || n < 0 || n > max) return null;
+  return Math.round(n);
+}
+
+function readNutrients(value: unknown): (FoodNutrients & {
+  calories: number;
+  proteinG: number | null;
+  carbG: number | null;
+  fatG: number | null;
+}) | null {
+  if (!value || typeof value !== "object") return null;
+  const data = value as Record<string, unknown>;
+  const calories = readCount(data.calories, 8000);
+  if (calories == null) return null;
+  return {
+    calories,
+    proteinG: readCount(data.proteinG, 500),
+    carbG: readCount(data.carbG, 500),
+    fatG: readCount(data.fatG, 500),
+    saturatedFatG: readCount(data.saturatedFatG, 500),
+    fiberG: readCount(data.fiberG, 150),
+    sugarG: readCount(data.sugarG, 500),
+    addedSugarG: readCount(data.addedSugarG, 500),
+    sodiumMg: readCount(data.sodiumMg, 20000),
+    cholesterolMg: readCount(data.cholesterolMg, 3000),
+    serving: cleanFoodText(data.serving, 80),
   };
 }
 
@@ -116,7 +164,15 @@ export async function POST(request: Request) {
     typeof body?.eatenOn === "string" && /^\d{4}-\d{2}-\d{2}$/.test(body.eatenOn)
       ? body.eatenOn
       : pacificDateIso();
-  const estimate = await estimateFoodParts(parts);
+  const fromPhoto = readNutrients(body?.nutrients);
+  const estimate = fromPhoto
+    ? {
+        ...parts,
+        ...EMPTY_NUTRIENTS,
+        ...fromPhoto,
+        source: "ai" as const,
+      }
+    : await estimateFoodParts(parts);
   const saved = await prisma.foodEntry.create({
     data: {
       userId,
@@ -129,6 +185,13 @@ export async function POST(request: Request) {
       proteinG: estimate.proteinG,
       carbG: estimate.carbG,
       fatG: estimate.fatG,
+      saturatedFatG: estimate.saturatedFatG,
+      fiberG: estimate.fiberG,
+      sugarG: estimate.sugarG,
+      addedSugarG: estimate.addedSugarG,
+      sodiumMg: estimate.sodiumMg,
+      cholesterolMg: estimate.cholesterolMg,
+      serving: estimate.serving,
       source: estimate.source,
     },
   });
