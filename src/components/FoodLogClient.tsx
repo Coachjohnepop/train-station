@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { calorieBand, type CalorieThresholds } from "@/lib/food-log";
+import { armCalorieHorn, playCalorieRedAlert } from "@/lib/calorie-red-alert";
+import { calorieBand, crossedHardCalorieLine, type CalorieThresholds } from "@/lib/food-log";
 
 type FoodRow = {
   id: string;
@@ -41,12 +42,13 @@ export default function FoodLogClient() {
 
   const load = useCallback(async () => {
     const res = await fetch("/api/member/food", { cache: "no-store" });
-    if (!res.ok) return;
+    if (!res.ok) return null;
     const data = (await res.json()) as LogResponse;
     setLog(data);
     window.dispatchEvent(
       new CustomEvent("food-calories-updated", { detail: { dayCalories: data.dayCalories } }),
     );
+    return data;
   }, []);
 
   useEffect(() => {
@@ -59,6 +61,8 @@ export default function FoodLogClient() {
 
   async function save(event: React.FormEvent) {
     event.preventDefault();
+    armCalorieHorn();
+    const beforeCalories = log?.dayCalories ?? 0;
     setBusy(true);
     setError("");
     setNote("");
@@ -79,7 +83,10 @@ export default function FoodLogClient() {
           ? "Saved with a rough calorie guess. The AI estimate was unavailable."
           : "Saved. Calories are an estimate.",
       );
-      await load();
+      const next = await load();
+      if (next && crossedHardCalorieLine(beforeCalories, next.dayCalories, next.thresholds)) {
+        playCalorieRedAlert();
+      }
     } finally {
       setBusy(false);
     }

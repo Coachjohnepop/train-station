@@ -3908,6 +3908,19 @@ html[data-free-ticket="open"] .landing-nav .theme-mode-toggle {
   box-shadow: none;
 }
 
+.calorie-red-flash {
+  position: fixed;
+  inset: 0;
+  z-index: 20000;
+  pointer-events: none;
+  background: rgba(220, 38, 38, 0);
+  transition: background-color 40ms linear;
+}
+
+.calorie-red-flash[data-on="1"] {
+  background: rgba(220, 38, 38, 0.92);
+}
+
 .member-nav-score-badge--pulse {
   animation: member-score-badge-pop 0.9s cubic-bezier(0.22, 1, 0.36, 1);
 }
