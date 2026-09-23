@@ -902,8 +902,25 @@ table.data.table-sticky-actions td:last-child {
 }
 
 @media (max-width: 767px) {
+  .member-app > main {
+    padding-top: 0.2rem;
+    padding-bottom: 0.35rem;
+  }
+
+  .member-app .member-aux-hints {
+    margin-bottom: 0;
+  }
+
+  .member-app .member-aux-hints:not(:has(*)) {
+    display: none;
+  }
+
+  [data-soft-refresh].space-y-4 > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 0;
+  }
+
   .member-today-stack.space-y-4 > :not([hidden]) ~ :not([hidden]) {
-    margin-top: 0.3rem;
+    margin-top: 0.2rem;
   }
 
   .member-active-card {
@@ -987,9 +1004,9 @@ table.data.table-sticky-actions td:last-child {
     width: 100%;
   }
 
-  /* Room for Zoom picture-in-picture over the last exercise. */
-  .member-workout-console {
-    padding-bottom: 7.5rem;
+  /* Room for Zoom picture-in-picture over the last exercise — not after it's logged. */
+  .member-workout-console:not(.is-logged) {
+    padding-bottom: 4.5rem;
   }
 
   .member-exercise-anchor {

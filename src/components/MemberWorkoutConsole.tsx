@@ -2729,7 +2729,9 @@ export default function MemberWorkoutConsole({
     <div
       id="member-workout-console"
       className={`member-workout-console mx-auto w-full max-w-md md:max-w-2xl lg:max-w-2xl xl:max-w-2xl ${
-        embedded ? "px-0 py-2 md:px-2" : showLoggedSuccess ? "px-4 py-2 md:px-6" : "px-4 py-6 md:px-6"
+        showLoggedSuccess ? "is-logged" : ""
+      } ${
+        embedded ? "px-0 py-0 md:px-2" : showLoggedSuccess ? "px-0 py-0 md:px-6" : "px-4 py-2 md:px-6"
       }`}
     >
       {showLoggedSuccess ? (

@@ -415,7 +415,7 @@ export default async function MemberTodayPage({ searchParams }: Props) {
   const consoleIsMaintain = Boolean(maintainWorkout);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-1 sm:space-y-4">
       <TodayPageLiveRefresh
         userId={uid}
         viewDate={viewDate}
