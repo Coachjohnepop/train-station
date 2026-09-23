@@ -39,37 +39,59 @@ export function validateByowUsername(raw: string): string | null {
   return null;
 }
 
+/** Same column and rules for guests and email accounts. */
+export async function setUserUsername(
+  userId: string,
+  raw: string | null,
+): Promise<string | null> {
+  if (raw == null || !raw.trim()) {
+    await prisma.user.update({
+      where: { id: userId },
+      data: { username: null },
+    });
+    return null;
+  }
+  const err = validateByowUsername(raw);
+  if (err) throw new Error(err);
+  const username = normalizeByowUsername(raw);
+  if (await usernameTaken(username, userId)) {
+    throw new Error("That username is taken. Try another.");
+  }
+  await prisma.user.update({
+    where: { id: userId },
+    data: { username },
+  });
+  return username;
+}
+
 export async function claimByowUsername(input: {
   userId: string;
   username: string;
 }): Promise<{ username: string }> {
-  const err = validateByowUsername(input.username);
-  if (err) throw new Error(err);
-  const username = normalizeByowUsername(input.username);
-  const taken = await prisma.user.findFirst({
-    where: {
-      name: { equals: username, mode: "insensitive" },
-      NOT: { id: input.userId },
-    },
-    select: { id: true },
-  });
-  if (taken) throw new Error("That username is taken. Try another.");
+  const username = await setUserUsername(input.userId, input.username);
+  if (!username) throw new Error("Username must be 3–24 characters.");
   const user = await prisma.user.findUnique({
     where: { id: input.userId },
-    select: { id: true, email: true, name: true, role: true },
+    select: { name: true },
   });
-  if (!user) throw new Error("Account not found.");
-  await prisma.user.update({
-    where: { id: input.userId },
-    data: { name: username },
-  });
+  const current = user?.name?.trim() || "";
+  if (!current || /^Guest[a-z0-9]{6,}$/i.test(current)) {
+    await prisma.user.update({
+      where: { id: input.userId },
+      data: { name: username },
+    });
+  }
   return { username };
 }
 
-export async function usernameTaken(username: string): Promise<boolean> {
+export async function usernameTaken(username: string, exceptUserId?: string): Promise<boolean> {
   const u = normalizeByowUsername(username);
+  if (!u) return false;
   const hit = await prisma.user.findFirst({
-    where: { name: { equals: u, mode: "insensitive" } },
+    where: {
+      username: { equals: u, mode: "insensitive" },
+      ...(exceptUserId ? { NOT: { id: exceptUserId } } : {}),
+    },
     select: { id: true },
   });
   return Boolean(hit);
@@ -122,6 +144,7 @@ export async function startByowGuest(input: {
       id,
       email,
       name: username,
+      username,
       role: "MEMBER",
       passwordHash: null,
     },

@@ -38,6 +38,8 @@ model User {
   id                 String              @id @default(cuid())
   email              String              @unique
   name               String?
+  /// Handle for every account, including try-without-email. Unique ignoring case. Min 3.
+  username           String?             @unique
   phone              String?
   /** Normalized E.164 when known (e.g. +15551234567). Prefer for match/send. */
   phoneE164          String?

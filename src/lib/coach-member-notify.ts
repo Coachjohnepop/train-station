@@ -27,17 +27,6 @@ const EMAIL_ALERT_EVENTS: ReadonlySet<CoachAlertEvent> = new Set([
   "intakeScheduled",
 ]);
 
-/** Always post system note into the member’s Messages thread for coaches. */
-const FORCE_IN_APP_EVENTS: ReadonlySet<CoachAlertEvent> = new Set([
-  "newMember",
-  "memberPaid",
-  "equipmentSelected",
-  "programStartChosen",
-  "messagesOpened",
-  "warmupStarted",
-  "intakeScheduled",
-]);
-
 /**
  * Phone interrupt when coachPhone is set (gym-friendly).
  * Signup + paid funnel steps — not every workout log (those stay email + Messages).
@@ -152,10 +141,9 @@ export async function notifyCoachForMemberEvent(params: {
   if (!EMAIL_ALERT_EVENTS.has(params.event) && params.forceEmail !== true) {
     channels.email = false;
   }
-  if (FORCE_IN_APP_EVENTS.has(params.event)) channels.inApp = true;
   if (FORCE_SMS_EVENTS.has(params.event)) channels.sms = true;
-  // A finished workout is an alert, not a thread that needs a reply.
-  if (params.event === "workoutLogged") channels.inApp = false;
+  // Messages stay coach ↔ member. Status notes (finished workout, signup, gear) do not post there.
+  channels.inApp = false;
 
   const link = params.deepLink || `${appBaseUrl()}/admin/members`;
   const result = { inApp: false, email: false, sms: false, push: false };

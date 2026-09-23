@@ -17,6 +17,8 @@ import {
   normalizeWorkoutSchedule,
 } from "@/lib/onboard-path";
 import { formatPhoneInputValue } from "@/lib/sms-phone";
+import { setUserUsername } from "@/lib/byow-guest";
+import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +28,7 @@ const nullableString = z.string().max(4000).nullable().optional();
 
 const patchSchema = z.object({
   name: z.string().min(1).max(120).optional(),
+  username: z.string().max(24).nullable().optional(),
   phone: z.string().max(30).nullable().optional(),
   dailyReminderTime: z.string().max(10).nullable().optional(),
   smsReminderCadence: z.enum(["consistent", "minimum"]).nullable().optional(),
@@ -69,10 +72,16 @@ async function loadCard(userId: string) {
       ? await getBusinessUpgradeQueuePlaceForUser(userId)
       : null;
 
+  const userRow = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { username: true },
+  });
+
   return {
     userId,
     email: accountRow.email,
     name: accountRow.account.name,
+    username: userRow?.username || "",
     createdAt: accountRow.account.createdAt,
     planLabel: signupPlanLabel(profile.plan),
     coachingMode,
@@ -123,6 +132,15 @@ export async function PATCH(request: Request, { params }: Params) {
     body.workoutSchedule === undefined
       ? undefined
       : normalizeWorkoutSchedule(body.workoutSchedule);
+
+  if (body.username !== undefined) {
+    try {
+      await setUserUsername(userId, blankToNull(body.username) ?? null);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "That username is taken.";
+      return NextResponse.json({ error: message }, { status: 400 });
+    }
+  }
 
   const name = body.name?.trim();
   if (name || phone !== undefined) {

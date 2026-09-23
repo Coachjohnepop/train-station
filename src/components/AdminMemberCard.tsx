@@ -23,6 +23,7 @@ type CardPayload = {
   userId: string;
   email: string;
   name: string;
+  username?: string;
   createdAt: string;
   planLabel: string;
   coachingMode: string;
@@ -33,6 +34,7 @@ type CardPayload = {
 
 type FormState = {
   name: string;
+  username: string;
   phone: string;
   city: string;
   state: string;
@@ -52,6 +54,7 @@ type FormState = {
 function emptyForm(): FormState {
   return {
     name: "",
+    username: "",
     phone: "",
     city: "",
     state: "",
@@ -73,6 +76,7 @@ function formFromCard(card: CardPayload): FormState {
   const p = card.profile;
   return {
     name: card.name || "",
+    username: card.username || "",
     phone: p.phone || "",
     city: p.city || "",
     state: p.state || "",
@@ -188,6 +192,7 @@ export default function AdminMemberCard({ userId }: { userId: string }) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         name: form.name.trim() || undefined,
+        username: form.username.trim() || null,
         phone: form.phone.trim() || null,
         city: form.city.trim() || null,
         state: form.state.trim() || null,
@@ -394,6 +399,19 @@ export default function AdminMemberCard({ userId }: { userId: string }) {
             <p className="mt-1 text-xs text-[var(--muted)]">
               {card.planLabel} · {card.email}
             </p>
+            <label className="mt-2 block text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">
+              Username
+              <input
+                value={form.username}
+                onChange={(e) => patchForm("username", e.target.value)}
+                maxLength={24}
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                placeholder="At least 3 characters, unique"
+                className="mt-1 w-full rounded-lg border border-[var(--border)] bg-[var(--bg)] px-3 py-1.5 text-sm font-medium normal-case tracking-normal text-[var(--text)] outline-none"
+              />
+            </label>
           </div>
           <div className="flex flex-wrap gap-1.5">
             <span className="rounded-full bg-[var(--bg)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">
@@ -608,7 +626,7 @@ export default function AdminMemberCard({ userId }: { userId: string }) {
                         {g.label}
                       </option>
                     ))}
-                    <option value="__custom__">Add a goal…</option>
+                    <option value="__custom__">Add new…</option>
                   </select>
                   {addingGoal ||
                   (form.primaryGoal &&

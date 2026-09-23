@@ -136,7 +136,9 @@ export async function loadCoachChatFromDb(): Promise<ChatStore> {
 
   return {
     threads: threads.map(rowToThread),
-    messages: messages.map(rowToMessage),
+    messages: messages
+      .filter((row) => row.authorRole !== "system" && row.kind !== "system")
+      .map(rowToMessage),
   };
 }
 
