@@ -86,14 +86,14 @@ export function calorieThresholdsAreSet(
   );
 }
 
-/** True only when this entry is what pushed the day past the hard total. */
-export function crossedHardCalorieLine(
+/** A saved meal that leaves the day over the hard total, including later meals the same day. */
+export function shouldFlashHardCalorieAlert(
   beforeCalories: number,
   afterCalories: number,
   thresholds: CalorieThresholds | null,
 ): boolean {
   if (!thresholds || !(afterCalories > beforeCalories)) return false;
-  return calorieBand(beforeCalories, thresholds) !== "hard" && calorieBand(afterCalories, thresholds) === "hard";
+  return calorieBand(afterCalories, thresholds) === "hard";
 }
 
 /** Gold outline, emerald range, deep orange, then red past the hard total. */

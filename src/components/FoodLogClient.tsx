@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { armCalorieHorn, playCalorieRedAlert } from "@/lib/calorie-red-alert";
-import { calorieBand, crossedHardCalorieLine, type CalorieThresholds } from "@/lib/food-log";
+import { calorieBand, shouldFlashHardCalorieAlert, type CalorieThresholds } from "@/lib/food-log";
 
 type FoodRow = {
   id: string;
@@ -84,7 +84,7 @@ export default function FoodLogClient() {
           : "Saved. Calories are an estimate.",
       );
       const next = await load();
-      if (next && crossedHardCalorieLine(beforeCalories, next.dayCalories, next.thresholds)) {
+      if (next && shouldFlashHardCalorieAlert(beforeCalories, next.dayCalories, next.thresholds)) {
         playCalorieRedAlert();
       }
     } finally {

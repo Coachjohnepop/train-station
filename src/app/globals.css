@@ -3921,6 +3921,34 @@ html[data-free-ticket="open"] .landing-nav .theme-mode-toggle {
   background: rgba(220, 38, 38, 0.92);
 }
 
+.calorie-red-flash__mark {
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  width: min(52vw, 18rem);
+  height: auto;
+  transform: translate(-50%, -50%);
+  color: #fff;
+  opacity: 0;
+  transition: opacity 40ms linear;
+}
+
+.calorie-red-flash[data-on="1"] .calorie-red-flash__mark {
+  opacity: 0.38;
+}
+
+.calorie-red-flash__label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .member-nav-score-badge--pulse {
   animation: member-score-badge-pop 0.9s cubic-bezier(0.22, 1, 0.36, 1);
 }

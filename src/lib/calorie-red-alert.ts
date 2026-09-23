@@ -82,14 +82,46 @@ function scheduleBrrt(ctx: AudioContext, time: number, duration: number): void {
   lfo.stop(time + duration + 0.02);
 }
 
+const SKULL = `<svg class="calorie-red-flash__mark" viewBox="0 0 200 250" aria-hidden="true">
+  <defs>
+    <mask id="calorie-red-skull">
+      <rect width="200" height="250" fill="black" />
+      <g fill="white">
+        <g transform="translate(100 176) rotate(-38)">
+          <rect x="-78" y="-8" width="156" height="16" rx="8" />
+          <circle cx="-78" cy="0" r="14" />
+          <circle cx="78" cy="0" r="14" />
+        </g>
+        <g transform="translate(100 176) rotate(38)">
+          <rect x="-78" y="-8" width="156" height="16" rx="8" />
+          <circle cx="-78" cy="0" r="14" />
+          <circle cx="78" cy="0" r="14" />
+        </g>
+        <ellipse cx="100" cy="86" rx="54" ry="60" />
+        <rect x="78" y="132" width="44" height="22" rx="6" />
+      </g>
+      <g fill="black">
+        <ellipse cx="80" cy="80" rx="14" ry="18" />
+        <ellipse cx="120" cy="80" rx="14" ry="18" />
+        <path d="M100 98 L92 116 L108 116 Z" />
+        <rect x="86" y="136" width="6" height="14" />
+        <rect x="97" y="136" width="6" height="14" />
+        <rect x="108" y="136" width="6" height="14" />
+      </g>
+    </mask>
+  </defs>
+  <rect width="200" height="250" fill="currentColor" mask="url(#calorie-red-skull)" />
+</svg>`;
+
 function flashScreen(bursts: number): void {
   const overlay = document.createElement("div");
   overlay.className = "calorie-red-flash";
   overlay.setAttribute("role", "alert");
   const label = document.createElement("span");
-  label.className = "sr-only";
+  label.className = "calorie-red-flash__label";
   label.textContent = "Over the hard calorie total";
   overlay.appendChild(label);
+  overlay.insertAdjacentHTML("beforeend", SKULL);
   document.body.appendChild(overlay);
 
   const periodMs = (ON_SEC + GAP_SEC) * 1000;
@@ -109,7 +141,7 @@ function flashScreen(bursts: number): void {
   }, bursts * periodMs + 80);
 }
 
-/** Three full-screen red flashes, each with a short horn burst. Once per crossing. */
+/** Three full-screen red flashes, each with a short horn burst. */
 export function playCalorieRedAlert(): void {
   if (typeof document === "undefined" || playing) return;
   playing = true;
