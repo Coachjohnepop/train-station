@@ -2,11 +2,7 @@ import "server-only";
 
 import { prisma } from "@/lib/prisma";
 import { pacificDateIso } from "@/lib/food-log";
-import {
-  estimateActivityBurn,
-  estimateWorkoutBurn,
-  workoutMinutes,
-} from "@/lib/burn-estimate";
+import { estimateActivityBurn, estimateSessionBurn } from "@/lib/burn-estimate";
 
 export type BurnLine = {
   id: string;
@@ -56,7 +52,15 @@ export async function burnForDates(userId: string, dates: string[], focusDate: s
         workout: {
           select: {
             name: true,
-            exercises: { select: { setCount: true, sets: true, restBetweenSetsSec: true } },
+            exercises: {
+              select: {
+                setCount: true,
+                sets: true,
+                reps: true,
+                exercise: { select: { name: true } },
+                phases: { select: { durationSec: true } },
+              },
+            },
           },
         },
       },
@@ -81,12 +85,16 @@ export async function burnForDates(userId: string, dates: string[], focusDate: s
     const date = pacificKey(row.performedAt);
     const bucket = byDate.get(date);
     if (!bucket) continue;
-    const minutes = workoutMinutes(row.workout.exercises);
-    const calories = estimateWorkoutBurn({
+    const calories = estimateSessionBurn({
       name: row.workout.name,
       weightLbs,
-      minutes,
       progress: row.progress,
+      pieces: row.workout.exercises.map((exercise) => ({
+        name: exercise.exercise.name,
+        sets: exercise.setCount || exercise.sets,
+        reps: exercise.reps,
+        durationSec: exercise.phases.find((phase) => phase.durationSec)?.durationSec ?? null,
+      })),
     });
     if (calories <= 0) continue;
     bucket.push({

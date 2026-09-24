@@ -53,11 +53,85 @@ export function estimateActivityBurn(text: string, weightLbs: number): number | 
   else if (/bike|cycle|cycling/i.test(line)) met = 6.5;
   else if (/run|jog/i.test(line)) met = 8;
   else if (/horse/i.test(line)) met = 5.5;
+  else if (/ice\s*skat|skate/i.test(line)) met = /leisure|easy|slow/i.test(line) ? 5.5 : 7;
   else if (/ski/i.test(line)) met = /cross[\s-]?country/i.test(line) ? 8 : 6;
   else if (/zoo|stroll/i.test(line)) met = 3.3;
   else if (/fasted|cardio|brisk/i.test(line)) met = 6.5;
   else if (/walk/i.test(line)) met = 3.8;
   return metCalories(met, weightLbs, durationHours);
+}
+
+export type SessionPiece = {
+  name: string;
+  sets?: number | null;
+  reps?: string | null;
+  durationSec?: number | null;
+};
+
+function minutesInText(text: string): number | null {
+  const match = text.match(/(\d+)\s*(?:-|–|to)?\s*(\d+)?\s*mins?/i);
+  if (!match) return null;
+  const low = Number(match[1]);
+  const high = match[2] ? Number(match[2]) : low;
+  const minutes = (low + high) / 2;
+  return minutes > 0 ? minutes : null;
+}
+
+function metForMovement(name: string): number {
+  const line = name.toLowerCase();
+  if (/stretch|mobility|cool down|yoga|rest day/.test(line)) return 2.5;
+  if (/jump rope|sprint|\brun\b|jog|mile/.test(line)) return 8;
+  if (/jump squat|burpee|plyo/.test(line)) return 8;
+  if (/bike|cycle|\brow\b/.test(line)) return 7;
+  if (/walk|treadmill|fasted cardio|\bcardio\b/.test(line)) return 5.5;
+  if (/warm/.test(line)) return 3.5;
+  return 5;
+}
+
+function steadyCardio(name: string): boolean {
+  return /walk|treadmill|fasted cardio|\bcardio\b|bike|cycle|\brow\b/.test(name.toLowerCase());
+}
+
+function pieceMinutes(piece: SessionPiece): number {
+  if (piece.durationSec && piece.durationSec > 0) return piece.durationSec / 60;
+  const written = minutesInText(`${piece.name} ${piece.reps ?? ""}`);
+  if (written) return written;
+  const label = piece.name.toLowerCase();
+  if (/\bmile\b/.test(label)) return 10;
+  if (/warm/.test(label)) return 6;
+  if (steadyCardio(label)) return 30;
+  const sets = piece.sets && piece.sets > 0 ? piece.sets : 3;
+  return sets * 2.5;
+}
+
+/** One logged session. Steady cardio is counted once; strength work adds up. */
+export function estimateSessionBurn(input: {
+  name: string;
+  weightLbs: number;
+  pieces: SessionPiece[];
+  progress?: number;
+}): number {
+  const titleMinutes = minutesInText(input.name);
+  let calories = 0;
+  if (titleMinutes && /cardio|walk|run|bike|row|ski/.test(input.name.toLowerCase())) {
+    calories = metCalories(metForMovement(input.name), input.weightLbs, titleMinutes / 60);
+  } else if (/^\s*rest\b/i.test(input.name) && input.pieces.length === 0) {
+    calories = 0;
+  } else {
+    let steady = 0;
+    for (const piece of input.pieces) {
+      const minutes = pieceMinutes(piece);
+      const burned = metCalories(metForMovement(piece.name), input.weightLbs, minutes / 60);
+      if (steadyCardio(piece.name)) steady = Math.max(steady, burned);
+      else calories += burned;
+    }
+    calories += steady;
+  }
+  if (calories <= 0 && !/rest/i.test(input.name)) {
+    calories = estimateWorkoutBurn({ name: input.name, weightLbs: input.weightLbs, minutes: 45 });
+  }
+  const scale = input.progress == null ? 1 : Math.min(1, Math.max(0, input.progress / 100));
+  return Math.round(calories * (scale || 1));
 }
 
 export function estimateWorkoutBurn(input: {

@@ -387,6 +387,11 @@ function BurnNote({
     <p className="mt-2 text-xs leading-relaxed text-[var(--muted)]">
       Rough burn about {burn.todayCalories}, against {eaten} eaten.
       {eatMore ? " That’s more than you logged eating, so this is a day to eat more." : ""}
+      {burn.lines.length > 0 ? (
+        <span className="mt-1 block">
+          {burn.lines.map((line) => `${line.kind === "workout" ? "Workout" : "Activity"} · ${line.label} · about ${line.calories}`).join("  ·  ")}
+        </span>
+      ) : null}
     </p>
   );
 }
