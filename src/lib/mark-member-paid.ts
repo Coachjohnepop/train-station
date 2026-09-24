@@ -107,6 +107,21 @@ export async function markMemberPaid(input: {
     },
   });
 
+  if (!wasPaid && method === "stripe" && (input.amountCents ?? 0) > 0 && updated?.referralCode) {
+    try {
+      const { attributeAffiliateConversion } = await import("@/lib/affiliate/convert");
+      await attributeAffiliateConversion({
+        userId: input.userId,
+        amountCents: input.amountCents ?? 0,
+        plan: typeof plan === "string" ? plan : null,
+        checkoutSessionId: input.stripeCheckoutSessionId ?? null,
+        referralCode: updated.referralCode,
+      });
+    } catch (e) {
+      console.warn("[mark-member-paid] affiliate conversion failed", e);
+    }
+  }
+
   // First time paid only — alert Jeremy (email / push / SMS / Messages / purple badge).
   if (!wasPaid) {
     try {

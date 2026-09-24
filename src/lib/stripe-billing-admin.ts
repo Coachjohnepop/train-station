@@ -481,6 +481,26 @@ export async function createBillingRefund(input: {
       },
     });
 
+    const refundedNow = already + refund.amount;
+    let userId = charge.metadata?.userId || null;
+    if (!userId && charge.customer) {
+      const customerId = typeof charge.customer === "string" ? charge.customer : charge.customer.id;
+      const { prisma } = await import("@/lib/prisma");
+      const profile = await prisma.memberProfile.findFirst({
+        where: { stripeCustomerId: customerId },
+        select: { userId: true },
+      });
+      userId = profile?.userId ?? null;
+    }
+    if (userId && refundedNow >= charge.amount) {
+      try {
+        const { cancelUnpaidAffiliateConversion } = await import("@/lib/affiliate/convert");
+        await cancelUnpaidAffiliateConversion(userId);
+      } catch (error) {
+        console.warn("[affiliate] refund cancel failed", error);
+      }
+    }
+
     return {
       ok: true,
       refund: {

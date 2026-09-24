@@ -185,6 +185,19 @@ export async function POST(request: Request) {
           actor: { role: "system" },
           auditSource: "stripe.webhook.invoice.paid",
         });
+        if ((invoice.amount_paid ?? 0) > 0) {
+          const profile = await getMemberProfile(userId);
+          const { attributeAffiliateConversion } = await import("@/lib/affiliate/convert");
+          await attributeAffiliateConversion({
+            userId,
+            amountCents: invoice.amount_paid ?? 0,
+            plan: sub.metadata?.plan ?? profile?.plan ?? null,
+            checkoutSessionId: null,
+            invoiceId: invoice.id,
+            billingReason: invoice.billing_reason ?? null,
+            referralCode: profile?.referralCode ?? sub.metadata?.referralCode ?? null,
+          });
+        }
       }
 
       const paidAtSec =
@@ -267,6 +280,14 @@ export async function POST(request: Request) {
             stripeSubscriptionId: sub.id,
           });
         }
+      }
+      break;
+    }
+    case "account.updated": {
+      const account = event.data.object as import("stripe").Stripe.Account;
+      if (account.metadata?.role === "affiliate" || account.metadata?.affiliate_id) {
+        const { syncAffiliateStripeAccount } = await import("@/lib/affiliate/payouts");
+        await syncAffiliateStripeAccount(account);
       }
       break;
     }

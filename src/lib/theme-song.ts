@@ -21,7 +21,7 @@ const GUEST_PREFIXES = [
 ] as const;
 
 /** Auth screens — never Theme Song, even if they look like public guest pages. */
-const SILENT_PREFIXES = ["/login", "/forgot-password", "/reset-password"] as const;
+const SILENT_PREFIXES = ["/login", "/forgot-password", "/reset-password", "/affiliate"] as const;
 
 function normalizePath(pathname: string): string {
   return (pathname.split("?")[0] || "/").replace(/\/+$/, "") || "/";

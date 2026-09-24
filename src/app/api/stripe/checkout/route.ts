@@ -1,5 +1,8 @@
+import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { AFFILIATE_REF_COOKIE } from "@/lib/affiliate/cookies";
+import { promotionDiscountForAffiliateCode } from "@/lib/affiliate/promotions";
 import { getSessionUser, syncMemberGateCookies } from "@/lib/auth";
 import { ensureMemberProfile, getMemberProfile, updateMemberProfile } from "@/lib/member-profiles-store";
 import { memberCheckoutPath } from "@/lib/member-gates";
@@ -145,7 +148,9 @@ export async function POST(request: Request) {
       phone: existingProfile?.phone,
     });
 
-    const referralInput = parsed.data.referralCode?.trim() || profile?.referralCode || null;
+    const cookieRef = (await cookies()).get(AFFILIATE_REF_COOKIE)?.value;
+    const referralInput =
+      parsed.data.referralCode?.trim() || profile?.referralCode || cookieRef || null;
     const referral = referralInput ? await resolveReferralDiscount(referralInput) : null;
 
     // Explicit promo field wins over referral map discount (still can store referral for attribution).
@@ -161,6 +166,11 @@ export async function POST(request: Request) {
       }
       discount = fromStripe;
     }
+
+    const promoOverride = await promotionDiscountForAffiliateCode(
+      promoRaw || referral?.referralCode || referralInput,
+    );
+    if (promoOverride) discount = promoOverride;
 
     const trialDays =
       parsed.data.trial === "week" &&

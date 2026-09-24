@@ -2193,3 +2193,169 @@ model WhFactUpgradeRequest {
 
   @@index([dateKey, status])
 }
+
+/// Partner account for the unlisted /affiliate program. Separate from member login.
+model Affiliate {
+  id             String   @id @default(cuid())
+  email          String   @unique
+  name           String
+  passwordHash   String
+  referralCode   String   @unique
+  /// Share of a paid membership, e.g. 0.05.
+  commissionRate Float    @default(0.20)
+  /// When set, earn that rate on each invoice for this many months after the member's first payment.
+  commissionMonths Int?
+  /// Public door, no slash: commit → /commit
+  vanityPath     String?  @unique
+  /// PENDING | ACTIVE | PAUSED | TERMINATED
+  status         String   @default("PENDING")
+  /// Stripe Connect account that receives commission transfers (acct_…).
+  stripeAccountId String?
+  stripeOnboarded Boolean @default(false)
+  totalClicks    Int      @default(0)
+  totalOrders    Int      @default(0)
+  totalRevenueCents    Int @default(0)
+  totalCommissionCents Int @default(0)
+  pendingBalanceCents  Int @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  codes        AffiliateCode[]
+  clicks       AffiliateClick[]
+  conversions  AffiliateConversion[]
+  payouts      AffiliatePayout[]
+  resetTokens  AffiliateResetToken[]
+
+  @@index([status])
+  @@index([stripeAccountId])
+}
+
+model AffiliateCode {
+  id                 String    @id @default(cuid())
+  code               String    @unique
+  affiliateId        String
+  affiliate          Affiliate @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
+  /// Customer discount, e.g. 0.10.
+  discountPercent    Float
+  commissionRate     Float
+  usageCount         Int       @default(0)
+  maxUsage           Int?
+  expiresAt          DateTime?
+  isActive           Boolean   @default(true)
+  stripePromotionCodeId String?
+  stripeCouponId     String?
+  createdAt          DateTime  @default(now())
+
+  conversions AffiliateConversion[]
+
+  @@index([affiliateId])
+}
+
+model AffiliateClick {
+  id          String    @id @default(cuid())
+  affiliateId String
+  affiliate   Affiliate @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
+  visitorId   String
+  ipAddress   String?
+  userAgent   String?
+  referer     String?
+  landingPage String
+  createdAt   DateTime  @default(now())
+
+  @@index([affiliateId, createdAt])
+  @@index([visitorId])
+}
+
+/// A paid membership invoice attributed to an affiliate. A seat can have one row per invoice.
+model AffiliateConversion {
+  id                     String    @id @default(cuid())
+  affiliateId            String
+  affiliate              Affiliate @relation(fields: [affiliateId], references: [id])
+  userId                 String
+  affiliateCodeId        String?
+  affiliateCode          AffiliateCode? @relation(fields: [affiliateCodeId], references: [id])
+  plan                   String?
+  orderSubtotalCents     Int
+  discountCents          Int       @default(0)
+  commissionRate         Float
+  commissionCents        Int
+  /// APPROVED (payable) | PENDING | PAID | CANCELLED
+  status                 String    @default("APPROVED")
+  stripeCheckoutSessionId String?
+  stripeInvoiceId        String?   @unique
+  createdAt              DateTime  @default(now())
+  paidAt                 DateTime?
+  payoutId               String?
+  payout                 AffiliatePayout? @relation(fields: [payoutId], references: [id])
+
+  @@index([affiliateId, status])
+  @@index([affiliateId, createdAt])
+  @@index([userId, createdAt])
+}
+
+/// Commission transfer to the affiliate's Stripe Connect account.
+model AffiliatePayout {
+  id          String    @id @default(cuid())
+  affiliateId String
+  affiliate   Affiliate @relation(fields: [affiliateId], references: [id])
+  amountCents Int
+  /// PROCESSING | COMPLETED | FAILED | REQUESTED
+  status      String    @default("PROCESSING")
+  stripeTransferId String?
+  note        String?   @db.Text
+  createdAt   DateTime  @default(now())
+  processedAt DateTime?
+
+  conversions AffiliateConversion[]
+
+  @@index([affiliateId, status])
+  @@index([status, createdAt])
+}
+
+/// Station-wide discount that replaces an affiliate code's own percent at checkout.
+model AffiliatePromotion {
+  id              String    @id @default(cuid())
+  name            String
+  /// Whole percent, 10 means 10% off.
+  discountPercent Float
+  isActive        Boolean   @default(true)
+  startsAt        DateTime  @default(now())
+  endsAt          DateTime?
+  stripeCouponId  String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+/// One row. How much Stripe cash to keep back before a bank sweep.
+model AffiliateProgramSettings {
+  id                 String   @id @default("default")
+  reserveTargetCents Int      @default(50000)
+  updatedAt          DateTime @updatedAt
+}
+
+/// One invite link. Only John and Jeremy can create these.
+model AffiliateInvite {
+  id             String    @id @default(cuid())
+  email          String
+  name           String
+  tokenHash      String    @unique
+  invitedByEmail String
+  expiresAt      DateTime
+  acceptedAt     DateTime?
+  createdAt      DateTime  @default(now())
+
+  @@index([email])
+  @@index([expiresAt])
+}
+
+model AffiliateResetToken {
+  tokenHash   String    @id
+  affiliateId String
+  affiliate   Affiliate @relation(fields: [affiliateId], references: [id], onDelete: Cascade)
+  rawToken    String?
+  expiresAt   DateTime
+  createdAt   DateTime  @default(now())
+
+  @@index([affiliateId])
+  @@index([expiresAt])
+}

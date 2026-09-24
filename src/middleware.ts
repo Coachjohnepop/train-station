@@ -20,6 +20,13 @@ import {
   type LandingAbVariant,
 } from "@/lib/landing-ab";
 import { canonicalSiteUrl, isVanityRedirectHost } from "@/lib/vanity-hosts";
+import {
+  AFFILIATE_COOKIE_MAX_AGE,
+  AFFILIATE_REF_COOKIE,
+  AFFILIATE_VISITOR_COOKIE,
+  generateAffiliateVisitorId,
+  normalizeAffiliateCode,
+} from "@/lib/affiliate/cookies";
 
 const NEEDS_ONBOARD_COOKIE = "ts_needs_onboard";
 const SIGNUP_PLAN_COOKIE = "ts_signup_plan";
@@ -73,6 +80,8 @@ const PUBLIC_API_PREFIXES = [
   "/api/push/vapid-public-key",
   // Vercel Cron + manual Bearer CRON_SECRET — each route still authorizes
   "/api/cron",
+  // Affiliate portal auth is its own cookie. Handlers still reject a missing session.
+  "/api/affiliate",
 ];
 
 function isPublicPage(pathname: string): boolean {
@@ -187,7 +196,60 @@ function nextWithPath(request: NextRequest, pathname: string) {
   });
 }
 
-export async function middleware(request: NextRequest) {
+function affiliateCookieBase() {
+  return {
+    path: "/",
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax" as const,
+    ...(process.env.VERCEL_ENV === "production" ? { domain: ".thetrainstation.co" } : {}),
+  };
+}
+
+/** First active ?ref= wins for 30 days. Unknown codes do not stick. */
+async function stampAffiliateReferral(request: NextRequest, response: NextResponse) {
+  const { pathname } = request.nextUrl;
+  if (pathname.startsWith("/affiliate")) {
+    response.headers.set("X-Robots-Tag", "noindex, nofollow");
+  }
+  if (pathname.startsWith("/api/") || pathname.startsWith("/_next")) return response;
+  const ref = normalizeAffiliateCode(request.nextUrl.searchParams.get("ref"));
+  if (!ref || request.cookies.get(AFFILIATE_REF_COOKIE)?.value) return response;
+
+  let visitorId = request.cookies.get(AFFILIATE_VISITOR_COOKIE)?.value;
+  if (!visitorId) visitorId = generateAffiliateVisitorId();
+  try {
+    const clickUrl = new URL("/api/affiliate/click", request.url);
+    const recorded = await fetch(clickUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ref,
+        visitorId,
+        landingPage: pathname,
+        referer: request.headers.get("referer"),
+        userAgent: request.headers.get("user-agent"),
+      }),
+      signal: AbortSignal.timeout(1500),
+    });
+    const body = (await recorded.json().catch(() => null)) as { ok?: boolean; code?: string } | null;
+    if (!recorded.ok || !body?.ok || !body.code) return response;
+    const base = affiliateCookieBase();
+    response.cookies.set(AFFILIATE_REF_COOKIE, body.code, {
+      ...base,
+      maxAge: AFFILIATE_COOKIE_MAX_AGE,
+    });
+    response.cookies.set(AFFILIATE_VISITOR_COOKIE, visitorId, {
+      ...base,
+      maxAge: AFFILIATE_COOKIE_MAX_AGE,
+    });
+  } catch {
+    /* A tracking miss must not block the page. */
+  }
+  return response;
+}
+
+async function runMiddleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   if (isVanityRedirectHost(request.headers.get("host"))) {
     const dest = canonicalSiteUrl(pathname, request.nextUrl.search);
@@ -435,6 +497,10 @@ export async function middleware(request: NextRequest) {
   }
 
   return nextWithPath(request, pathname);
+}
+
+export async function middleware(request: NextRequest) {
+  return stampAffiliateReferral(request, await runMiddleware(request));
 }
 
 export const config = {

@@ -80,6 +80,18 @@ const CARDS = [
     cta: "Open partner desk →",
   },
   {
+    href: "/admin/affiliates",
+    title: "Affiliates",
+    description: "Affiliate users, the payout percent, reserve, and Stripe transfers.",
+    cta: "Open affiliates →",
+  },
+  {
+    href: "/admin/mercury",
+    title: "Mercury",
+    description: "Bank balances, registers, in-flight items, cards, and recipients.",
+    cta: "Open Mercury →",
+  },
+  {
     href: "/admin/audit",
     title: "Audit log",
     description: "Mark-paid, refunds, discounts, tips, role changes.",

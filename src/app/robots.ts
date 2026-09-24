@@ -40,6 +40,8 @@ export default async function robots(): Promise<MetadataRoute.Robots> {
         "/b",
         "/l",
         "/l/",
+        "/affiliate",
+        "/affiliate/",
       ],
     },
     sitemap: `${origin}/sitemap.xml`,

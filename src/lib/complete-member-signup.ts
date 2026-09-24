@@ -31,6 +31,7 @@ import { enrollUserInProgram } from "@/lib/data/user-data";
 import { requireSignupPassword } from "@/lib/security-config";
 
 import { BYOW_COOKIE } from "@/lib/byow-access";
+import { AFFILIATE_REF_COOKIE } from "@/lib/affiliate/cookies";
 
 export { BYOW_COOKIE };
 export const BYOW_SIGNUP_CHANNEL = "byow" as const;
@@ -65,7 +66,8 @@ export async function completeMemberSignup(input: CompleteSignupInput): Promise<
   const lastName = input.lastName;
   const phone = input.phone;
   const password = input.password;
-  const referralCode = input.referralCode;
+  const cookieRef = (await cookies()).get(AFFILIATE_REF_COOKIE)?.value;
+  const referralCode = input.referralCode?.trim() || cookieRef || undefined;
   const weekTrial = Boolean(input.week);
 
   if (!byow && !input.plan?.trim()) {
@@ -86,7 +88,7 @@ export async function completeMemberSignup(input: CompleteSignupInput): Promise<
 
   const plan = byow ? "explorer" : normalizeSignupPlan(input.plan);
   const quoteRequest = !byow && isQuoteOffer(plan);
-  const referral = !byow && referralCode ? await resolveReferralDiscount(referralCode) : null;
+  const referral = referralCode ? await resolveReferralDiscount(referralCode) : null;
 
   try {
     const account = await registerMember({
