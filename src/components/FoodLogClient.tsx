@@ -241,7 +241,7 @@ export default function FoodLogClient() {
         <Link href="/member/today" className="text-xs font-semibold text-[var(--accent)] hover:underline">
           ← Back to Today
         </Link>
-        <h1 className="mt-3 text-2xl font-bold">Enter Eating</h1>
+        <h1 className="mt-3 text-2xl font-bold">Eating Log</h1>
         <p className="mt-2 text-sm text-[var(--muted)]">
           Protein, starch, and the butter or oil you cooked with. Garlic, peanut butter, and the rest go in Other.
           A photo of the plate or the nutrition label works. Fiber, sugar, and sodium are kept with the meal.
