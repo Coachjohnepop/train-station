@@ -32,12 +32,21 @@ type DayBucket = {
   entries: FoodRow[];
 };
 
+type BurnLine = { id: string; label: string; calories: number; kind: "activity" | "workout" };
+
 type LogResponse = {
   eatenOn: string;
   dayCalories: number;
   weekCalories: number;
   thresholds: CalorieThresholds | null;
   days: DayBucket[];
+  burn?: {
+    weightLbs: number;
+    assumedWeight: boolean;
+    todayCalories: number;
+    weekCalories: number;
+    lines: BurnLine[];
+  } | null;
 };
 
 type PhotoDraft = FoodNutrients & {
@@ -264,6 +273,8 @@ export default function FoodLogClient() {
         </div>
       </div>
 
+      <BurnCard burn={log?.burn} />
+
       <form id="food-entry-form" onSubmit={(event) => void save(event)} className="card space-y-3 p-4">
         {editingId ? (
           <p className="text-sm font-semibold">Editing this meal. Add the extra food on the line it belongs to.</p>
@@ -361,6 +372,45 @@ export default function FoodLogClient() {
         ))}
       </section>
     </div>
+  );
+}
+
+function BurnCard({
+  burn,
+}: {
+  burn?: LogResponse["burn"];
+}) {
+  if (!burn) return null;
+  return (
+    <section className="card space-y-3 p-4">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--muted)]">Burned today</p>
+          <p className="mt-1 text-3xl font-bold tabular-nums">{burn.todayCalories}</p>
+          <p className="text-xs text-[var(--muted)]">
+            Rough calories from workouts and activity notes. This week {burn.weekCalories}.
+            {burn.assumedWeight ? " No weight is saved, so this uses 170 lb." : ` Using ${Math.round(burn.weightLbs)} lb.`}
+          </p>
+        </div>
+      </div>
+      {burn.lines.length === 0 ? (
+        <p className="text-sm text-[var(--muted)]">
+          Finish a workout, or note a walk, golf round, or wheelbarrow loads in the activity log. A rough burn shows up here.
+        </p>
+      ) : (
+        <ul className="space-y-2">
+          {burn.lines.map((line) => (
+            <li key={line.id} className="flex items-start gap-3 text-sm">
+              <span className="w-14 shrink-0 font-bold tabular-nums">{line.calories}</span>
+              <span className="min-w-0 flex-1 text-[var(--muted)]">
+                {line.kind === "workout" ? "Workout · " : ""}
+                {line.label}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
 

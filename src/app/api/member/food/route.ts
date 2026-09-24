@@ -15,6 +15,7 @@ import {
   type FoodNutrients,
 } from "@/lib/food-log";
 import { getMemberProfile } from "@/lib/member-profiles-store";
+import { burnForDates } from "@/lib/burn-day";
 
 export const dynamic = "force-dynamic";
 
@@ -124,6 +125,12 @@ export async function GET(request: Request) {
     };
   });
   const today = byDay.find((day) => day.date === eatenOn) ?? byDay[0];
+  let burn = null;
+  try {
+    burn = await burnForDates(userId, days, eatenOn);
+  } catch (error) {
+    console.warn("[food] burn estimate skipped", error);
+  }
   const profile = await getMemberProfile(userId);
   const thresholds: CalorieThresholds | null =
     profile?.calorieMin != null &&
@@ -143,6 +150,7 @@ export async function GET(request: Request) {
     weekCalories: byDay.reduce((sum, day) => sum + day.calories, 0),
     thresholds,
     days: byDay,
+    burn,
   });
 }
 
