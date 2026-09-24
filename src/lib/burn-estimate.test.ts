@@ -15,6 +15,11 @@ test("wheelbarrow loads are a short hard effort", () => {
   assert.ok(burned != null && burned >= 150 && burned <= 280);
 });
 
+test("five hours of snow skiing is a large burn", () => {
+  const burned = estimateActivityBurn("snow skiing for 5 hours", 179);
+  assert.ok(burned != null && burned >= 2000 && burned <= 2800);
+});
+
 test("a two hour zoo walk is a few hundred calories", () => {
   const burned = estimateActivityBurn("walked around sacramento zoo for 2 hours", 179);
   assert.ok(burned != null && burned >= 450 && burned <= 600);

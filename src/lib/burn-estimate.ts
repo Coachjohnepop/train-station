@@ -53,6 +53,7 @@ export function estimateActivityBurn(text: string, weightLbs: number): number | 
   else if (/bike|cycle|cycling/i.test(line)) met = 6.5;
   else if (/run|jog/i.test(line)) met = 8;
   else if (/horse/i.test(line)) met = 5.5;
+  else if (/ski/i.test(line)) met = /cross[\s-]?country/i.test(line) ? 8 : 6;
   else if (/zoo|stroll/i.test(line)) met = 3.3;
   else if (/fasted|cardio|brisk/i.test(line)) met = 6.5;
   else if (/walk/i.test(line)) met = 3.8;

@@ -263,8 +263,9 @@ export default function FoodLogClient() {
           >
             {log?.dayCalories ?? 0}
           </p>
-          <p className="text-xs text-[var(--muted)]">calories</p>
+          <p className="text-xs text-[var(--muted)]">calories eaten</p>
           <NutrientTotals rows={today?.entries ?? []} />
+          <BurnNote eaten={log?.dayCalories ?? 0} burn={log?.burn} />
         </div>
         <div className="card p-4">
           <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--muted)]">This week</p>
@@ -272,8 +273,6 @@ export default function FoodLogClient() {
           <p className="text-xs text-[var(--muted)]">Monday through Sunday</p>
         </div>
       </div>
-
-      <BurnCard burn={log?.burn} />
 
       <form id="food-entry-form" onSubmit={(event) => void save(event)} className="card space-y-3 p-4">
         {editingId ? (
@@ -375,42 +374,20 @@ export default function FoodLogClient() {
   );
 }
 
-function BurnCard({
+function BurnNote({
+  eaten,
   burn,
 }: {
+  eaten: number;
   burn?: LogResponse["burn"];
 }) {
-  if (!burn) return null;
+  if (!burn || burn.todayCalories <= 0) return null;
+  const eatMore = burn.todayCalories > eaten + 200;
   return (
-    <section className="card space-y-3 p-4">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--muted)]">Burned today</p>
-          <p className="mt-1 text-3xl font-bold tabular-nums">{burn.todayCalories}</p>
-          <p className="text-xs text-[var(--muted)]">
-            Rough calories from workouts and activity notes. This week {burn.weekCalories}.
-            {burn.assumedWeight ? " No weight is saved, so this uses 170 lb." : ` Using ${Math.round(burn.weightLbs)} lb.`}
-          </p>
-        </div>
-      </div>
-      {burn.lines.length === 0 ? (
-        <p className="text-sm text-[var(--muted)]">
-          Finish a workout, or note a walk, golf round, or wheelbarrow loads in the activity log. A rough burn shows up here.
-        </p>
-      ) : (
-        <ul className="space-y-2">
-          {burn.lines.map((line) => (
-            <li key={line.id} className="flex items-start gap-3 text-sm">
-              <span className="w-14 shrink-0 font-bold tabular-nums">{line.calories}</span>
-              <span className="min-w-0 flex-1 text-[var(--muted)]">
-                {line.kind === "workout" ? "Workout · " : ""}
-                {line.label}
-              </span>
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
+    <p className="mt-2 text-xs leading-relaxed text-[var(--muted)]">
+      Rough burn about {burn.todayCalories}, against {eaten} eaten.
+      {eatMore ? " That’s more than you logged eating, so this is a day to eat more." : ""}
+    </p>
   );
 }
 
