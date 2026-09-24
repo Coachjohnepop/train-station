@@ -60,6 +60,7 @@ export default function FoodLogClient() {
   const [error, setError] = useState("");
   const [note, setNote] = useState("");
   const [photoDraft, setPhotoDraft] = useState<PhotoDraft | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const res = await fetch("/api/member/food", { cache: "no-store" });
@@ -88,12 +89,14 @@ export default function FoodLogClient() {
     setError("");
     setNote("");
     try {
-      const res = await fetch("/api/member/food", {
-        method: "POST",
+      const editing = Boolean(editingId);
+      const res = await fetch(editing ? `/api/member/food/${editingId}` : "/api/member/food", {
+        method: editing ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...form,
           nutrients:
+            !editing &&
             photoDraft &&
             photoDraft.protein === form.protein &&
             photoDraft.starch === form.starch &&
@@ -117,12 +120,17 @@ export default function FoodLogClient() {
       );
       setForm(EMPTY);
       setPhotoDraft(null);
+      setEditingId(null);
       setNote(
-        data.entry?.source === "rough"
-          ? "Saved with a rough calorie guess. The AI estimate was unavailable."
-          : keptLabel
-            ? "Saved the label numbers."
-            : "Saved. Calories are an estimate.",
+        editing
+          ? data.entry?.source === "rough"
+            ? "Updated with a rough calorie guess. The AI estimate was unavailable."
+            : "Updated. Calories were estimated again."
+          : data.entry?.source === "rough"
+            ? "Saved with a rough calorie guess. The AI estimate was unavailable."
+            : keptLabel
+              ? "Saved the label numbers."
+              : "Saved. Calories are an estimate.",
       );
       const next = await load();
       if (next && shouldFlashHardCalorieAlert(beforeCalories, next.dayCalories, next.thresholds)) {
@@ -178,6 +186,28 @@ export default function FoodLogClient() {
     }
   }
 
+  function beginEdit(row: FoodRow) {
+    setEditingId(row.id);
+    setForm({
+      protein: row.protein,
+      starch: row.starch,
+      fat: row.fat,
+      extras: row.extras,
+    });
+    setPhotoDraft(null);
+    setError("");
+    setNote("Change any line, then update. Calories are estimated again.");
+    document.getElementById("food-entry-form")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setForm(EMPTY);
+    setPhotoDraft(null);
+    setNote("");
+    setError("");
+  }
+
   async function remove(id: string) {
     setBusy(true);
     setError("");
@@ -187,6 +217,7 @@ export default function FoodLogClient() {
         setError("Could not remove that line.");
         return;
       }
+      if (editingId === id) cancelEdit();
       await load();
     } finally {
       setBusy(false);
@@ -233,15 +264,28 @@ export default function FoodLogClient() {
         </div>
       </div>
 
-      <form onSubmit={(event) => void save(event)} className="card space-y-3 p-4">
+      <form id="food-entry-form" onSubmit={(event) => void save(event)} className="card space-y-3 p-4">
+        {editingId ? (
+          <p className="text-sm font-semibold">Editing this meal. Add the extra food on the line it belongs to.</p>
+        ) : null}
         <Field label="Protein" hint="4 home laid chicken eggs" value={form.protein} onChange={(v) => patch("protein", v)} />
         <Field label="Starch" hint="1 piece all natural sourdough" value={form.starch} onChange={(v) => patch("starch", v)} />
         <Field label="Butter or oil" hint="Cooked in butter" value={form.fat} onChange={(v) => patch("fat", v)} />
         <Field label="Other" hint="Roasted garlic, chunky peanut butter" value={form.extras} onChange={(v) => patch("extras", v)} />
         <div className="flex flex-wrap items-center gap-3">
           <button type="submit" className="btn-primary px-4 py-2 text-sm font-semibold" disabled={busy}>
-            {busy ? "Saving…" : "Save meal"}
+            {busy ? "Saving…" : editingId ? "Update meal" : "Save meal"}
           </button>
+          {editingId ? (
+            <button
+              type="button"
+              className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm font-semibold"
+              disabled={busy}
+              onClick={cancelEdit}
+            >
+              Cancel
+            </button>
+          ) : null}
           <button
             type="button"
             className="rounded-lg border border-[var(--border)] px-4 py-2 text-sm font-semibold"
@@ -272,7 +316,13 @@ export default function FoodLogClient() {
           <p className="text-3xl font-bold tabular-nums leading-none">{log?.dayCalories ?? 0}</p>
           <h2 className="text-lg font-semibold">Today</h2>
         </div>
-        <FoodTable rows={today?.entries ?? []} onRemove={(id) => void remove(id)} busy={busy} />
+        <FoodTable
+          rows={today?.entries ?? []}
+          editingId={editingId}
+          onEdit={beginEdit}
+          onRemove={(id) => void remove(id)}
+          busy={busy}
+        />
       </section>
 
       <section className="space-y-3">
@@ -294,6 +344,13 @@ export default function FoodLogClient() {
                       {row.calories}
                     </span>
                     <span className="min-w-0 flex-1 text-[var(--muted)]">{foodLine(row)}</span>
+                    <MealActions
+                      row={row}
+                      editing={editingId === row.id}
+                      busy={busy}
+                      onEdit={beginEdit}
+                      onRemove={(id) => void remove(id)}
+                    />
                   </li>
                 ))}
               </ul>
@@ -332,12 +389,51 @@ function Field({
   );
 }
 
+function MealActions({
+  row,
+  editing,
+  busy,
+  onEdit,
+  onRemove,
+}: {
+  row: FoodRow;
+  editing: boolean;
+  busy: boolean;
+  onEdit: (row: FoodRow) => void;
+  onRemove: (id: string) => void;
+}) {
+  return (
+    <span className="flex shrink-0 gap-2">
+      <button
+        type="button"
+        className="text-xs font-semibold text-[var(--accent)] hover:underline"
+        disabled={busy}
+        onClick={() => onEdit(row)}
+      >
+        {editing ? "Editing" : "Edit"}
+      </button>
+      <button
+        type="button"
+        className="text-xs font-semibold text-[var(--muted)] hover:text-[var(--text)]"
+        disabled={busy}
+        onClick={() => onRemove(row.id)}
+      >
+        Remove
+      </button>
+    </span>
+  );
+}
+
 function FoodTable({
   rows,
+  editingId,
+  onEdit,
   onRemove,
   busy,
 }: {
   rows: FoodRow[];
+  editingId: string | null;
+  onEdit: (row: FoodRow) => void;
   onRemove: (id: string) => void;
   busy: boolean;
 }) {
@@ -357,14 +453,13 @@ function FoodTable({
               <span className="mt-0.5 block text-[11px] text-[var(--muted)]">{nutrientLine(row)}</span>
             ) : null}
           </span>
-          <button
-            type="button"
-            className="shrink-0 text-xs font-semibold text-[var(--muted)] hover:text-[var(--text)]"
-            disabled={busy}
-            onClick={() => onRemove(row.id)}
-          >
-            Remove
-          </button>
+          <MealActions
+            row={row}
+            editing={editingId === row.id}
+            busy={busy}
+            onEdit={onEdit}
+            onRemove={onRemove}
+          />
         </li>
       ))}
     </ul>
