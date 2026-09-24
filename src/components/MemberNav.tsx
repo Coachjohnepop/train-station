@@ -469,7 +469,7 @@ export default function MemberNav({
             onClick={() => setNutritionOpen(false)}
             className="member-nav-more-link member-nav-eating-link"
           >
-            <span>Enter Your Eating</span>
+            <span>Enter Eating</span>
           </Link>
           <div className="nutrition-ideas-item" data-drop={ideasDrop}>
             <Link

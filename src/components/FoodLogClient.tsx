@@ -241,7 +241,7 @@ export default function FoodLogClient() {
         <Link href="/member/today" className="text-xs font-semibold text-[var(--accent)] hover:underline">
           ← Back to Today
         </Link>
-        <h1 className="mt-3 text-2xl font-bold">Enter your eating</h1>
+        <h1 className="mt-3 text-2xl font-bold">Enter Eating</h1>
         <p className="mt-2 text-sm text-[var(--muted)]">
           Protein, starch, and the butter or oil you cooked with. Garlic, peanut butter, and the rest go in Other.
           A photo of the plate or the nutrition label works. Fiber, sugar, and sodium are kept with the meal.
@@ -265,7 +265,7 @@ export default function FoodLogClient() {
           </p>
           <p className="text-xs text-[var(--muted)]">calories eaten</p>
           <NutrientTotals rows={today?.entries ?? []} />
-          <BurnNote eaten={log?.dayCalories ?? 0} burn={log?.burn} />
+          <BudgetNote eaten={log?.dayCalories ?? 0} thresholds={log?.thresholds ?? null} burn={log?.burn?.todayCalories ?? 0} />
         </div>
         <div className="card p-4">
           <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--muted)]">This week</p>
@@ -344,7 +344,17 @@ export default function FoodLogClient() {
                 {day.label}
                 {day.date === log?.eatenOn ? " · today" : ""}
               </h3>
-              <p className="tabular-nums text-sm font-semibold">{day.calories} cal</p>
+              <div className="text-right">
+                <p className="tabular-nums text-sm font-semibold">{day.calories} cal</p>
+                {day.date === log?.eatenOn ? (
+                  <BudgetNote
+                    eaten={day.calories}
+                    thresholds={log?.thresholds ?? null}
+                    burn={log?.burn?.todayCalories ?? 0}
+                    compact
+                  />
+                ) : null}
+              </div>
             </div>
             {day.entries.length > 0 ? (
               <ul className="mt-2 space-y-1 text-sm">
@@ -374,24 +384,23 @@ export default function FoodLogClient() {
   );
 }
 
-function BurnNote({
+function BudgetNote({
   eaten,
+  thresholds,
   burn,
+  compact = false,
 }: {
   eaten: number;
-  burn?: LogResponse["burn"];
+  thresholds: CalorieThresholds | null;
+  burn: number;
+  compact?: boolean;
 }) {
-  if (!burn || burn.todayCalories <= 0) return null;
-  const eatMore = burn.todayCalories > eaten + 200;
+  if (!thresholds && burn <= 0) return null;
+  const room = thresholds ? Math.max(0, thresholds.rangeMax - eaten) : null;
   return (
-    <p className="mt-2 text-xs leading-relaxed text-[var(--muted)]">
-      Rough burn about {burn.todayCalories}, against {eaten} eaten.
-      {eatMore ? " That’s more than you logged eating, so this is a day to eat more." : ""}
-      {burn.lines.length > 0 ? (
-        <span className="mt-1 block">
-          {burn.lines.map((line) => `${line.kind === "workout" ? "Workout" : "Activity"} · ${line.label} · about ${line.calories}`).join("  ·  ")}
-        </span>
-      ) : null}
+    <p className={`text-[11px] leading-snug text-[var(--muted)] ${compact ? "" : "mt-2"}`}>
+      {room != null ? `About ${room} left in today's range.` : null}
+      {burn > 0 ? ` Rough burn ${burn} added to the budget.` : null}
     </p>
   );
 }

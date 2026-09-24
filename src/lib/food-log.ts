@@ -128,6 +128,21 @@ export function shouldFlashHardCalorieAlert(
   return calorieBand(afterCalories, thresholds) === "hard";
 }
 
+/** A day's movement raises the floor and the ceiling by the same rough burn. */
+export function thresholdsWithBurn(
+  thresholds: CalorieThresholds | null,
+  burnCalories: number,
+): CalorieThresholds | null {
+  if (!thresholds) return null;
+  const extra = Math.max(0, Math.round(burnCalories));
+  if (!extra) return thresholds;
+  return {
+    min: thresholds.min + extra,
+    rangeMax: thresholds.rangeMax + extra,
+    hardMax: thresholds.hardMax + extra,
+  };
+}
+
 /** Gold outline, emerald range, deep orange, then red past the hard total. */
 export function calorieBand(
   calories: number,

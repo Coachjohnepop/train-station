@@ -290,7 +290,6 @@ export default function MemberChatWorkspace({
   const replyDestination =
     activeReplyThread?.kind === "cohort" ? "DM with group" : "DM with Coach";
 
-  const totalUnread = Object.values(unreadByThread).reduce((n, c) => n + c, 0);
   const chromeOffset = useMemberChromeOffset();
 
   return (
@@ -322,19 +321,9 @@ export default function MemberChatWorkspace({
         page title / message feed scroll. Outside overflow-hidden shell so sticky works.
       */}
       <div
-        className="member-chat-threads-lock sticky z-40 -mx-1 rounded-xl border border-[var(--border)] bg-[color-mix(in_srgb,var(--bg)_92%,var(--surface))] px-3 py-2.5 shadow-[0_10px_28px_rgba(0,0,0,0.22)] backdrop-blur-md"
+        className="member-chat-threads-lock sticky z-40 -mx-1 px-1 py-1 lg:rounded-xl lg:border lg:border-[var(--border)] lg:bg-[color-mix(in_srgb,var(--bg)_92%,var(--surface))] lg:px-3 lg:py-2.5 lg:shadow-[0_10px_28px_rgba(0,0,0,0.22)] lg:backdrop-blur-md"
         style={{ top: chromeOffset > 0 ? chromeOffset : 0 }}
       >
-        <div className="mb-1.5 flex items-center justify-between gap-2">
-          <p className="text-[10px] font-bold uppercase tracking-wide text-[var(--muted)]">
-            Threads
-            {totalUnread > 0 ? (
-              <span className="ml-1.5 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[#ff3b30] px-1 text-[9px] font-bold normal-case tracking-normal text-white">
-                {totalUnread > 9 ? "9+" : totalUnread}
-              </span>
-            ) : null}
-          </p>
-        </div>
         {/*
           True jelly beans: wrap (no side-scroll). New members see every group + per-bean
           unread in one glance — the nav "8" is one tap away, not scroll-then-tap.

@@ -12,6 +12,7 @@ import {
   weekDates,
   weekdayLabel,
   type CalorieThresholds,
+  thresholdsWithBurn,
   type FoodNutrients,
 } from "@/lib/food-log";
 import { getMemberProfile } from "@/lib/member-profiles-store";
@@ -148,7 +149,7 @@ export async function GET(request: Request) {
     sunday: addIsoDays(days[0], 6),
     dayCalories: today?.calories ?? 0,
     weekCalories: byDay.reduce((sum, day) => sum + day.calories, 0),
-    thresholds,
+    thresholds: thresholdsWithBurn(thresholds, burn?.todayCalories ?? 0),
     days: byDay,
     burn,
   });
