@@ -60,7 +60,7 @@ export default function SetLogFingerHint({ hidden }: { hidden?: boolean }) {
 
   return (
     <div
-      className="pointer-events-none fixed z-[70] flex -translate-x-1/2 -translate-y-full flex-col items-center"
+      className="pointer-events-none fixed z-[60] flex -translate-x-1/2 -translate-y-full flex-col items-center"
       style={{ left: anchor.left, top: anchor.top - 4 }}
       role="note"
       aria-label="Log this set so the rest timer starts"

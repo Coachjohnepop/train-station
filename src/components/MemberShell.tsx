@@ -91,7 +91,7 @@ export default function MemberShell({
 
       {/* Frozen top chrome: greeting + Today/Messages nav (and live strip) stay visible while session scrolls.
           data-member-chrome hides the root fixed theme toggle so it doesn’t sit on Business Class / Sign out. */}
-      <div className="member-sticky-chrome sticky top-0 z-50" data-member-chrome="">
+      <div className="member-sticky-chrome sticky top-0 z-[80]" data-member-chrome="">
         <header className="app-shell-header">
           <div className="member-chrome-bar mx-auto flex w-full max-w-lg items-center justify-between gap-3 px-4 py-3 md:max-w-3xl md:px-6 lg:max-w-6xl lg:px-8 xl:max-w-7xl">
             <div className="member-chrome-identity flex min-w-0 items-center gap-2.5 sm:gap-3">
