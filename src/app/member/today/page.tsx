@@ -36,6 +36,8 @@ import {
 } from "@/lib/member-enrollment-day";
 import { loadMemberUpcomingSessions, memberTodayHref } from "@/lib/member-today";
 import { resolveTodayPageWorkout } from "@/lib/member-today-workout";
+import { getSessionForUserOnDate } from "@/lib/today-sessions";
+import { getSmsGeneratedWorkout } from "@/lib/sms-generated-workouts";
 import {
   buildCalendarSwipeDays,
   buildIntakeRampPlaceholderDays,
@@ -275,6 +277,32 @@ export default async function MemberTodayPage({ searchParams }: Props) {
   });
   let { session, workout, programSlug, source, scheduleLabel, parts, activePartIndex } =
     todayWorkout;
+  // A text uploaded for today replaces the program on Today. The day chip
+  // uses an M1D code, which was letting the catalog workout cover the upload.
+  const viewingProgramToday = viewDate === programTodayKey || viewDate === calendarToday;
+  if (viewingProgramToday) {
+    const uploadedToday = getSessionForUserOnDate(uid, calendarToday);
+    if (uploadedToday?.workoutId) {
+      const uploaded = await getSmsGeneratedWorkout(uploadedToday.workoutId, memberName, uid);
+      if (uploaded) {
+        session = uploadedToday;
+        workout = uploaded;
+        source = "sms";
+        scheduleLabel = uploadedToday.title;
+        programSlug = uploadedToday.programSlug || programSlug;
+        const chip = memberDays.find(
+          (day) => day.iso === programTodayKey || day.calendarDate === calendarToday,
+        );
+        if (chip) {
+          chip.workoutName = uploadedToday.title;
+          chip.workoutId = uploadedToday.workoutId;
+          chip.smsOverride = true;
+          chip.themeLabel = uploadedToday.title;
+          chip.hasWorkout = true;
+        }
+      }
+    }
+  }
   const coachMembers = asInstructor
     ? (await listCoachMembersForUi()).map((m) => ({
         id: m.id,
@@ -631,9 +659,9 @@ export default async function MemberTodayPage({ searchParams }: Props) {
             programSlug={programSlug}
             memberOptions={coachMembers}
             defaultUserIds={[uid]}
-            defaultDate={viewDate}
-            lockSessionDate={viewDate}
-            viewDateLabel={formatDateLabel(viewDate)}
+            defaultDate={selectedCalDate}
+            lockSessionDate={selectedCalDate}
+            viewDateLabel={formatDateLabel(selectedCalDate)}
             defaultTime={session ? new Date(session.scheduledAt).toTimeString().slice(0, 5) : "06:30"}
             collapsible
             defaultAssignOpen={!session}

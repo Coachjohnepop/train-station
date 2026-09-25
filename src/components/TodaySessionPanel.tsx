@@ -54,7 +54,10 @@ export default function TodaySessionPanel({
 }) {
   const router = useRouter();
   const calendarToday = localTodayIso();
-  const effectiveDate = lockSessionDate || defaultDate || calendarToday;
+  const asCalendarDate = (value?: string) =>
+    value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : "";
+  const effectiveDate =
+    asCalendarDate(lockSessionDate) || asCalendarDate(defaultDate) || calendarToday;
   const [rawSms, setRawSms] = useState("");
   const [sessionDate, setSessionDate] = useState(effectiveDate);
   const [scheduledTime, setScheduledTime] = useState(defaultTime);
@@ -71,7 +74,8 @@ export default function TodaySessionPanel({
   const [assignOpen, setAssignOpen] = useState(defaultAssignOpen);
 
   useEffect(() => {
-    setSessionDate(lockSessionDate || defaultDate || localTodayIso());
+    const iso = (value?: string) => (value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : "");
+    setSessionDate(iso(lockSessionDate) || iso(defaultDate) || localTodayIso());
   }, [lockSessionDate, defaultDate]);
 
   useEffect(() => {
