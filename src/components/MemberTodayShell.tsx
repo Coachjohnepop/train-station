@@ -865,7 +865,7 @@ export default function MemberTodayShell({
         Quick maintain at the bottom of Today — not beside the day card.
         Coach Class sees it greyed with unlock steps; Business Class gets 5 uses/month.
       */}
-      {maintainAccess && (maintainWorkouts.length > 0 || maintainAccess.mode === "locked") ? (
+      {maintainAccess ? (
         <MemberMaintainWorkouts
           workouts={maintainWorkouts}
           hrefFor={maintainHref}

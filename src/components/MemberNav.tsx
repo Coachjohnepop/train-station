@@ -8,6 +8,7 @@ import { calorieBand, type CalorieThresholds } from "@/lib/food-log";
 import ChatNavBadge from "@/components/ChatNavBadge";
 import UserBicepAvatar from "@/components/UserBicepAvatar";
 import { goMemberTodayHome } from "@/lib/member-today-home";
+import { openQuickMaintainInPlace, QUICK_MAINTAIN_HREF } from "@/lib/open-quick-maintain";
 import { memberCheckoutPath } from "@/lib/member-route-gates";
 import type { SignupPlan } from "@/lib/signup-plans";
 import {
@@ -52,6 +53,11 @@ const messagesItem: NavItem = {
 };
 
 const moreItems: NavItem[] = [
+  {
+    href: QUICK_MAINTAIN_HREF,
+    label: "Quick maintain",
+    match: () => false,
+  },
   {
     href: "/member/equipment",
     label: "Gear",
@@ -558,7 +564,10 @@ export default function MemberNav({
                 key={item.href}
                 id={isGearTab ? "member-nav-gear" : undefined}
                 href={href}
-                onClick={() => setMoreOpen(false)}
+                onClick={(event) => {
+                  if (item.href === QUICK_MAINTAIN_HREF) openQuickMaintainInPlace(event);
+                  setMoreOpen(false);
+                }}
                 className={`member-nav-more-link ${active ? "member-nav-more-link--active" : ""} ${
                   locked ? "opacity-75" : ""
                 } ${isGearTab ? "member-nav-gear" : ""}`}

@@ -39,6 +39,9 @@ export default function MemberMaintainWorkouts({
     const openFromHash = () => {
       if (window.location.hash === "#quick-maintain") {
         setExpanded(true);
+        window.setTimeout(() => {
+          document.getElementById("quick-maintain")?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }, 60);
       }
     };
     openFromHash();
@@ -54,7 +57,7 @@ export default function MemberMaintainWorkouts({
   return (
     <section
       id="quick-maintain"
-      className={`card relative scroll-mt-20 overflow-hidden ${
+      className={`card relative scroll-mt-28 overflow-hidden ${
         dayComplete
           ? "border-[color-mix(in_srgb,var(--success)_30%,var(--border))]"
           : locked
@@ -191,7 +194,9 @@ export default function MemberMaintainWorkouts({
               </div>
             ) : null}
 
-            {workouts.length > 0 ? (
+            {workouts.length === 0 ? (
+              <p className="text-sm text-[var(--muted)]">No Quick maintain sessions are in the library yet.</p>
+            ) : (
               <div className="space-y-2">
                 {locked && !dayComplete ? (
                   <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--muted)]">
@@ -259,7 +264,7 @@ export default function MemberMaintainWorkouts({
                   })}
                 </ul>
               </div>
-            ) : null}
+            )}
           </div>
         ) : null}
       </div>

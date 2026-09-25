@@ -1,8 +1,11 @@
+"use client";
+
 import Link from "next/link";
 import DayCompleteStamp from "@/components/DayCompleteStamp";
 import MemberReminderSettings from "@/components/MemberReminderSettings";
 import type { MemberDashboardData } from "@/lib/member-context";
 import type { MaintainAccess } from "@/lib/member-maintain-workouts";
+import { openQuickMaintainInPlace, QUICK_MAINTAIN_HREF } from "@/lib/open-quick-maintain";
 
 type Props = {
   dashboard: MemberDashboardData;
@@ -57,9 +60,7 @@ export default function MemberTodayHub({
   const { enrollments, stats, trialEndsAt, effectivePlan } = dashboard;
   const dayComplete = Boolean(maintainAccess?.dayComplete);
   const maintainLocked = maintainAccess ? !maintainAccess.allowed : true;
-  const maintainHref = maintainAccess
-    ? "/member/today#quick-maintain"
-    : "/member/account";
+  const maintainHref = maintainAccess ? QUICK_MAINTAIN_HREF : "/member/account";
   const maintainTitle = maintainTileTitle(maintainAccess, dayComplete);
 
   return (
@@ -119,6 +120,7 @@ export default function MemberTodayHub({
 
         <Link
           href={maintainHref}
+          onClick={maintainAccess ? openQuickMaintainInPlace : undefined}
           title={maintainTitle}
           aria-label={
             maintainLocked && !dayComplete
