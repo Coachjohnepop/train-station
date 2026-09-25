@@ -35,6 +35,8 @@ export default function MemberLiveZoomStrip({
   const sessionDate = status?.sessionDate ?? "";
   const [joined, setJoined] = useState(false);
   const [pingOpen, setPingOpen] = useState(false);
+  const [starting, setStarting] = useState(false);
+  const [startError, setStartError] = useState<string | null>(null);
   const freeExplorer = isFreeExplorerPlan(membershipPlan);
   const pingAllowed = canPingCoachZoom(membershipPlan);
 
@@ -134,7 +136,36 @@ export default function MemberLiveZoomStrip({
               : "Waiting for coach to open Zoom"}
           </p>
         </div>
-        {pingAllowed ? (
+        {status?.canStartHost ? (
+          <button
+            type="button"
+            className="btn-primary shrink-0 px-3 py-2 text-xs font-bold sm:px-4 sm:text-sm"
+            disabled={starting}
+            title="Start today's class on Jeremy's Zoom"
+            onClick={() => {
+              setStarting(true);
+              setStartError(null);
+              void fetch("/api/member/live-zoom/start", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ sessionDate: sessionDate || undefined }),
+              })
+                .then(async (res) => {
+                  const data = await res.json().catch(() => ({}));
+                  if (!res.ok || !data.openUrl) {
+                    setStartError(typeof data.error === "string" ? data.error : "Could not start Zoom.");
+                    return;
+                  }
+                  window.open(data.openUrl, "_blank", "noopener,noreferrer");
+                })
+                .catch(() => setStartError("Could not start Zoom."))
+                .finally(() => setStarting(false));
+            }}
+          >
+            {starting ? "Starting…" : "Start Zoom"}
+          </button>
+        ) : null}
+        {pingAllowed && !status?.canStartHost ? (
           <button
             type="button"
             className="btn-ghost shrink-0 border border-sky-400/40 bg-sky-500/15 px-3 py-2 text-xs font-bold text-sky-100 hover:bg-sky-500/25 sm:px-4 sm:text-sm"
@@ -145,6 +176,9 @@ export default function MemberLiveZoomStrip({
           </button>
         ) : null}
       </div>
+      {startError ? (
+        <p className="mx-auto w-full max-w-lg px-4 pb-2 text-xs text-rose-200 md:max-w-3xl lg:max-w-6xl">{startError}</p>
+      ) : null}
       {pingAllowed ? (
         <PingCoachZoomModal
           open={pingOpen}

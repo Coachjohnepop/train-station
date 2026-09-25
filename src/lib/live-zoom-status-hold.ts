@@ -10,6 +10,7 @@ export type LiveZoomJoinBits = {
   hostStarted: boolean;
   canJoin: boolean;
   joinUrl: string | null;
+  canStartHost?: boolean;
 };
 
 export const LIVE_ZOOM_NOT_LIVE_HOLD_MS = 8_000;
@@ -29,7 +30,8 @@ export function sameLiveZoomStatus(
     a.roomReady === b.roomReady &&
     a.hostStarted === b.hostStarted &&
     a.canJoin === b.canJoin &&
-    a.joinUrl === b.joinUrl
+    a.joinUrl === b.joinUrl &&
+    Boolean(a.canStartHost) === Boolean(b.canStartHost)
   );
 }
 

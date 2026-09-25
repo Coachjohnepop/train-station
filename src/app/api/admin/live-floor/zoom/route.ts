@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireCoachStaff } from "@/lib/api-auth";
 import {
+  canSubstituteStartLiveZoom,
   clearLiveClassHostStarted,
   ensureLiveClassZoom,
   getLiveClassZoom,
@@ -10,7 +11,7 @@ import {
   markLiveClassZoomNotified,
   notifyLiveClassZoomAttendees,
 } from "@/lib/live-class-zoom";
-import { zoomReady } from "@/lib/zoom";
+import { zoomHostStartUrl, zoomReady } from "@/lib/zoom";
 import { ZOOM_FREE_MAX_DURATION_MIN } from "@/lib/zoom-oauth-flow";
 import { zoomMeetingSdkConfigured } from "@/lib/zoom-meeting-sdk-signature";
 
@@ -53,13 +54,14 @@ export async function POST(request: Request) {
     const coachEmail = auth.session.email;
     const { record, created } = await ensureLiveClassZoom(sessionDate, { coachEmail });
     const open = liveClassOpenUrlForCoach(record, coachEmail);
+    const substitute = canSubstituteStartLiveZoom(coachEmail);
     let notified = 0;
     if (created && !record.demo) {
       const alert = await notifyLiveClassZoomAttendees(record.sessionDate, record.joinUrl);
       notified = alert.sent;
       await markLiveClassZoomNotified(record.sessionDate);
     }
-    // Only the real Zoom host marks the room "live" for members.
+    // Jeremy, or John starting on Jeremy's saved Zoom.
     let hostStarted = false;
     if (startHost && open.isHost && !record.demo) {
       await markLiveClassHostStarted(record.sessionDate);
@@ -67,6 +69,20 @@ export async function POST(request: Request) {
     }
     // Re-read so response (and any follow-up) includes hostStartedAt.
     const fresh = (await getLiveClassZoom(record.sessionDate)) || record;
+    const zoom = zoomPayload(fresh, coachEmail);
+    if (substitute && zoom && !fresh.demo) {
+      const hostUrl = await zoomHostStartUrl({
+        meetingNumber: fresh.meetingNumber || fresh.meetingId,
+        password: fresh.password,
+        coachEmail: fresh.hostCoachEmail,
+      });
+      if (hostUrl) {
+        zoom.hostUrl = hostUrl;
+        zoom.openUrl = hostUrl;
+        zoom.isHost = true;
+        zoom.openAs = "host";
+      }
+    }
     return NextResponse.json({
       ok: true,
       created,
@@ -77,7 +93,7 @@ export async function POST(request: Request) {
       maxDurationMin: ZOOM_FREE_MAX_DURATION_MIN,
       coachStartsFirst: true,
       demo: fresh.demo === true,
-      zoom: zoomPayload(fresh, coachEmail),
+      zoom,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Could not create live class Zoom room.";

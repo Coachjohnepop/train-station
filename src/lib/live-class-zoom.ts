@@ -193,6 +193,12 @@ export async function resolveLiveClassHostCoachEmail(
   return request || preferred;
 }
 
+/** John can start the class on Jeremy's saved Zoom without Jeremy's password. */
+export function canSubstituteStartLiveZoom(email: string | null | undefined): boolean {
+  const got = (email || "").trim().toLowerCase();
+  return got === "john@thetrainstation.co" || got === "john@lemonvoice.com";
+}
+
 /** True when this coach should open start_url; others use join_url to enter as guests. */
 export function isLiveClassHostForCoach(
   record: LiveClassZoomRecord | null | undefined,
@@ -212,7 +218,8 @@ export function liveClassOpenUrlForCoach(
   record: LiveClassZoomRecord,
   coachEmail?: string | null,
 ): { openUrl: string; openAs: "host" | "participant"; isHost: boolean } {
-  const isHost = isLiveClassHostForCoach(record, coachEmail);
+  const isHost =
+    isLiveClassHostForCoach(record, coachEmail) || canSubstituteStartLiveZoom(coachEmail);
   if (isHost && record.hostUrl) {
     return { openUrl: record.hostUrl, openAs: "host", isHost: true };
   }
@@ -394,6 +401,8 @@ export async function memberLiveZoomStatus(input: {
   hostStarted: boolean;
   canJoin: boolean;
   joinUrl: string | null;
+  /** John can start the room on Jeremy's Zoom. */
+  canStartHost: boolean;
   livePageUrl: string;
 }> {
   const date = normalizeLiveSessionDate(input.sessionDate);
@@ -409,6 +418,7 @@ export async function memberLiveZoomStatus(input: {
       hostStarted: false,
       canJoin: false,
       joinUrl: null,
+      canStartHost: canSubstituteStartLiveZoom(input.memberEmail),
       livePageUrl,
     };
   }
@@ -432,6 +442,7 @@ export async function memberLiveZoomStatus(input: {
     hostStarted,
     canJoin,
     joinUrl: canJoin ? record.joinUrl : null,
+    canStartHost: canSubstituteStartLiveZoom(input.memberEmail),
     livePageUrl,
   };
 }

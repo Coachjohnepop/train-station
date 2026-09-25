@@ -231,6 +231,22 @@ export async function createZoomMeeting(input: {
   };
 }
 
+/** Open Jeremy's meeting as host using a short-lived token. No Zoom password. */
+export async function zoomHostStartUrl(input: {
+  meetingNumber: string;
+  password?: string | null;
+  coachEmail?: string | null;
+}): Promise<string | null> {
+  const meetingNumber = input.meetingNumber.replace(/\D/g, "");
+  if (!meetingNumber) return null;
+  const zak = await fetchZoomZakToken({ coachEmail: input.coachEmail });
+  if (!zak) return null;
+  const url = new URL(`https://zoom.us/s/${meetingNumber}`);
+  if (input.password) url.searchParams.set("pwd", input.password);
+  url.searchParams.set("zak", zak);
+  return url.toString();
+}
+
 export async function fetchZoomZakToken(ctx?: ZoomCoachContext): Promise<string | null> {
   const token = await resolveZoomAccessToken(ctx);
   if (!token) return null;

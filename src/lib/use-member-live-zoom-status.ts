@@ -13,6 +13,7 @@ export type MemberLiveZoomStatus = {
   hostStarted: boolean;
   canJoin: boolean;
   joinUrl: string | null;
+  canStartHost?: boolean;
   livePageUrl: string;
 };
 
