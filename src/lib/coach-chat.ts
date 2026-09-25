@@ -496,18 +496,23 @@ export function getUnreadCountsByThreadForCoach(): Record<string, number> {
   return counts;
 }
 
-/** Per-thread unread coach messages for a member (tab / body badges). */
+/** Unread for a member: coach notes, plus other people in a group thread. */
 export function getUnreadCountsByThreadForMember(
   memberId: string,
   programSlugs: string[] = [],
   windows?: Record<string, MemberChatWindow>,
 ): Record<string, number> {
   const threads = listThreadsForMember(memberId, programSlugs);
-  const threadIds = new Set(threads.map((t) => t.id));
+  const threadById = new Map(threads.map((t) => [t.id, t]));
   const counts: Record<string, number> = {};
   for (const m of readStore().messages) {
-    if (!threadIds.has(m.threadId)) continue;
-    if (m.authorRole !== "coach") continue;
+    const thread = threadById.get(m.threadId);
+    if (!thread) continue;
+    if (m.authorId === memberId) continue;
+    if (m.authorRole === "system") continue;
+    const fromCoach = m.authorRole === "coach";
+    const fromGroupMate = m.authorRole === "member" && thread.kind === "cohort";
+    if (!fromCoach && !fromGroupMate) continue;
     if (m.readByUserIds.includes(memberId)) continue;
     if (windows && !messageInLiveView(m.createdAt, windows[m.threadId])) continue;
     counts[m.threadId] = (counts[m.threadId] || 0) + 1;
