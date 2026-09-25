@@ -4,6 +4,7 @@
  */
 
 import { divisionForPlan } from "@/lib/gamification-levers";
+import { normalizeSignupPlan } from "@/lib/signup-plans";
 
 /** How many exercises Free can fully log on an unlocked free day (rest are preview). */
 export const FREE_PREVIEW_EXERCISES = 3;
@@ -12,7 +13,10 @@ export const FREE_PREVIEW_EXERCISES = 3;
 export const FREE_COACH_CHAT_SOFT_CAP = 8;
 
 export function isFreeExplorerPlan(plan: string | null | undefined): boolean {
-  return divisionForPlan(plan) === "explorer";
+  // A missing plan is not a free ticket. Callers that omit it were locking
+  // Business Class behind "Upgrade to Coach Class".
+  if (plan == null || !String(plan).trim()) return false;
+  return divisionForPlan(normalizeSignupPlan(plan)) === "explorer";
 }
 
 /** 0-based exercise index is locked for Free after FREE_PREVIEW_EXERCISES open slots. */

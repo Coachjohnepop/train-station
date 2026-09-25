@@ -2,6 +2,8 @@
  * Gamification economy levers — defaults + normalize for Admin console / config row.
  */
 
+import { normalizeSignupPlan } from "@/lib/signup-plans";
+
 export type GamificationDivision = "explorer" | "member" | "business" | "pro";
 
 export type GamificationLevers = {
@@ -109,10 +111,10 @@ export function countsTowardScore(at: string | Date, resetAt: string | null | un
 
 /** Map membership plan → scoreboard division. */
 export function divisionForPlan(plan: string | null | undefined): GamificationDivision {
-  const p = (plan || "explorer").toLowerCase();
-  if (p === "member" || p === "coach_class") return "member";
-  if (p === "business" || p === "business_class") return "business";
-  if (p === "pro" || p === "first_class") return "pro";
+  const p = normalizeSignupPlan(plan);
+  if (p === "member") return "member";
+  if (p === "business") return "business";
+  if (p === "pro") return "pro";
   return "explorer";
 }
 

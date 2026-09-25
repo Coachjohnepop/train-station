@@ -13,6 +13,7 @@ type Props = {
   warmupWorkout: MemberWorkoutView;
   programSlug: string;
   targetUserId: string;
+  membershipPlan?: string | null;
 };
 
 function phaseLabel(summary: MemberDaySummary, todayIso: string): string {
@@ -122,6 +123,7 @@ export default function MemberWarmupDayNavigator({
   warmupWorkout,
   programSlug,
   targetUserId,
+  membershipPlan = null,
 }: Props) {
   const touchStartX = useRef<number | null>(null);
   const idx = days.findIndex((d) => d.iso === selectedDate);
@@ -205,6 +207,7 @@ export default function MemberWarmupDayNavigator({
                 progressMode="warmup"
                 hideLogButton
                 embedded
+                membershipPlan={membershipPlan}
               />
             </div>
           ) : (

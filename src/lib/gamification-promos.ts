@@ -17,6 +17,7 @@ import type { MembershipPlan } from "@/lib/signup-plans";
 import {
   isMembershipPlan,
   isPaidMembershipPlan,
+  membershipPlanRank,
   resolveEffectiveMembershipPlan,
 } from "@/lib/signup-plans";
 
@@ -118,17 +119,20 @@ export async function getActiveAccessOverride(
 /**
  * Effective plan for content + board: promo override wins over paid plan stamp.
  */
+function higherMembershipPlan(a: MembershipPlan, b: MembershipPlan): MembershipPlan {
+  return (membershipPlanRank(a) ?? 0) >= (membershipPlanRank(b) ?? 0) ? a : b;
+}
+
 export async function getEffectiveMembershipPlan(
   userId: string,
   profilePlan?: string | null,
 ): Promise<MembershipPlan> {
   const override = await getActiveAccessOverride(userId);
-  if (override) return override.plan;
-  if (isPaidMembershipPlan(profilePlan)) return profilePlan;
+  if (isPaidMembershipPlan(profilePlan) && !override) return profilePlan;
 
   const profile = await getMemberProfile(userId);
   const stamped = profilePlan ?? profile?.plan ?? "explorer";
-  if (isPaidMembershipPlan(stamped)) return stamped;
+  if (isPaidMembershipPlan(stamped) && !override) return stamped;
 
   let signupPlan: string | null = null;
   if (profile?.paymentStatus === "paid" || !isMembershipPlan(stamped as MembershipPlan)) {
@@ -143,11 +147,14 @@ export async function getEffectiveMembershipPlan(
     }
   }
 
-  return resolveEffectiveMembershipPlan({
+  const resolved = resolveEffectiveMembershipPlan({
     profilePlan: stamped,
     signupPlan,
     paymentStatus: profile?.paymentStatus ?? null,
   });
+  // A free-week sample can lift Explorer. It must not drop Business or 1st Class.
+  if (override) return higherMembershipPlan(resolved, override.plan);
+  return resolved;
 }
 
 export async function listPromosForUser(userId: string): Promise<PromoDto[]> {

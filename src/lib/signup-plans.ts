@@ -74,14 +74,21 @@ export const SIGNUP_PLANS = [...MEMBERSHIP_PLANS, ...SERVICE_OFFER_IDS] as const
 export type SignupPlan = (typeof SIGNUP_PLANS)[number];
 
 export function normalizeSignupPlan(raw: string | null | undefined): SignupPlan {
-  const v = (raw || "").trim().toLowerCase().replace(/-/g, "_");
-  if (v === "member" || v === "coach_class") return "member";
+  const v = (raw || "")
+    .trim()
+    .toLowerCase()
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+  if (v === "member" || v === "coach" || v === "coach_class") return "member";
   if (
     v === "pro" ||
     v === "first_class" ||
     v === "first_class_1on1" ||
     v === "first_class_1_on_1" ||
     v === "1on1" ||
+    v === "1st" ||
+    v === "1st_class" ||
     v === "intensive"
   ) {
     return "pro";

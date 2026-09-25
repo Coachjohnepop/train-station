@@ -12,6 +12,8 @@ import { resolveMemberWorkoutContext } from "@/lib/member-workout-context";
 import { resolveTargetUserId } from "@/lib/resolve-target-user";
 import { localTodayIso } from "@/lib/program-calendar";
 import { findCompletedSessionLog } from "@/lib/workout-logs-db";
+import { getEffectiveMembershipPlan } from "@/lib/gamification-promos";
+import { getMemberProfile } from "@/lib/member-profiles-store";
 
 type Props = {
   searchParams: Promise<{
@@ -92,6 +94,10 @@ export default async function MemberWorkoutPage({ searchParams }: Props) {
   }
 
   const memberUserId = resolveTargetUserId(forUser, await resolveMemberUserId());
+  const memberProfile = memberUserId ? await getMemberProfile(memberUserId) : null;
+  const membershipPlan = memberUserId
+    ? await getEffectiveMembershipPlan(memberUserId, memberProfile?.plan)
+    : null;
 
   const workoutContext = program
     ? await resolveMemberWorkoutContext({
@@ -222,6 +228,7 @@ export default async function MemberWorkoutPage({ searchParams }: Props) {
             scheduleLabel={workoutContext?.scheduleLabel}
             liveSyncUserId={memberUserId}
             liveSessionDate={date}
+            membershipPlan={membershipPlan}
           />
 
           {/* Eating report visible to coach while doing the live workout coaching (coming soon - temporarily disabled) */}

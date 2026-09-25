@@ -468,7 +468,7 @@ export default function MemberTodayShell({
             scheduleLabel={scheduleLabel}
             calendarDateLabel={calendarDateLabel}
             onEngage={notifyMaintainWorkoutEngage}
-            membershipPlan={contentAccess?.plan ?? "explorer"}
+            membershipPlan={contentAccess?.plan}
           />
         </MemberMaintainConsoleStage>
       </div>
@@ -676,6 +676,7 @@ export default function MemberTodayShell({
             warmupWorkout={warmupWorkout}
             programSlug={programSlug}
             targetUserId={targetUserId}
+            membershipPlan={contentAccess?.plan}
           />
         </>
       )}
@@ -763,7 +764,7 @@ export default function MemberTodayShell({
               logSessionDate={selectedSummary?.calendarDate}
               reviewMode={previewFutureReadOnly}
               futurePreview={previewFutureReadOnly}
-              membershipPlan={contentAccess?.plan ?? "explorer"}
+              membershipPlan={contentAccess?.plan}
               scheduleLabel={
                 multiPart && dayParts
                   ? `${dayParts.find((p) => p.partIndex === activePartIndex)?.label || "Session"}${

@@ -598,6 +598,7 @@ export default async function MemberTodayPage({ searchParams }: Props) {
                   (/^\d{4}-\d{2}-\d{2}$/.test(viewDate) ? viewDate : calendarToday)
                 }
                 scheduleLabel={scheduleLabel}
+                membershipPlan={contentAccess.plan}
                 calendarDateLabel={formatDateLabel(
                   selectedSummary?.calendarDate && /^\d{4}-\d{2}-\d{2}$/.test(selectedSummary.calendarDate)
                     ? selectedSummary.calendarDate
