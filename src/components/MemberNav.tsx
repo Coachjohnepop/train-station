@@ -59,6 +59,11 @@ const moreItems: NavItem[] = [
     match: () => false,
   },
   {
+    href: "/member/byow",
+    label: "BYOW",
+    match: (p: string) => p.startsWith("/member/byow"),
+  },
+  {
     href: "/member/equipment",
     label: "Gear",
     match: (p: string) => p.startsWith("/member/equipment"),
@@ -78,11 +83,6 @@ const moreItems: NavItem[] = [
     label: "Book Call",
     match: (p: string) => p.startsWith("/member/book"),
     openDuringPayment: true,
-  },
-  {
-    href: "/member/byow",
-    label: "Build Your Own",
-    match: (p: string) => p.startsWith("/member/byow"),
   },
   {
     href: "/member/account",

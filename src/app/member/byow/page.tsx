@@ -3,6 +3,7 @@ import { getSessionUser } from "@/lib/auth";
 import { listByowWorkoutsForOwner } from "@/lib/byow-build";
 import { canAccessByowAdmin } from "@/lib/byow-access";
 import { buildByowWeekReport } from "@/lib/byow-report";
+import ByowUploadClient from "@/components/ByowUploadClient";
 import ByowWeekReportCard from "@/components/ByowWeekReport";
 
 export const dynamic = "force-dynamic";
@@ -24,7 +25,10 @@ export default async function MemberByowPage({
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-semibold">Build Your Own</h1>
+      <h1 className="text-xl font-semibold">BYOW</h1>
+      <p className="text-sm text-[var(--muted)]">
+        Paid members can build a workout from notes. It stays in your library and opens in the same console as Today.
+      </p>
       <div className="flex gap-2">
         <Link
           href="/member/byow"
@@ -51,16 +55,10 @@ export default async function MemberByowPage({
         <ByowWeekReportCard report={report} />
       ) : (
         <>
-      <p className="text-sm text-[var(--muted)]">
-        Workouts you built from notes. Check them off in the same console as Today.
-      </p>
+      <ByowUploadClient />
       {workouts.length === 0 ? (
         <p className="text-sm text-[var(--muted)]">
-          None yet.{" "}
-          <Link href="/byow" className="text-accent hover:underline">
-            Upload a notes file
-          </Link>
-          .
+          None saved yet. Paste notes above, then save.
         </p>
       ) : (
         <ul className="space-y-2">
