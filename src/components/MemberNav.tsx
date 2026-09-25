@@ -8,6 +8,7 @@ import { calorieBand, type CalorieThresholds } from "@/lib/food-log";
 import ChatNavBadge from "@/components/ChatNavBadge";
 import UserBicepAvatar from "@/components/UserBicepAvatar";
 import { goMemberTodayHome } from "@/lib/member-today-home";
+import { useMemberLiveZoomStatus } from "@/lib/use-member-live-zoom-status";
 import { openQuickMaintainInPlace, QUICK_MAINTAIN_HREF } from "@/lib/open-quick-maintain";
 import { memberCheckoutPath } from "@/lib/member-route-gates";
 import type { SignupPlan } from "@/lib/signup-plans";
@@ -138,6 +139,8 @@ export default function MemberNav({
   const router = useRouter();
   const wrapRef = useRef<HTMLDivElement>(null);
   const [moreOpen, setMoreOpen] = useState(false);
+  const [startingClass, setStartingClass] = useState(false);
+  const liveZoom = useMemberLiveZoomStatus();
   const [nutritionOpen, setNutritionOpen] = useState(false);
   const nutritionBtnRef = useRef<HTMLButtonElement>(null);
   const [nutritionMenu, setNutritionMenu] = useState<{ left: number; top: number } | null>(null);
@@ -552,6 +555,35 @@ export default function MemberNav({
               </button>
             ))}
           </div>
+          {liveZoom?.canStartHost ? (
+            <button
+              type="button"
+              className="member-nav-more-link text-left"
+              disabled={startingClass}
+              title="One-off. Starts today's class on Jeremy's Zoom so others can join."
+              onClick={() => {
+                setStartingClass(true);
+                void fetch("/api/member/live-zoom/start", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ sessionDate: liveZoom.sessionDate || undefined }),
+                })
+                  .then(async (res) => {
+                    const data = await res.json().catch(() => ({}));
+                    if (!res.ok || !data.openUrl) {
+                      window.alert(typeof data.error === "string" ? data.error : "Could not start class.");
+                      return;
+                    }
+                    setMoreOpen(false);
+                    window.open(data.openUrl, "_blank", "noopener,noreferrer");
+                  })
+                  .catch(() => window.alert("Could not start class."))
+                  .finally(() => setStartingClass(false));
+              }}
+            >
+              <span>{startingClass ? "Starting class…" : "Start Class"}</span>
+            </button>
+          ) : null}
           {moreItems.map((item) => {
             const href = navHref(item, paymentGateActive, checkoutPlan);
             const locked = paymentGateActive && !item.openDuringPayment;

@@ -218,8 +218,7 @@ export function liveClassOpenUrlForCoach(
   record: LiveClassZoomRecord,
   coachEmail?: string | null,
 ): { openUrl: string; openAs: "host" | "participant"; isHost: boolean } {
-  const isHost =
-    isLiveClassHostForCoach(record, coachEmail) || canSubstituteStartLiveZoom(coachEmail);
+  const isHost = isLiveClassHostForCoach(record, coachEmail);
   if (isHost && record.hostUrl) {
     return { openUrl: record.hostUrl, openAs: "host", isHost: true };
   }

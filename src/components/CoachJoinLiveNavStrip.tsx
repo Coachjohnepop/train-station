@@ -204,10 +204,10 @@ export default function CoachJoinLiveNavStrip() {
             {busy
               ? "Opening…"
               : room?.isHost === false
-                ? "Join class Zoom"
-                : hostStarted
-                  ? "Rejoin as host"
-                  : "Start Zoom"}
+                ? "Join Class"
+                : room?.openUrl || room?.hostUrl
+                  ? "Join Live Now"
+                  : "Start Live Zoom"}
           </button>
         ) : (
           <Link
