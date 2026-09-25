@@ -18,29 +18,38 @@ export function metCalories(met: number, weightLbs: number, hours: number): numb
 }
 
 function countBefore(text: string, unit: RegExp): number | null {
-  const match = text.match(new RegExp(`(\\d+|${Object.keys(WORD_COUNTS).join("|")})\\s*(?:full\\s+)?${unit.source}`, "i"));
+  const match = text.match(
+    new RegExp(`(\\d+|${Object.keys(WORD_COUNTS).join("|")})\\s*(?:full\\s+)?(?:${unit.source})`, "i"),
+  );
   if (!match) return null;
   const raw = match[1].toLowerCase();
   const value = /^\d+$/.test(raw) ? Number(raw) : WORD_COUNTS[raw];
   return value && value > 0 ? value : null;
 }
 
+export type TimedBurn = { calories: number; minutes: number };
+
+/** A day of sitting, before any workout or extra activity is added. */
+export function sedentaryDayBurn(weightLbs: number): number {
+  return metCalories(1.2, weightLbs, 24);
+}
+
 /** Free-text activity. Returns null when the sentence has no movement we can price. */
-export function estimateActivityBurn(text: string, weightLbs: number): number | null {
+export function describeActivityBurn(text: string, weightLbs: number): TimedBurn | null {
   const line = text.replace(/\s+/g, " ").trim();
   if (line.length < 3) return null;
 
   if (/golf|holes?/i.test(line)) {
     const holes = countBefore(line, /holes?/) ?? (/nine|9/.test(line) ? 9 : 9);
-    const hours = holes <= 9 ? 2 : 4;
+    const hours = (holes <= 9 ? 2 : 4) * (holes > 9 ? 1 : holes / 9);
     const met = /hill/i.test(line) ? 5 : 4.5;
-    return metCalories(met, weightLbs, hours * (holes > 9 ? 1 : holes / 9));
+    return { calories: metCalories(met, weightLbs, hours), minutes: Math.round(hours * 60) };
   }
 
   if (/wheel\s*barrow|dirt|loads?/i.test(line) && /load/i.test(line)) {
     const loads = countBefore(line, /loads?/) ?? 1;
     const minutes = Math.min(180, Math.max(10, loads * 2.5));
-    return metCalories(6, weightLbs, minutes / 60);
+    return { calories: metCalories(6, weightLbs, minutes / 60), minutes: Math.round(minutes) };
   }
 
   const hours = countBefore(line, /hours?|hrs?/);
@@ -58,7 +67,14 @@ export function estimateActivityBurn(text: string, weightLbs: number): number | 
   else if (/zoo|stroll/i.test(line)) met = 3.3;
   else if (/fasted|cardio|brisk/i.test(line)) met = 6.5;
   else if (/walk/i.test(line)) met = 3.8;
-  return metCalories(met, weightLbs, durationHours);
+  return {
+    calories: metCalories(met, weightLbs, durationHours),
+    minutes: Math.round(durationHours * 60),
+  };
+}
+
+export function estimateActivityBurn(text: string, weightLbs: number): number | null {
+  return describeActivityBurn(text, weightLbs)?.calories ?? null;
 }
 
 export type SessionPiece = {
@@ -102,6 +118,24 @@ function pieceMinutes(piece: SessionPiece): number {
   if (steadyCardio(label)) return 30;
   const sets = piece.sets && piece.sets > 0 ? piece.sets : 3;
   return sets * 2.5;
+}
+
+/** How long a logged session lasted. Steady cardio is counted once. */
+export function sessionMinutes(input: { name: string; pieces: SessionPiece[] }): number {
+  const titleMinutes = minutesInText(input.name);
+  if (titleMinutes && /cardio|walk|run|bike|row|ski/.test(input.name.toLowerCase())) {
+    return Math.round(titleMinutes);
+  }
+  if (input.pieces.length === 0) return 45;
+  let minutes = 0;
+  let steady = 0;
+  for (const piece of input.pieces) {
+    const span = pieceMinutes(piece);
+    if (steadyCardio(piece.name)) steady = Math.max(steady, span);
+    else minutes += span;
+  }
+  const total = Math.round(minutes + steady);
+  return total > 0 ? total : 45;
 }
 
 /** One logged session. Steady cardio is counted once; strength work adds up. */

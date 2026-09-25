@@ -1,6 +1,14 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { estimateActivityBurn, estimateSessionBurn, estimateWorkoutBurn, metCalories } from "./burn-estimate";
+import {
+  describeActivityBurn,
+  estimateActivityBurn,
+  estimateSessionBurn,
+  estimateWorkoutBurn,
+  metCalories,
+  sedentaryDayBurn,
+  sessionMinutes,
+} from "./burn-estimate";
 
 test("hilly nine-hole walk is about 800 calories at 179 lb", () => {
   const burned = estimateActivityBurn(
@@ -25,9 +33,34 @@ test("a two hour zoo walk is a few hundred calories", () => {
   assert.ok(burned != null && burned >= 450 && burned <= 600);
 });
 
+test("sitting is the day before any extra activity", () => {
+  assert.equal(sedentaryDayBurn(179), metCalories(1.2, 179, 24));
+});
+
+test("a 45 minute horse ride keeps that duration", () => {
+  const burned = describeActivityBurn("rode a horse for 45 mins", 179);
+  assert.equal(burned?.minutes, 45);
+  assert.ok(burned != null && burned.calories >= 300 && burned.calories <= 450);
+});
+
+test("five hours of skiing reports five hours", () => {
+  const burned = describeActivityBurn("skied for 5 hours", 179);
+  assert.equal(burned?.minutes, 300);
+});
+
 test("an hour of ice skating is a moderate burn", () => {
   const burned = estimateActivityBurn("ice skating for 1 hour", 179);
   assert.ok(burned != null && burned >= 500 && burned <= 700);
+});
+
+test("fasted cardio keeps the minutes in the title", () => {
+  assert.equal(
+    sessionMinutes({
+      name: "35 Minutes of Fasted Cardio",
+      pieces: [{ name: "Fasted Cardio", sets: 1 }],
+    }),
+    35,
+  );
 });
 
 test("a named 35 minute fasted cardio uses that duration once", () => {

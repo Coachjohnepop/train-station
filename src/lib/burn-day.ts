@@ -2,12 +2,18 @@ import "server-only";
 
 import { prisma } from "@/lib/prisma";
 import { pacificDateIso } from "@/lib/food-log";
-import { estimateActivityBurn, estimateSessionBurn } from "@/lib/burn-estimate";
+import {
+  describeActivityBurn,
+  estimateSessionBurn,
+  sedentaryDayBurn,
+  sessionMinutes,
+} from "@/lib/burn-estimate";
 
 export type BurnLine = {
   id: string;
   label: string;
   calories: number;
+  minutes: number;
   kind: "activity" | "workout";
 };
 
@@ -71,12 +77,13 @@ export async function burnForDates(userId: string, dates: string[], focusDate: s
   for (const date of dates) byDate.set(date, []);
 
   for (const row of activities) {
-    const calories = estimateActivityBurn(row.text, weightLbs);
-    if (calories == null || calories <= 0) continue;
+    const priced = describeActivityBurn(row.text, weightLbs);
+    if (!priced || priced.calories <= 0) continue;
     byDate.get(row.loggedOn)?.push({
       id: row.id,
       label: row.text,
-      calories,
+      calories: priced.calories,
+      minutes: priced.minutes,
       kind: "activity",
     });
   }
@@ -101,6 +108,15 @@ export async function burnForDates(userId: string, dates: string[], focusDate: s
       id: row.id,
       label: row.workout.name,
       calories,
+      minutes: sessionMinutes({
+        name: row.workout.name,
+        pieces: row.workout.exercises.map((exercise) => ({
+          name: exercise.exercise.name,
+          sets: exercise.setCount || exercise.sets,
+          reps: exercise.reps,
+          durationSec: exercise.phases.find((phase) => phase.durationSec)?.durationSec ?? null,
+        })),
+      }),
       kind: "workout",
     });
   }
@@ -113,6 +129,7 @@ export async function burnForDates(userId: string, dates: string[], focusDate: s
   return {
     weightLbs,
     assumedWeight,
+    sedentaryCalories: sedentaryDayBurn(weightLbs),
     todayCalories: todayLines.reduce((sum, line) => sum + line.calories, 0),
     weekCalories,
     lines: todayLines,

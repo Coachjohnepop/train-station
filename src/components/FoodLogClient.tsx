@@ -32,7 +32,22 @@ type DayBucket = {
   entries: FoodRow[];
 };
 
-type BurnLine = { id: string; label: string; calories: number; kind: "activity" | "workout" };
+type BurnLine = {
+  id: string;
+  label: string;
+  calories: number;
+  minutes: number;
+  kind: "activity" | "workout";
+};
+
+type DayBurn = {
+  weightLbs: number;
+  assumedWeight: boolean;
+  sedentaryCalories: number;
+  todayCalories: number;
+  weekCalories: number;
+  lines: BurnLine[];
+};
 
 type LogResponse = {
   eatenOn: string;
@@ -40,13 +55,7 @@ type LogResponse = {
   weekCalories: number;
   thresholds: CalorieThresholds | null;
   days: DayBucket[];
-  burn?: {
-    weightLbs: number;
-    assumedWeight: boolean;
-    todayCalories: number;
-    weekCalories: number;
-    lines: BurnLine[];
-  } | null;
+  burn?: DayBurn | null;
 };
 
 type PhotoDraft = FoodNutrients & {
@@ -235,43 +244,15 @@ export default function FoodLogClient() {
 
   const today = log?.days.find((day) => day.date === log.eatenOn);
 
-  return (
-    <div className="mx-auto max-w-3xl space-y-6">
-      <div>
-        <Link href="/member/today" className="text-xs font-semibold text-[var(--accent)] hover:underline">
-          ← Back to Today
-        </Link>
-        <h1 className="mt-3 text-2xl font-bold">Eating Log</h1>
-        <p className="mt-2 text-sm text-[var(--muted)]">
-          Protein, starch, and the butter or oil you cooked with. Garlic, peanut butter, and the rest go in Other.
-          A photo of the plate or the nutrition label works. Fiber, sugar, and sodium are kept with the meal.
-          The week starts Monday.
-        </p>
-      </div>
+  const todayRows = today?.entries ?? [];
 
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div className="card p-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--muted)]">Today</p>
-          <p
-            className={`mt-1 inline-flex min-w-16 justify-center rounded-full border px-3 py-1 text-3xl font-bold tabular-nums member-nav-score-badge${
-              log
-                ? calorieBand(log.dayCalories, log.thresholds)
-                  ? ` member-nav-score-badge--cal-${calorieBand(log.dayCalories, log.thresholds)}`
-                  : ""
-                : ""
-            }`}
-          >
-            {log?.dayCalories ?? 0}
-          </p>
-          <p className="text-xs text-[var(--muted)]">calories eaten</p>
-          <NutrientTotals rows={today?.entries ?? []} />
-          <BudgetNote eaten={log?.dayCalories ?? 0} thresholds={log?.thresholds ?? null} burn={log?.burn?.todayCalories ?? 0} />
-        </div>
-        <div className="card p-4">
-          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--muted)]">This week</p>
-          <p className="mt-1 text-3xl font-bold tabular-nums">{log?.weekCalories ?? 0}</p>
-          <p className="text-xs text-[var(--muted)]">Monday through Sunday</p>
-        </div>
+  return (
+    <div className="mx-auto max-w-3xl space-y-4">
+      <div className="flex items-baseline justify-between gap-3">
+        <h1 className="text-xl font-bold">Eating Log</h1>
+        <Link href="/member/today" className="text-xs font-semibold text-[var(--accent)] hover:underline">
+          Today
+        </Link>
       </div>
 
       <form id="food-entry-form" onSubmit={(event) => void save(event)} className="card space-y-3 p-4">
@@ -321,88 +302,162 @@ export default function FoodLogClient() {
         {note ? <p className="text-sm text-[var(--muted)]">{note}</p> : null}
       </form>
 
-      <section className="space-y-2">
-        <div className="flex items-baseline gap-3">
-          <p className="text-3xl font-bold tabular-nums leading-none">{log?.dayCalories ?? 0}</p>
-          <h2 className="text-lg font-semibold">Today</h2>
-        </div>
-        <FoodTable
-          rows={today?.entries ?? []}
-          editingId={editingId}
-          onEdit={beginEdit}
-          onRemove={(id) => void remove(id)}
-          busy={busy}
+      {log ? (
+        <TodayBoard
+          rows={todayRows}
+          eaten={log.dayCalories}
+          thresholds={log.thresholds}
+          burn={log.burn ?? null}
         />
-      </section>
+      ) : (
+        <section className="card p-4">
+          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--muted)]">Today</p>
+        </section>
+      )}
 
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold">Week</h2>
-        {(log?.days ?? []).map((day) => (
-          <div key={day.date} className="card p-4">
-            <div className="flex items-baseline justify-between gap-3">
-              <h3 className="font-semibold">
-                {day.label}
-                {day.date === log?.eatenOn ? " · today" : ""}
-              </h3>
-              <div className="text-right">
-                <p className="tabular-nums text-sm font-semibold">{day.calories} cal</p>
-                {day.date === log?.eatenOn ? (
-                  <BudgetNote
-                    eaten={day.calories}
-                    thresholds={log?.thresholds ?? null}
-                    burn={log?.burn?.todayCalories ?? 0}
-                    compact
-                  />
-                ) : null}
+      <FoodTable
+        rows={todayRows}
+        editingId={editingId}
+        onEdit={beginEdit}
+        onRemove={(id) => void remove(id)}
+        busy={busy}
+      />
+
+      {(log?.days ?? []).some((day) => day.date !== log?.eatenOn && day.entries.length > 0) ? (
+        <section className="space-y-3">
+          {(log?.days ?? [])
+            .filter((day) => day.date !== log?.eatenOn && day.entries.length > 0)
+            .map((day) => (
+              <div key={day.date} className="card p-4">
+                <div className="flex items-baseline justify-between gap-3">
+                  <h2 className="font-semibold">{day.label}</h2>
+                  <p className="tabular-nums text-sm font-semibold">{day.calories}</p>
+                </div>
+                <ul className="mt-2 space-y-1 text-sm">
+                  {day.entries.map((row) => (
+                    <li key={row.id} className="flex items-start gap-3">
+                      <span className="w-14 shrink-0 text-left font-bold tabular-nums">{row.calories}</span>
+                      <span className="min-w-0 flex-1 text-[var(--muted)]">{foodLine(row)}</span>
+                      <MealActions
+                        row={row}
+                        editing={editingId === row.id}
+                        busy={busy}
+                        onEdit={beginEdit}
+                        onRemove={(id) => void remove(id)}
+                      />
+                    </li>
+                  ))}
+                </ul>
               </div>
-            </div>
-            {day.entries.length > 0 ? (
-              <ul className="mt-2 space-y-1 text-sm">
-                {day.entries.map((row) => (
-                  <li key={row.id} className="flex items-start gap-3">
-                    <span className="w-14 shrink-0 text-left font-bold tabular-nums text-[var(--text)]">
-                      {row.calories}
-                    </span>
-                    <span className="min-w-0 flex-1 text-[var(--muted)]">{foodLine(row)}</span>
-                    <MealActions
-                      row={row}
-                      editing={editingId === row.id}
-                      busy={busy}
-                      onEdit={beginEdit}
-                      onRemove={(id) => void remove(id)}
-                    />
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="mt-1 text-sm text-[var(--muted)]">Nothing logged.</p>
-            )}
-          </div>
-        ))}
-      </section>
+            ))}
+        </section>
+      ) : null}
     </div>
   );
 }
 
-function BudgetNote({
+function TodayBoard({
+  rows,
   eaten,
   thresholds,
   burn,
-  compact = false,
 }: {
+  rows: FoodRow[];
   eaten: number;
   thresholds: CalorieThresholds | null;
-  burn: number;
-  compact?: boolean;
+  burn: DayBurn | null;
 }) {
-  if (!thresholds && burn <= 0) return null;
-  const room = thresholds ? Math.max(0, thresholds.rangeMax - eaten) : null;
+  const proteinKnown = rows.length === 0 || rows.some((row) => row.proteinG != null);
+  const protein = Math.round(rows.reduce((sum, row) => sum + (row.proteinG ?? 0), 0));
+  const band = calorieBand(eaten, thresholds);
+  const extra = burn?.todayCalories ?? 0;
+  const sitting = burn?.sedentaryCalories ?? 0;
+  const workout = (burn?.lines ?? [])
+    .filter((line) => line.kind === "workout")
+    .reduce((sum, line) => sum + line.calories, 0);
+  const budget =
+    thresholds && thresholds.rangeMax > 0 ? Math.round((eaten / thresholds.rangeMax) * 100) : null;
+  const offset = extra > 0 ? offsetSentence(eaten, extra) : null;
+
   return (
-    <p className={`text-[11px] leading-snug text-[var(--muted)] ${compact ? "" : "mt-2"}`}>
-      {room != null ? `About ${room} left in today's range.` : null}
-      {burn > 0 ? ` Rough burn ${burn} added to the budget.` : null}
-    </p>
+    <section className="card space-y-3 p-4">
+      <div className="flex items-baseline justify-between gap-3">
+        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--muted)]">Today</p>
+        <p className="text-sm font-semibold tabular-nums">
+          {proteinKnown ? `Protein ${protein}g` : "Protein —"}
+        </p>
+      </div>
+
+      {burn ? (
+        <div className="space-y-1.5 text-sm">
+          <div className="flex items-baseline justify-between gap-3">
+            <span>
+              Sitting
+              <span className="text-[var(--muted)]"> · {Math.round(burn.weightLbs)} lb</span>
+            </span>
+            <span className="tabular-nums">{sitting}</span>
+          </div>
+          {burn.lines.map((line) => (
+            <div key={line.id} className="flex items-start justify-between gap-3">
+              <span className="min-w-0 leading-snug">
+                {line.label}
+                <span className="whitespace-nowrap text-[var(--muted)]">
+                  {" "}
+                  · {formatMinutes(line.minutes)}
+                </span>
+              </span>
+              <span className="shrink-0 tabular-nums">+{line.calories}</span>
+            </div>
+          ))}
+          <div className="flex items-baseline justify-between gap-3 border-t border-[var(--border)] pt-1.5 font-semibold">
+            <span>Burn</span>
+            <span className="tabular-nums">{sitting + extra}</span>
+          </div>
+        </div>
+      ) : null}
+
+      <div className="flex items-baseline justify-between gap-3">
+        <p
+          className={`inline-flex min-w-16 justify-center rounded-full border px-3 py-1 text-2xl font-bold tabular-nums member-nav-score-badge${
+            band ? ` member-nav-score-badge--cal-${band}` : ""
+          }`}
+        >
+          {eaten}
+        </p>
+        <p className="text-xs text-[var(--muted)]">calories eaten</p>
+      </div>
+
+      {workout > 0 ? (
+        <p className="text-sm">
+          Today&apos;s workout burned <span className="font-semibold tabular-nums">{workout}</span>.
+        </p>
+      ) : null}
+      {offset ? <p className="text-sm">{offset}</p> : null}
+      {budget != null ? (
+        <p className="text-sm font-semibold tabular-nums">{budget}% of today&apos;s budget</p>
+      ) : null}
+      <NutrientTotals rows={rows} />
+    </section>
   );
+}
+
+function offsetSentence(eaten: number, extra: number): string {
+  if (eaten >= extra) {
+    const left = eaten - extra;
+    return left > 0
+      ? `Food offset the extra burn, with ${left} left over.`
+      : "Food offset the extra burn.";
+  }
+  return `Food offset ${eaten} of the ${extra} extra burn.`;
+}
+
+function formatMinutes(minutes: number): string {
+  const total = Math.max(0, Math.round(minutes));
+  const hours = Math.floor(total / 60);
+  const mins = total % 60;
+  if (hours <= 0) return `${total} min`;
+  if (mins === 0) return `${hours} hr`;
+  return `${hours} hr ${mins} min`;
 }
 
 function Field({
