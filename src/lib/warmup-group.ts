@@ -163,6 +163,9 @@ export function parseWarmupNoteMovements(
     if (WARMUP_HEADER_RE.test(chunk) && chunk.length < 16) continue;
     if (/^rest\s+periods?/i.test(chunk)) continue;
     if (/^stay\s+flexible$/i.test(chunk)) continue;
+    if (/^same as usual\.?$/i.test(chunk)) continue;
+    if (/^warm[- ]?up well$/i.test(chunk)) continue;
+    if (/^upper body warm[- ]?up$/i.test(chunk)) continue;
     if (/^\d+\s*(min|mins|minutes|sec|secs|s)$/i.test(chunk)) continue;
 
     const duration = chunk.match(/(\d+(?:\.\d+)?)\s*(min|mins|minutes|sec|secs|s)\b/i);
@@ -184,6 +187,17 @@ export function parseWarmupNoteMovements(
         reps: `${duration[1]} ${isMin ? "min" : "sec"}`,
         timed: true,
         holdSeconds: holdSeconds && holdSeconds >= 5 ? holdSeconds : null,
+      });
+      continue;
+    }
+
+    const slashReps = chunk.match(/^(.*?)[\s,]+(\d+\s*\/\s*\d+)\s*$/);
+    if (slashReps && slashReps[1].trim().length > 2) {
+      out.push({
+        name: shortWarmupLabel(slashReps[1]),
+        reps: slashReps[2].replace(/\s/g, ""),
+        timed: false,
+        holdSeconds: null,
       });
       continue;
     }

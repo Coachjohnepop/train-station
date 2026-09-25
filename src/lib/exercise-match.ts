@@ -44,11 +44,14 @@ function aliasTarget(normalized: string): string | null {
   let best: string | null = null;
   let bestLen = 0;
   for (const [key, target] of Object.entries(SMS_EXERCISE_ALIASES)) {
-    if (normalized.includes(key) || key.includes(normalized)) {
-      if (key.length > bestLen) {
-        bestLen = key.length;
-        best = target;
-      }
+    // A short alias such as "warm up" must not replace a longer movement
+    // that merely contains those words ("shoulder mobility bands warm up").
+    const keyInsideName =
+      normalized.includes(key) && key.length >= Math.ceil(normalized.length * 0.75);
+    const nameInsideKey = key.includes(normalized) && normalized.length >= 4;
+    if ((keyInsideName || nameInsideKey) && key.length > bestLen) {
+      bestLen = key.length;
+      best = target;
     }
   }
   return best;
@@ -58,10 +61,42 @@ function meaningfulWords(s: string): string[] {
   return s.split(" ").filter((w) => w.length > 2 && !/^\d+$/.test(w));
 }
 
+const MOVEMENT_FAMILIES: Array<[string, RegExp]> = [
+  ["fly", /\bfl(?:y|ies)\b/],
+  ["row", /\brows?\b/],
+  ["press", /\bpress(?:es)?\b/],
+  ["curl", /\bcurls?\b/],
+  ["extension", /\bextensions?\b/],
+  ["squat", /\bsquats?\b/],
+  ["lunge", /\blunges?\b/],
+  ["raise", /\braises?\b/],
+  ["deadlift", /\bdead\s*lifts?\b|\brdl\b/],
+  ["pulldown", /\bpull\s*downs?\b|\bpulldowns?\b/],
+  ["pushup", /\bpush[- ]?ups?\b/],
+  ["thrust", /\bthrusts?\b/],
+  ["plank", /\bplanks?\b/],
+  ["crunch", /\bcrunches?\b/],
+];
+
+function movementFamilies(value: string): Set<string> {
+  const found = new Set<string>();
+  for (const [name, re] of MOVEMENT_FAMILIES) {
+    if (re.test(value)) found.add(name);
+  }
+  return found;
+}
+
 function scoreMatch(target: string, candidate: string): number {
   const tWords = meaningfulWords(target);
   const cWords = meaningfulWords(candidate);
   if (tWords.length === 0) return 0;
+
+  const targetMoves = movementFamilies(target);
+  const candidateMoves = movementFamilies(candidate);
+  if (targetMoves.size > 0) {
+    const shared = [...targetMoves].some((move) => candidateMoves.has(move));
+    if (!shared) return 0;
+  }
 
   let score = 0;
   for (const tw of tWords) {
@@ -93,6 +128,21 @@ function scoreMatch(target: string, candidate: string): number {
   if (target.includes("seated") && candidate.includes("seated")) {
     score += 4;
   }
+  if (!target.includes("seated") && candidate.includes("seated") && !target.includes("machine")) {
+    score -= 4;
+  }
+  if (target.includes("chest") && candidate.includes("back") && !candidate.includes("chest")) {
+    score -= 25;
+  }
+  if (target.includes("fly") && !/\bfl(?:y|ies)\b/.test(candidate)) {
+    score -= 25;
+  }
+  if (target.includes("rope") && !candidate.includes("rope")) score -= 12;
+  if (target.includes("rope") && /\bbar\b/.test(candidate) && !candidate.includes("rope")) {
+    score -= 12;
+  }
+  if (!target.includes("incline") && candidate.includes("incline")) score -= 8;
+  if (target.includes("machine") && candidate.includes("machine")) score += 4;
 
   if (candidate.includes(target) || target.includes(candidate)) score += 3;
 

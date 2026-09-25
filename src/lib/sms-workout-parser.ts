@@ -81,19 +81,93 @@ function isInstructionLine(line: string): boolean {
 }
 
 function isWarmupLine(line: string) {
+  const cardioIncline =
+    /incline/i.test(line) && /walk|treadmill|bike|jog|cardio|heart/i.test(line);
+  const warmupWord =
+    /warm|mobility|bands?|bike|treadmill|walk|upper body/i.test(line) || cardioIncline;
+  if (!warmupWord) return false;
+  // "Shoulder mobility … warm up" is still the warm-up. A bench angle is not.
+  if (/warm|mobility/i.test(line)) return true;
+  if (/press|extension|squat|curl|row|tricep|chest|bicep|shoulder/i.test(line)) return false;
+  return true;
+}
+
+/** Light prep listed under an open warm-up, before the first working lift. */
+function isWarmupFillerLine(line: string): boolean {
+  if (isWarmupLine(line)) return true;
   return (
-    /warm|mobility|bands?|bike|treadmill|walk|upper body|incline/i.test(line) &&
-    !/press|extension|squat|curl|row|tricep|chest|bicep|shoulder/i.test(line)
+    /curl|shrug|wall tap|shoulder press|\bband\b/i.test(line) &&
+    !/bench|fly|tricep|chest\s+press|incline/i.test(line)
   );
 }
 
 function isCooldownLine(line: string) {
+  if (/hiit/i.test(line)) return false;
   return /^stretch\s*$/i.test(line) || /^stretch\s+well/i.test(line) || /cool\s*down/i.test(line);
+}
+
+function isHiitCooldownLine(line: string) {
+  return /hiit/i.test(line) && /cool/i.test(line);
+}
+
+function isHiitDetailLine(line: string) {
+  if (/^stretch\b/i.test(line) || isExerciseLine(line)) return false;
+  return /\d+\s*sec|\bintervals?\b|\d+\s*min/i.test(line);
 }
 
 function isTitleLine(line: string, index: number) {
   if (index !== 0) return false;
-  return /isolation|core|work|upper|lower|leg|push|pull|full/i.test(line) && line.length < 80;
+  if (line.length >= 80 || /\d/.test(line)) return false;
+  if (isCooldownLine(line) || isRepLine(line)) return false;
+  // Session names such as "Upper Body Workout" or "Chest tricep power".
+  // Checked before warm-up so "upper body" in a title is not a warm-up block.
+  if (/isolation|core|work|upper|lower|leg|push|pull|full|day|power/i.test(line)) return true;
+  if (isWarmupLine(line) || isExerciseLine(line)) return false;
+  return true;
+}
+
+/** Rest for the working sets ("1 min 30 sec rests"), not a rest-pause cue. */
+function isSessionRestLine(line: string): boolean {
+  if (/rest\s+pause/i.test(line)) return false;
+  return /\brests?\b/i.test(line) && /\d/.test(line);
+}
+
+function formatSessionRest(line: string): string {
+  const minSec = line.match(/(\d+)\s*min(?:ute)?s?\s*(\d+)\s*sec/i);
+  if (minSec) return `${minSec[1]}:${minSec[2].padStart(2, "0")} rests`;
+  return line.trim();
+}
+
+function isCoachingCue(line: string): boolean {
+  if (isExerciseLine(line) || isRepLine(line) || isWarmupLine(line) || isCooldownLine(line)) {
+    return false;
+  }
+  if (isInstructionLine(line) || isSessionRestLine(line)) return true;
+  if (
+    /hold|burn\s*out|\d+\s*sec|stay\s+flexible|each\s+(leg|arm)|single\s+leg/i.test(line)
+  ) {
+    return true;
+  }
+  if (/\d+\s*count\b/i.test(line)) return true;
+  if (/squeeze|pinkies|elbow|pulley|degrees?|rest\s+pause|positives?/i.test(line)) return true;
+  if (/^bench\s+at\b/i.test(line) || /^hand on\b/i.test(line)) return true;
+  return false;
+}
+
+/** Equipment or attachment on its own line, continued by the next exercise name. */
+function isNameFragment(line: string): boolean {
+  if (
+    isRepLine(line) ||
+    isCoachingCue(line) ||
+    isWarmupLine(line) ||
+    isCooldownLine(line) ||
+    isExerciseLine(line) ||
+    isHiitCooldownLine(line)
+  ) {
+    return false;
+  }
+  if (line.length > 40 || /\d/.test(line)) return false;
+  return /[a-z]/i.test(line);
 }
 
 function isExerciseLine(line: string) {
@@ -107,6 +181,12 @@ function isExerciseLine(line: string) {
 }
 
 function applySetsFromLine(current: ParsedSmsExercise, line: string): boolean {
+  const setsAndReps = line.match(/^(\d+)\s*sets?\s+(?:of\s+)?(\d+)\s*reps?\.?$/i);
+  if (setsAndReps) {
+    current.sets = Number(setsAndReps[1]);
+    current.reps = setsAndReps[2];
+    return true;
+  }
   const setsOnly = line.match(/^(\d+)\s*sets?\s*(each\s+leg)?$/i);
   if (setsOnly) {
     current.sets = Number(setsOnly[1]);
@@ -125,16 +205,6 @@ function applySetsFromLine(current: ParsedSmsExercise, line: string): boolean {
     return true;
   }
   return false;
-}
-
-function appendCoachingCue(current: ParsedSmsExercise, line: string) {
-  if (
-    /hold|burnout|burn\s*out|\d+\s*sec|reps?\s+immediately|stay\s+flexible|each\s+leg|single\s+leg/i.test(
-      line,
-    )
-  ) {
-    current.notes = [current.notes, line].filter(Boolean).join(" · ");
-  }
 }
 
 function applyHiitTiming(current: ParsedSmsExercise, line: string) {
@@ -165,6 +235,10 @@ export function parseSmsWorkout(rawText: string): ParsedSmsWorkout {
   let current: ParsedSmsExercise | null = null;
   const warmupLines: string[] = [];
   let pendingHeader: string | null = null;
+  let pendingNamePrefix: string | null = null;
+  let warmupOpen = false;
+  let prescriptionClosed = false;
+  let sessionRestNote: string | null = null;
 
   const flushWarmup = () => {
     if (warmupLines.length === 0) return;
@@ -183,16 +257,29 @@ export function parseSmsWorkout(rawText: string): ParsedSmsWorkout {
 
   const pushCurrent = () => {
     if (!current) return;
+    if (
+      current.section === "main" &&
+      sessionRestNote &&
+      !(current.notes || "").includes(sessionRestNote)
+    ) {
+      current.notes = [current.notes, sessionRestNote].filter(Boolean).join(" · ");
+    }
     exercises.push(current);
     current = null;
+    prescriptionClosed = false;
   };
 
   const startExercise = (line: string): ParsedSmsExercise => {
     flushWarmup();
     pushCurrent();
-    const { name, reps } = parseExerciseNameAndReps(line);
+    warmupOpen = false;
+    const prefix = pendingNamePrefix;
+    pendingNamePrefix = null;
+    const combined = `${prefix ? `${prefix} ` : ""}${line}`.replace(/\.\s*$/, "");
+    const { name, reps } = parseExerciseNameAndReps(combined);
     const header = pendingHeader;
     pendingHeader = null;
+    prescriptionClosed = Boolean(reps);
     return {
       name: titleCaseName(name),
       sets: 1,
@@ -211,101 +298,135 @@ export function parseSmsWorkout(rawText: string): ParsedSmsWorkout {
       continue;
     }
 
-    if (isCooldownLine(line)) {
+    if (isHiitCooldownLine(line)) {
       flushWarmup();
       pushCurrent();
-      exercises.push({
-        name: "Stretch / Cool-down",
-        sets: 1,
-        reps: "—",
-        notes: line,
-        section: "cooldown",
-      });
-      continue;
-    }
-
-    if (/hiit\s+cool/i.test(line)) {
-      flushWarmup();
-      pushCurrent();
-      const chunk = lines.slice(i, Math.min(i + 4, lines.length)).join(" ");
+      warmupOpen = false;
+      pendingNamePrefix = null;
+      const details: string[] = [];
+      while (i + 1 < lines.length && isHiitDetailLine(lines[i + 1])) {
+        i += 1;
+        details.push(lines[i]);
+      }
+      const chunk = [line, ...details].join(" ");
       const duration = chunk.match(/(\d+)\s*min/i)?.[1] || "5";
-      const timed = chunk.match(/(\d+)\s*sec\s+on\s+(\d+)\s*sec\s+off/i);
+      const seconds = details.join(" ").match(/(\d+)\s*sec/i);
+      const onOff = chunk.match(/(\d+)\s*sec\s+on\s+(\d+)\s*sec\s+off/i);
       exercises.push({
-        name: "HIIT Cool-down",
+        name: "HIIT Cooldown",
         sets: 1,
         reps: `${duration} min`,
-        notes: timed ? `${timed[1]}s on / ${timed[2]}s off` : chunk,
+        notes: onOff
+          ? `${onOff[1]}s on / ${onOff[2]}s off`
+          : seconds
+            ? `${seconds[1]} sec intervals`
+            : details.join(" · ") || undefined,
         section: "cooldown",
         setScheme: "timed",
       });
-      i += 2;
       continue;
     }
 
-    if (isWarmupLine(line)) {
+    if (isCooldownLine(line)) {
+      flushWarmup();
       pushCurrent();
-      warmupLines.push(line);
+      warmupOpen = false;
+      pendingNamePrefix = null;
+      const bareStretch = /^stretch\s*$/i.test(line);
+      exercises.push({
+        name: bareStretch ? "Stretch" : "Cool Down & Stretch",
+        sets: 1,
+        reps: "—",
+        notes: bareStretch ? undefined : line,
+        section: "cooldown",
+      });
       continue;
     }
 
-    if (isRepLine(line) && current) {
-      const parsed = parseRepLine(line);
-      current.sets = parsed.sets;
-      current.reps = parsed.reps;
-      if (parsed.notes) current.notes = [current.notes, parsed.notes].filter(Boolean).join(" · ");
+    if (isSessionRestLine(line) && !current) {
+      sessionRestNote = formatSessionRest(line);
       continue;
+    }
+
+    if (!current && (isWarmupLine(line) || (warmupOpen && isWarmupFillerLine(line)))) {
+      warmupOpen = true;
+      if (!/^same as usual\.?$/i.test(line)) warmupLines.push(line);
+      continue;
+    }
+
+    if (
+      warmupOpen &&
+      !current &&
+      !isExerciseLine(line) &&
+      !isRepLine(line) &&
+      !isCooldownLine(line)
+    ) {
+      if (!/^same as usual\.?$/i.test(line)) warmupLines.push(line);
+      continue;
+    }
+
+    if (isRepLine(line) && (current || pendingNamePrefix)) {
+      if (!current && pendingNamePrefix) {
+        const name = pendingNamePrefix;
+        pendingNamePrefix = null;
+        current = startExercise(name);
+      }
+      if (current) {
+        const parsed = parseRepLine(line);
+        current.sets = parsed.sets;
+        current.reps = parsed.reps;
+        if (parsed.notes) {
+          current.notes = [current.notes, parsed.notes].filter(Boolean).join(" · ");
+        }
+        prescriptionClosed = true;
+        continue;
+      }
     }
 
     if (current && applySetsFromLine(current, line)) {
-      appendCoachingCue(current, line);
+      prescriptionClosed = true;
       continue;
     }
 
     if (current && applyHiitTiming(current, line)) {
-      appendCoachingCue(current, line);
+      prescriptionClosed = true;
       continue;
     }
 
-    if (/^each\s+arm/i.test(line) && current) {
+    if (current && (isCoachingCue(line) || /^each\s+arm/i.test(line))) {
       current.notes = [current.notes, line].filter(Boolean).join(" · ");
       continue;
     }
 
-    if (/^jump\s+squats?\s+(\d+)/i.test(line)) {
-      const m = line.match(/^jump\s+squats?\s+(\d+)/i);
+    if (isExerciseLine(line) || /^jump\s+squats?\s+\d+/i.test(line)) {
+      const jump = line.match(/^jump\s+squats?\s+(\d+)/i);
       current = startExercise(line);
-      if (m) current.reps = m[1];
+      if (jump) current.reps = jump[1];
       continue;
     }
 
-    if (isExerciseLine(line)) {
-      current = startExercise(line);
+    if (prescriptionClosed && isNameFragment(line)) {
+      pendingNamePrefix = line.replace(/\.\s*$/, "");
+      pushCurrent();
       continue;
     }
 
     if (current) {
-      if (applySetsFromLine(current, line)) {
-        appendCoachingCue(current, line);
-        continue;
-      }
-      if (applyHiitTiming(current, line)) {
-        appendCoachingCue(current, line);
-        continue;
-      }
-      if (isInstructionLine(line) || /hold|burnout|burn\s*out|\d+\s*sec/i.test(line)) {
-        appendCoachingCue(current, line);
-        continue;
-      }
       current.notes = [current.notes, line].filter(Boolean).join(" · ");
-    } else if (!isCooldownLine(line)) {
-      // Unknown lines after a warm-up header stay in the warm-up blob.
-      // Bare section titles ("Better for back") are notes on the next lift —
-      // they must not replace the agreed standard warm-up.
-      if (warmupLines.length > 0 || isWarmupLine(line)) {
-        warmupLines.push(line);
-      } else {
-        pendingHeader = line;
-      }
+      continue;
+    }
+
+    if (pendingNamePrefix) {
+      pendingNamePrefix = `${pendingNamePrefix} ${line}`.replace(/\.\s*$/, "");
+      continue;
+    }
+
+    // Unknown lines after a warm-up header stay in the warm-up blob.
+    // Bare section titles ("Better for back") are notes on the next lift.
+    if (warmupLines.length > 0 || warmupOpen) {
+      if (!/^same as usual\.?$/i.test(line)) warmupLines.push(line);
+    } else {
+      pendingHeader = line;
     }
   }
 
