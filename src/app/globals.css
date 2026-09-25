@@ -466,6 +466,28 @@ html[data-ts-text-scale="xl"] {
   pointer-events: auto;
 }
 
+/* Under-tab Zoom strip is 60% of the old 48px pill. */
+.member-live-strip .member-live-strip__btn {
+  min-height: 1.8rem;
+  padding: 0.15rem 0.7rem;
+  font-size: 0.75rem;
+  line-height: 1.1;
+}
+
+.member-live-strip .mx-auto {
+  padding-top: 0.3rem;
+  padding-bottom: 0.3rem;
+}
+
+.member-live-strip p[class*="uppercase"] {
+  display: none;
+}
+
+.member-live-strip .truncate {
+  font-size: 0.7rem;
+  line-height: 1.15;
+}
+
 .app-shell-subbar {
   border-bottom: 1px solid var(--border);
   background: color-mix(in srgb, var(--bg) 88%, var(--surface-2));

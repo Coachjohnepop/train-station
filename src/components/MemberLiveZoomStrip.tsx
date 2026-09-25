@@ -2,11 +2,8 @@
 
 /**
  * Sticky top strip for members:
- * - Coach actively hosting, not yet joined → compact Join on the right
- *   (full-width bar used to cut through Nutrition / More). Header Join stays.
- * - After Join → nothing here. Sticky header already has Rejoin (a second
- *   `position:fixed` chip inside `.member-sticky-chrome` sat under the iOS
- *   clock because backdrop-filter makes `fixed` relative to that header).
+ * - Coach live → short Join Class under the tabs (Rejoin after they tap it).
+ * - A separate floating prompt can be closed.
  * - Coach not live → waiting / ping affordance
  *
  * Uses SSE + tab-focus. Backup poll only while coach is live.
@@ -58,13 +55,6 @@ export default function MemberLiveZoomStrip({
     setJoined(true);
   }, [sessionDate]);
 
-  // After join, sticky header Rejoin is the only control (see file comment).
-  if (showJoin && status?.joinUrl && joined) {
-    return null;
-  }
-
-  // Coach live, not yet joined: compact Join on the right — no full-width bar
-  // cutting through Nutrition / More. Header Join stays visible above the nav.
   if (showJoin && status?.joinUrl) {
     return (
       <div className={embedded ? "member-live-strip__join-slot" : "sticky top-0 z-40 member-live-strip__join-slot"}>
@@ -73,9 +63,9 @@ export default function MemberLiveZoomStrip({
           target="_blank"
           rel="noopener noreferrer"
           onClick={onJoinClick}
-          className="btn-primary shrink-0 px-4 py-2 text-xs font-bold sm:px-5 sm:text-sm"
+          className="btn-primary member-live-strip__btn shrink-0 text-xs font-bold"
         >
-          Join Class
+          {joined ? "Rejoin" : "Join Class"}
         </a>
       </div>
     );
@@ -137,7 +127,7 @@ export default function MemberLiveZoomStrip({
         {pingAllowed ? (
           <button
             type="button"
-            className="btn-ghost shrink-0 border border-sky-400/40 bg-sky-500/15 px-3 py-2 text-xs font-bold text-sky-100 hover:bg-sky-500/25 sm:px-4 sm:text-sm"
+            className="btn-ghost member-live-strip__btn shrink-0 border border-sky-400/40 bg-sky-500/15 text-xs font-bold text-sky-100 hover:bg-sky-500/25"
             title="Ping your coach to start the live Zoom"
             onClick={() => setPingOpen(true)}
           >
