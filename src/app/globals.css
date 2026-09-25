@@ -2709,11 +2709,11 @@ html[data-free-ticket="open"] .landing-nav .theme-mode-toggle {
 
 .member-nav-more {
   flex: 0 0 auto;
-  margin-left: auto;
 }
 
 .member-nav-messages {
   flex: 0 0 auto;
+  margin-left: auto;
 }
 
 .member-nav-scores {

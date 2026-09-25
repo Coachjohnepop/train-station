@@ -396,6 +396,26 @@ export default function MemberNav({
           );
         })()}
 
+        {(() => {
+          const href = navHref(messagesItem, paymentGateActive, checkoutPlan);
+          const locked = paymentGateActive && !messagesItem.openDuringPayment;
+          const active = !onCheckout && messagesItem.match(pathname);
+          return (
+            <Link
+              id="member-nav-messages"
+              href={href}
+              className={`member-folder-tab member-nav-messages member-nav-item relative flex min-h-10 flex-none flex-col items-center justify-center px-2 py-1 text-center text-sm font-semibold leading-tight tracking-tight transition sm:text-base lg:min-h-[2.75rem] lg:min-w-[5.25rem] lg:px-5 ${tabClass(
+                active,
+                false,
+              )} ${locked ? "opacity-75" : ""}`}
+            >
+              {messagesItem.label}
+              {locked ? lockIcon() : null}
+              <ChatNavBadge role="member" placement="corner" />
+            </Link>
+          );
+        })()}
+
         <button
           type="button"
           id="member-nav-more"
@@ -439,26 +459,6 @@ export default function MemberNav({
           )}
           <span className="member-nav-more-label">More</span>
         </button>
-
-        {(() => {
-          const href = navHref(messagesItem, paymentGateActive, checkoutPlan);
-          const locked = paymentGateActive && !messagesItem.openDuringPayment;
-          const active = !onCheckout && messagesItem.match(pathname);
-          return (
-            <Link
-              id="member-nav-messages"
-              href={href}
-              className={`member-folder-tab member-nav-messages member-nav-item relative flex min-h-10 flex-none flex-col items-center justify-center px-2 py-1 text-center text-sm font-semibold leading-tight tracking-tight transition sm:text-base lg:min-h-[2.75rem] lg:min-w-[5.25rem] lg:px-5 ${tabClass(
-                active,
-                false,
-              )} ${locked ? "opacity-75" : ""}`}
-            >
-              {messagesItem.label}
-              {locked ? lockIcon() : null}
-              <ChatNavBadge role="member" placement="corner" />
-            </Link>
-          );
-        })()}
       </nav>
 
       {nutritionOpen && !nutritionLocked && (nutritionMenu || (typeof window !== "undefined" && window.innerWidth < 1024)) ? (
