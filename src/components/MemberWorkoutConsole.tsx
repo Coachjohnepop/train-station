@@ -431,6 +431,7 @@ export default function MemberWorkoutConsole({
   const [alreadyLogged, setAlreadyLogged] = useState(false);
   const finishLockUntilRef = useRef(0);
   const [finishedListExpanded, setFinishedListExpanded] = useState(false);
+  const [workoutHeaderOpen, setWorkoutHeaderOpen] = useState(true);
   const [coachLive, setCoachLive] = useState(false);
   const [partnerLive, setPartnerLive] = useState(false);
   const [loggedDetailsOpen, setLoggedDetailsOpen] = useState(false);
@@ -2791,9 +2792,6 @@ export default function MemberWorkoutConsole({
 
       {!showLoggedSuccess && !embedded && (
         <>
-          <p className="text-xs font-semibold uppercase tracking-widest text-accent">
-            Today&apos;s workout
-          </p>
           {(() => {
             const cycle =
               cycleDayLabel ||
@@ -2805,42 +2803,48 @@ export default function MemberWorkoutConsole({
               .replace(/\s*·\s*(?:Class|Live)\s*/gi, " ")
               .replace(/\s+/g, " ")
               .trim();
+            const categoryLabel = classOverride
+              ? "Live"
+              : customWorkout || byow
+                ? "Custom"
+                : programName && programName.toLowerCase() !== "class"
+                  ? programName
+                  : null;
             return (
               <>
-                {cycle ? (
-                  <div className="mt-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="text-lg font-bold tabular-nums tracking-tight">{cycle}</p>
-                      {classOverride ? (
-                        <span className="rounded-full border border-amber-400/40 bg-amber-500/15 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-amber-200">
-                          Live
-                        </span>
-                      ) : customWorkout ? (
-                        <span className="rounded-full border border-[#7c3aed]/40 bg-[#7c3aed]/15 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-[#c4b5fd]">
-                          Custom
-                        </span>
-                      ) : null}
-                    </div>
+                <button
+                  type="button"
+                  className="flex w-full items-center gap-2 text-left text-lg font-bold tracking-tight"
+                  aria-expanded={workoutHeaderOpen}
+                  onClick={() => setWorkoutHeaderOpen((open) => !open)}
+                >
+                  <span
+                    className={`inline-block text-sm text-[var(--muted)] transition ${workoutHeaderOpen ? "rotate-90" : ""}`}
+                    aria-hidden
+                  >
+                    ▶
+                  </span>
+                  <span>Today&apos;s workout</span>
+                  {cycle ? <span className="tabular-nums">{cycle}</span> : null}
+                </button>
+                {workoutHeaderOpen ? (
+                  <>
                     {calendarDateLabel && !/^M\d+D\d+$/i.test(calendarDateLabel.trim()) ? (
-                      <p className="mt-0.5 text-sm font-medium text-[var(--text)]">{calendarDateLabel}</p>
+                      <p className="mt-1 text-sm font-medium text-[var(--text)]">{calendarDateLabel}</p>
                     ) : null}
-                  </div>
-                ) : calendarDateLabel ? (
-                  <p className="mt-1 text-sm font-medium text-[var(--text)]">{calendarDateLabel}</p>
-                ) : null}
-                {programName && programName.toLowerCase() !== "class" ? (
-                  <p className="mt-0.5 text-xs text-[var(--muted)]">{programName}</p>
+                    {categoryLabel ? (
+                      <p className="mt-0.5 text-xs text-[var(--muted)]">{categoryLabel}</p>
+                    ) : null}
+                    <h1 className="mt-2 text-2xl font-bold">{workout.workoutName}</h1>
+                    <p className="mt-1 text-sm text-[var(--muted)]">
+                      {headerNote ||
+                        `Hi ${workout.memberName} — follow each exercise. Your last session appears as a faint silhouette behind the active card.`}
+                    </p>
+                  </>
                 ) : null}
               </>
             );
           })()}
-          <h1 className="mt-2 text-2xl font-bold">
-            {workout.workoutName}
-          </h1>
-          <p className="mt-1 text-sm text-[var(--muted)]">
-            {headerNote ||
-              `Hi ${workout.memberName} — follow each exercise. Your last session appears as a faint silhouette behind the active card.`}
-          </p>
         </>
       )}
       {!showLoggedSuccess && coachLive && !instructorName && (
