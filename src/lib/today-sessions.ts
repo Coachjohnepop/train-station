@@ -9,6 +9,7 @@ import {
 } from "@/lib/sms-generated-workouts";
 import { hydrateJsonStore, persistJsonStore, readLocalJson } from "@/lib/demo-json-blob";
 import { localTodayIso } from "@/lib/program-calendar";
+import { addDaysIso } from "@/lib/workout-day-visibility";
 import {
   deleteSessionFromDb,
   deleteSessionsForUserOnDateDb,
@@ -238,11 +239,16 @@ export function getTodaySessionForUser(userId: string, referenceDate = new Date(
 }
 
 export function getUpcomingSessionsForUser(userId: string, referenceDate = new Date()): TodaySession[] {
-  const now = referenceDate.getTime();
+  const today = localTodayIso(referenceDate);
+  const earliest = addDaysIso(today, -5);
   return listTodaySessions()
     .filter((s) => sessionAppliesToUser(s, userId))
-    .filter((s) => new Date(s.scheduledAt).getTime() >= now - 12 * 60 * 60 * 1000)
-    .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime());
+    .filter((s) => s.sessionDate >= earliest)
+    .sort((a, b) => {
+      const byDate = b.sessionDate.localeCompare(a.sessionDate);
+      if (byDate !== 0) return byDate;
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
 }
 
 function normalizePlanText(rawSms: string) {

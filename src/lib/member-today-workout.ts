@@ -26,6 +26,7 @@ import type { ResolvedDayPart } from "@/lib/program-day-sessions";
 import { memberScheduleLabel } from "@/lib/member-day-window";
 import { localTodayIso } from "@/lib/program-calendar";
 import {
+  calendarIsoForEnrollmentDay,
   effectiveEnrollmentPosition,
   personalCoordinateForCalendarDate,
   resolveProgramBlock,
@@ -68,6 +69,7 @@ async function resolveEnrollmentProgramWorkout(
   dayNumber: number,
   session: TodaySession | null,
   preferredPartIndex?: number,
+  knownCalendarDate?: string | null,
 ): Promise<TodayPageWorkout | null> {
   const program = await getProgramBySlug(slug);
   if (!program) return null;
@@ -93,13 +95,14 @@ async function resolveEnrollmentProgramWorkout(
     currentWeek: block.weekNumber,
     currentDay: block.dayNumber,
   };
-  const isProgramToday =
-    weekNumber === effectiveEnrollment.currentWeek &&
-    dayNumber === effectiveEnrollment.currentDay;
-
-  if (isProgramToday) {
-    const calendarToday = localTodayIso();
-    const coachSession = getSessionForUserOnDate(userId, calendarToday);
+  const viewedCalendar =
+    knownCalendarDate && /^\d{4}-\d{2}-\d{2}$/.test(knownCalendarDate)
+      ? knownCalendarDate
+      : block.programStartDate
+        ? calendarIsoForEnrollmentDay(block.programStartDate, weekNumber, dayNumber)
+        : null;
+  if (viewedCalendar) {
+    const coachSession = getSessionForUserOnDate(userId, viewedCalendar);
     if (coachSession?.workoutId) {
       const workout = await getSmsGeneratedWorkout(coachSession.workoutId, memberName, userId);
       if (workout) {
@@ -250,12 +253,21 @@ export async function resolveTodayPageWorkout(
   const enrollmentCoord = parseEnrollmentDayKey(viewDate);
 
   if (enrollmentCoord) {
+    const enrolls = await getUserEnrollments(userId);
     for (const slug of await enrollmentSlugsForUser(userId)) {
       const program = await getProgramBySlug(slug);
       if (!program) continue;
       const cat = (program.category || "workout") as string;
       if (cat !== "workout" && cat !== "journey" && cat !== "yoga") continue;
 
+      const start = enrolls[slug]?.programStartDate;
+      const knownCalendar = start
+        ? calendarIsoForEnrollmentDay(
+            start,
+            enrollmentCoord.weekNumber,
+            enrollmentCoord.dayNumber,
+          )
+        : null;
       const resolved = await resolveEnrollmentProgramWorkout(
         userId,
         memberName,
@@ -264,6 +276,7 @@ export async function resolveTodayPageWorkout(
         enrollmentCoord.dayNumber,
         null,
         opts?.partIndex,
+        knownCalendar,
       );
       if (resolved) return resolved;
     }
@@ -310,6 +323,7 @@ export async function resolveTodayPageWorkout(
           personal.dayNumber,
           session,
           opts?.partIndex,
+          viewDate,
         );
         if (resolved) return resolved;
       }
@@ -337,6 +351,7 @@ export async function resolveTodayPageWorkout(
     enrollment.currentDay,
     null,
     opts?.partIndex,
+    calendarToday,
   );
 
   if (resolved) return resolved;

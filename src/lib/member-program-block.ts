@@ -230,6 +230,18 @@ export function calendarDateForBlockDay(programStartDate: string, linearDay: num
   return addDaysIso(programStartDate, Math.max(0, linearDay - 1));
 }
 
+/** Calendar date for a program week/day counted from the member's start date. */
+export function calendarIsoForEnrollmentDay(
+  programStartDate: string,
+  weekNumber: number,
+  dayNumber: number,
+): string {
+  return calendarDateForBlockDay(
+    programStartDate.slice(0, 10),
+    linearEnrollmentDay(weekNumber, dayNumber),
+  );
+}
+
 export function linearDayForCalendarDate(
   programStartDate: string,
   calendarIso: string,

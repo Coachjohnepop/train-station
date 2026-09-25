@@ -418,14 +418,14 @@ export default async function MemberTodayPage({ searchParams }: Props) {
     <div className="space-y-1 sm:space-y-4">
       <TodayPageLiveRefresh
         userId={uid}
-        viewDate={viewDate}
+        viewDate={selectedCalDate}
         sessionId={session?.id}
         workoutId={session?.workoutId || workout?.workoutId}
         assignmentStamp={session?.createdAt ?? null}
       />
 
       {!asInstructor ? (
-        <MemberTodaySoftRefresh userId={uid} viewDate={viewDate}>
+        <MemberTodaySoftRefresh userId={uid} viewDate={selectedCalDate}>
           <MemberCoachMediaStrip content={memberContent} />
 
           <Suspense fallback={<div className="card h-40 animate-pulse p-4" />}>

@@ -243,9 +243,15 @@ async function summarizeProgramDay(
   const visibilityTier =
     extras?.visibilityTier ?? dayVisibilityTierByOffset(entry.offset);
   const isProgramToday = entry.offset === 0;
+  const sessionDate =
+    extras?.calendarDate && /^\d{4}-\d{2}-\d{2}$/.test(extras.calendarDate)
+      ? extras.calendarDate
+      : isProgramToday
+        ? calendarToday
+        : null;
 
-  if (isProgramToday) {
-    const coachSession = getSessionForUserOnDate(userId, calendarToday);
+  if (sessionDate) {
+    const coachSession = getSessionForUserOnDate(userId, sessionDate);
     if (coachSession) {
       const preview = await getWorkoutExercisePreview(coachSession.workoutId, 8);
       const visibleNames = visibilityTier === "label" ? [] : preview;
