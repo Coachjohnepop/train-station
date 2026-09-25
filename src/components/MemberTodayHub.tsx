@@ -1,11 +1,9 @@
-"use client";
-
 import Link from "next/link";
-import DayCompleteStamp from "@/components/DayCompleteStamp";
 import MemberReminderSettings from "@/components/MemberReminderSettings";
+import QuickMaintainTile from "@/components/QuickMaintainTile";
 import type { MemberDashboardData } from "@/lib/member-context";
 import type { MaintainAccess } from "@/lib/member-maintain-workouts";
-import { openQuickMaintainInPlace, QUICK_MAINTAIN_HREF } from "@/lib/open-quick-maintain";
+import { QUICK_MAINTAIN_HREF } from "@/lib/open-quick-maintain";
 
 type Props = {
   dashboard: MemberDashboardData;
@@ -118,42 +116,13 @@ export default function MemberTodayHub({
           <span className="text-xs font-medium text-accent">→</span>
         </Link>
 
-        <Link
+        <QuickMaintainTile
           href={maintainHref}
-          onClick={maintainAccess ? openQuickMaintainInPlace : undefined}
           title={maintainTitle}
-          aria-label={
-            maintainLocked && !dayComplete
-              ? `Quick maintain locked. ${maintainTitle}`
-              : "Quick maintain"
-          }
-          className={`card relative flex items-center justify-between gap-2 overflow-hidden p-3 transition ${
-            dayComplete
-              ? "border-[color-mix(in_srgb,var(--success)_30%,var(--border))]"
-              : maintainLocked
-                ? "opacity-55 grayscale-[0.45] hover:opacity-75"
-                : "hover-accent-border"
-          }`}
-        >
-          {dayComplete ? <DayCompleteStamp className="rounded-[inherit]" /> : null}
-          <div className={dayComplete ? "relative z-[1] opacity-40" : undefined}>
-            <p className="text-sm font-semibold">Quick maintain</p>
-            <p className="text-[10px] text-[var(--muted)]">
-              {maintainTileSubtitle(maintainAccess, dayComplete)}
-            </p>
-          </div>
-          <span
-            className={`relative z-[1] text-xs font-medium ${
-              dayComplete
-                ? "text-[var(--success)]"
-                : maintainLocked
-                  ? "text-[var(--muted)]"
-                  : "text-accent"
-            }`}
-          >
-            {maintainLocked && !dayComplete ? "?" : "→"}
-          </span>
-        </Link>
+          subtitle={maintainTileSubtitle(maintainAccess, dayComplete)}
+          dayComplete={dayComplete}
+          locked={maintainLocked && !dayComplete}
+        />
       </div>
 
       {enrollments.length > 0 && (
