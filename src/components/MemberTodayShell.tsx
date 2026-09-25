@@ -109,6 +109,13 @@ type Props = {
   programBlock?: ResolvedProgramBlock | null;
   /** Free-ticket content gate — keep day wheel; lock only the player. */
   contentAccess?: ContentAccessResult | null;
+  regionWeather?: {
+    city: string;
+    state: string;
+    temperature: number;
+    condition: string;
+    windSpeed: number;
+  } | null;
   /** Catch-up: a past program day opened from Today. Logs as today. */
   isLateCatchUp?: boolean;
   /** Calendar date to stamp live checkoffs / logs (today when catching up). */
@@ -298,6 +305,7 @@ export default function MemberTodayShell({
   autoPromptIntroBooking = false,
   autoPromptFollowUpBooking = false,
   contentAccess = null,
+  regionWeather = null,
   programBlock = null,
   isLateCatchUp = false,
   logAsCalendarDate,
@@ -469,6 +477,7 @@ export default function MemberTodayShell({
             calendarDateLabel={calendarDateLabel}
             onEngage={notifyMaintainWorkoutEngage}
             membershipPlan={contentAccess?.plan}
+            regionWeather={regionWeather}
           />
         </MemberMaintainConsoleStage>
       </div>
@@ -765,6 +774,7 @@ export default function MemberTodayShell({
               reviewMode={previewFutureReadOnly}
               futurePreview={previewFutureReadOnly}
               membershipPlan={contentAccess?.plan}
+              regionWeather={regionWeather}
               scheduleLabel={
                 multiPart && dayParts
                   ? `${dayParts.find((p) => p.partIndex === activePartIndex)?.label || "Session"}${

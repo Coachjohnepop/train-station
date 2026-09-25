@@ -5,8 +5,9 @@ import SmsWorkoutView from "@/components/SmsWorkoutView";
 import { getDemoMemberWorkout } from "@/lib/demo-workout";
 import { getMemberWorkoutById } from "@/lib/member-workout";
 import { resolveMemberProgramWorkout } from "@/lib/member-program-workout";
-import { getCurrentUserLocation, resolveMemberUserId } from "@/lib/current-user";
-import { getWeatherForLocation, logUserWeather } from "@/lib/weather";
+import { resolveMemberUserId } from "@/lib/current-user";
+import { loadRegionWeather, logUserWeather } from "@/lib/weather";
+import { headers } from "next/headers";
 import { getActiveScheduleOverride } from "@/lib/demo-schedule-overrides";
 import { resolveMemberWorkoutContext } from "@/lib/member-workout-context";
 import { resolveTargetUserId } from "@/lib/resolve-target-user";
@@ -126,13 +127,12 @@ export default async function MemberWorkoutPage({ searchParams }: Props) {
 
   // Location + current weather for the member (from onboarding cookies or DB)
   // Used to show in console and for instructor context. Also logged for historical reference.
-  const memberLocation = await getCurrentUserLocation();
-  let currentWeather = null;
-  if (memberLocation.city && memberLocation.state) {
-    currentWeather = await getWeatherForLocation(memberLocation.city, memberLocation.state);
-    // Log for the (demo or target) user so instructor has context of conditions during the session
-    const effectiveUser = forUser || "demo-user";
-    await logUserWeather(effectiveUser, memberLocation, currentWeather);
+  const currentWeather = await loadRegionWeather({
+    userId: memberUserId,
+    headerStore: await headers(),
+  });
+  if (currentWeather && memberUserId) {
+    await logUserWeather(memberUserId, currentWeather, currentWeather);
   }
 
   return (
@@ -194,16 +194,14 @@ export default async function MemberWorkoutPage({ searchParams }: Props) {
 
           {/* Weather for the client's training area — visible to member and to instructor in coaching mode.
               Logged on page load so historical conditions are available for review/adjustments (e.g. snow vs sunny, outdoor recommendations). */}
-          {(currentWeather || memberLocation) && (
+          {currentWeather && (
             <div className="mx-4 mb-3 rounded border border-sky-500/30 bg-sky-500/10 p-3 text-sm">
               <div className="flex items-center justify-between gap-2">
                 <div className="font-medium">
-                  Weather in {currentWeather?.city || memberLocation?.city || "your area"}, {currentWeather?.state || memberLocation?.state || ""}
-                  {currentWeather && (
-                    <span className="ml-2 font-normal text-[var(--muted)]">
-                      {currentWeather.temperature}°F • {currentWeather.condition} • {currentWeather.windSpeed} mph wind
-                    </span>
-                  )}
+                  Weather in {currentWeather.city}, {currentWeather.state}
+                  <span className="ml-2 font-normal text-[var(--muted)]">
+                    {currentWeather.temperature}°F • {currentWeather.condition} • {currentWeather.windSpeed} mph wind
+                  </span>
                 </div>
                 <span className="text-[10px] text-sky-600 shrink-0">📍 client location</span>
               </div>

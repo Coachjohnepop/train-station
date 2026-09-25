@@ -81,6 +81,41 @@ function mapWeatherCode(code: number): string {
  * Full helper: given city/state, returns current weather or null.
  * Logs nothing here — caller decides.
  */
+/** Saved home city, otherwise the network region (phone vs laptop can differ). */
+export async function loadRegionWeather(input: {
+  userId?: string | null;
+  headerStore?: Headers;
+}): Promise<CurrentWeather | null> {
+  let city: string | null = null;
+  let state: string | null = null;
+
+  if (input.userId) {
+    try {
+      const { prisma } = await import("@/lib/prisma");
+      const user = await prisma.user.findUnique({
+        where: { id: input.userId },
+        select: { city: true, state: true },
+      });
+      city = user?.city?.trim() || null;
+      state = user?.state?.trim() || null;
+    } catch {
+      /* region headers still work */
+    }
+  }
+
+  if ((!city || !state) && input.headerStore) {
+    const { cityHintFromRequest } = await import("@/lib/geo-city-hint");
+    const hint = await cityHintFromRequest(
+      new Request("https://www.thetrainstation.co/", { headers: input.headerStore }),
+    );
+    city = city || hint?.city || null;
+    state = state || hint?.state || null;
+  }
+
+  if (!city || !state) return null;
+  return getWeatherForLocation(city, state);
+}
+
 export async function getWeatherForLocation(city: string, state: string): Promise<CurrentWeather | null> {
   const geo = await geocodeCityState(city, state);
   if (!geo) return null;
@@ -122,6 +157,14 @@ export async function logUserWeather(userId: string, location: { city: string | 
 
   try {
     const { prisma } = await import("@/lib/prisma");
+    const recent = await prisma.userWeatherLog.findFirst({
+      where: {
+        userId,
+        observedAt: { gte: new Date(Date.now() - 3 * 60 * 60 * 1000) },
+      },
+      select: { id: true },
+    });
+    if (recent) return;
     await prisma.userWeatherLog.create({
       data: logData,
     });

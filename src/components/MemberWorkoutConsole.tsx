@@ -296,6 +296,7 @@ export default function MemberWorkoutConsole({
   /** Maintain: notify parent/stage when member starts (weight / set / finish). */
   onEngage,
   membershipPlan = null,
+  regionWeather = null,
   byow = false,
 }: {
   workout: MemberWorkoutView;
@@ -336,6 +337,14 @@ export default function MemberWorkoutConsole({
   onEngage?: () => void;
   /** Membership plan for Free Explorer soft limits (preview sets + ticket shelf). */
   membershipPlan?: string | null;
+  /** Local conditions for this member's region. */
+  regionWeather?: {
+    city: string;
+    state: string;
+    temperature: number;
+    condition: string;
+    windSpeed: number;
+  } | null;
   /** Bring-your-own notes workout — log to ByowWorkoutLog, not Jeremy's catalog. */
   byow?: boolean;
 }) {
@@ -2827,6 +2836,12 @@ export default function MemberWorkoutConsole({
                   <span>Today&apos;s workout</span>
                   {cycle ? <span className="tabular-nums">{cycle}</span> : null}
                 </button>
+                {regionWeather ? (
+                  <p className="mt-1 text-xs text-sky-200/90">
+                    {regionWeather.city}, {regionWeather.state} · {regionWeather.temperature}°F{" "}
+                    {regionWeather.condition} · {regionWeather.windSpeed} mph wind
+                  </p>
+                ) : null}
                 {workoutHeaderOpen ? (
                   <>
                     {calendarDateLabel && !/^M\d+D\d+$/i.test(calendarDateLabel.trim()) ? (

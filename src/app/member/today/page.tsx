@@ -27,7 +27,8 @@ import { resolveMemberUserId } from "@/lib/current-user";
 import { resolveTargetUserId } from "@/lib/resolve-target-user";
 import { localTodayIso, toIsoDate } from "@/lib/program-calendar";
 import { addDaysIso } from "@/lib/workout-day-visibility";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
+import { loadRegionWeather, logUserWeather } from "@/lib/weather";
 import { SITE_SEEN_COOKIE, finishedSetupThisVisit, isFirstTimeOnSite } from "@/lib/site-visit";
 import {
   formatCycleDayFromWeekDay,
@@ -413,6 +414,13 @@ export default async function MemberTodayPage({ searchParams }: Props) {
   // Prefer maintain console when opened from the list.
   const consoleWorkout = maintainWorkout || memberWorkout;
   const consoleIsMaintain = Boolean(maintainWorkout);
+  const regionWeather = await loadRegionWeather({
+    userId: uid,
+    headerStore: await headers(),
+  });
+  if (regionWeather && uid) {
+    await logUserWeather(uid, regionWeather, regionWeather);
+  }
 
   return (
     <div className="space-y-1 sm:space-y-4">
@@ -451,6 +459,7 @@ export default async function MemberTodayPage({ searchParams }: Props) {
               programSlug={consoleIsMaintain ? "maintain" : programSlug}
               trainingLocation={trainingLocation}
               targetUserId={uid}
+              regionWeather={regionWeather}
               scheduleLabel={
                 consoleIsMaintain ? "Quick maintain · not program day" : scheduleLabel
               }
@@ -599,6 +608,7 @@ export default async function MemberTodayPage({ searchParams }: Props) {
                 }
                 scheduleLabel={scheduleLabel}
                 membershipPlan={contentAccess.plan}
+                regionWeather={regionWeather}
                 calendarDateLabel={formatDateLabel(
                   selectedSummary?.calendarDate && /^\d{4}-\d{2}-\d{2}$/.test(selectedSummary.calendarDate)
                     ? selectedSummary.calendarDate

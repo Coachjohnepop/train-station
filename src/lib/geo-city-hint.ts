@@ -70,6 +70,15 @@ export function normalizeUsStateCode(raw: string): string {
   return US_STATE_NAME_TO_CODE[trimmed.toLowerCase()] || upper.slice(0, 2);
 }
 
+function decodeHeader(value: string): string {
+  if (!value) return "";
+  try {
+    return decodeURIComponent(value.replace(/\+/g, " "));
+  } catch {
+    return value;
+  }
+}
+
 function isPrivateIp(ip: string): boolean {
   return (
     ip === "127.0.0.1" ||
@@ -92,7 +101,7 @@ function clientIpFromRequest(request: Request): string | null {
 
 function cityHintFromVercelHeaders(request: Request): CityHint | null {
   const country = request.headers.get("x-vercel-ip-country")?.trim().toUpperCase();
-  const city = request.headers.get("x-vercel-ip-city")?.trim();
+  const city = decodeHeader(request.headers.get("x-vercel-ip-city")?.trim() || "");
   const region = request.headers.get("x-vercel-ip-country-region")?.trim();
   if (country !== "US" || !city || !region) return null;
 
