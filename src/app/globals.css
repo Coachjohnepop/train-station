@@ -403,17 +403,33 @@ html[data-ts-text-scale="xl"] {
 .app-shell-header {
   border-bottom: 2px solid color-mix(in srgb, var(--tier-trim-strong) 55%, var(--border));
   box-shadow: inset 0 3px 0 var(--tier-trim-strong);
-  background: color-mix(in srgb, var(--bg) 72%, var(--surface));
-  backdrop-filter: blur(10px);
+  background: var(--bg);
 }
 
-/* Frozen member top chrome (greeting + Messages nav + live strip) while Today/session scrolls */
+/* Frozen member top chrome (greeting + Messages nav + live strip) while Today/session scrolls.
+   Solid fill: iOS 26 blurs translucent bars into a fade under the clock. */
 .member-sticky-chrome {
-  background: color-mix(in srgb, var(--bg) 92%, var(--surface));
-  backdrop-filter: blur(12px);
+  position: sticky;
+  background: var(--bg);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
   /* viewport-fit=cover: keep Join Zoom / greeting out from under the clock */
   padding-top: env(safe-area-inset-top, 0px);
+}
+
+.member-sticky-chrome::before {
+  content: "";
+  position: absolute;
+  z-index: 6;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: env(safe-area-inset-top, 0px);
+  background: var(--bg);
+  pointer-events: none;
+}
+
+.member-app.app-shell-bg {
+  background-image: none;
 }
 
 /* Header (nav + Nutrition/More menus) stacks above the live strip so dropdowns
