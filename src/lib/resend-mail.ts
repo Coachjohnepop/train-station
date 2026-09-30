@@ -1,6 +1,7 @@
 import "server-only";
 
 import { BRAND_NAME } from "@/lib/brand";
+import { recipientsAfterQuietPolicy } from "@/lib/email-quiet-policy";
 import { isOutboundMessagingEnabled } from "@/lib/messaging-gate";
 
 export type ResendEmailInput = {
@@ -163,11 +164,23 @@ export async function sendResendEmail(input: ResendEmailInput): Promise<boolean>
     "@/lib/outbound-notifications"
   );
   const category = categoryFromEmailTags(input.tags, input.subject);
-  const toList = Array.isArray(input.to) ? input.to : [input.to];
-  const toAddress = toList.filter(Boolean).join(", ");
+  const quiet = recipientsAfterQuietPolicy(input.to, category);
+  // Workout mail is the Resend spike. Do not log a row for every session.
+  if (quiet.stoppedForEveryone) return false;
+
+  const toList = quiet.recipients;
+  const toAddress =
+    toList.join(", ") ||
+    (Array.isArray(input.to) ? input.to.filter(Boolean).join(", ") : input.to);
 
   const logEmail = async (
-    status: "sent" | "failed" | "skipped_paused" | "skipped_no_key" | "skipped_misconfigured",
+    status:
+      | "sent"
+      | "failed"
+      | "skipped_paused"
+      | "skipped_no_key"
+      | "skipped_misconfigured"
+      | "skipped_no_recipient",
     extra?: { providerId?: string | null; errorMessage?: string | null; metadata?: Record<string, unknown> },
   ) => {
     await recordOutboundNotification({
@@ -187,6 +200,13 @@ export async function sendResendEmail(input: ResendEmailInput): Promise<boolean>
       },
     });
   };
+
+  if (!toList.length) {
+    await logEmail("skipped_no_recipient", {
+      errorMessage: "Recipient is off this mail.",
+    });
+    return false;
+  }
 
   if (!(await isOutboundMessagingEnabled())) {
     console.log(

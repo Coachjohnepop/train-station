@@ -5,7 +5,7 @@ import { resolveAlertChannels, type CoachAlertEvent } from "@/lib/alert-channels
 import { getCoachSettings } from "@/lib/coach-settings-store";
 import { getMemberCoachPrefs } from "@/lib/member-coach-prefs-store";
 import { postCoachSystemMessage } from "@/lib/coach-chat";
-import { sendResendEmail, transactionalSubject } from "@/lib/resend-mail";
+import { sendResendEmail } from "@/lib/resend-mail";
 import { deliverSms } from "@/lib/sms";
 import { isDemoMode } from "@/lib/demo-enrollments";
 import { memberCardPath } from "@/lib/member-card-path";
@@ -25,6 +25,12 @@ const EMAIL_ALERT_EVENTS: ReadonlySet<CoachAlertEvent> = new Set([
   "newMember",
   "memberPaid",
   "intakeScheduled",
+]);
+
+/** Workout and warm-up mail stays off even if a caller passes forceEmail. */
+const NEVER_EMAIL_EVENTS: ReadonlySet<CoachAlertEvent> = new Set([
+  "workoutLogged",
+  "warmupStarted",
 ]);
 
 /**
@@ -141,6 +147,7 @@ export async function notifyCoachForMemberEvent(params: {
   if (!EMAIL_ALERT_EVENTS.has(params.event) && params.forceEmail !== true) {
     channels.email = false;
   }
+  if (NEVER_EMAIL_EVENTS.has(params.event)) channels.email = false;
   if (FORCE_SMS_EVENTS.has(params.event)) channels.sms = true;
   // Messages stay coach ↔ member. Status notes (finished workout, signup, gear) do not post there.
   channels.inApp = false;
@@ -704,7 +711,7 @@ export type WorkoutLogExerciseSummary = {
 };
 
 /**
- * Member finished / logged a workout — Messages thread + coach email with what they did.
+ * Member finished a workout. Inbox only. No email.
  */
 export async function notifyCoachWorkoutLogged(params: {
   userId: string;
@@ -772,10 +779,10 @@ export async function notifyCoachWorkoutLogged(params: {
 }
 
 /**
- * Short confirmation to the member after they log a workout.
- * Non-fatal caller responsibility; does not post to Messages.
+ * Members are not emailed when they log a workout.
+ * That was one Resend send per session.
  */
-export async function notifyMemberWorkoutLogged(params: {
+export async function notifyMemberWorkoutLogged(_params: {
   name: string;
   email: string;
   workoutName: string;
@@ -784,36 +791,5 @@ export async function notifyMemberWorkoutLogged(params: {
   maintain?: boolean;
   late?: boolean;
 }): Promise<boolean> {
-  const email = params.email?.trim();
-  if (!email || !email.includes("@")) return false;
-
-  const hi = (params.name || email.split("@")[0] || "there").trim().split(/\s+/)[0] || "there";
-  const kind = params.maintain ? "Quick maintain" : "workout";
-  const progressLabel =
-    params.progress >= 100
-      ? "100% complete"
-      : `${Math.max(0, Math.min(100, params.progress))}% logged`;
-  const lateLine = params.late
-    ? "\n(Catch-up day. Score is a bit lower because this was logged late.)\n"
-    : "\n";
-  const todayUrl = `${appBaseUrl()}/member/today`;
-
-  const text =
-    `Hey ${hi},\n\n` +
-    `Nice work. Your ${kind} is saved.\n\n` +
-    `${params.workoutName}\n` +
-    `Date: ${params.sessionDate} · ${progressLabel}` +
-    lateLine +
-    `Jeremy can see this on Alerts. Day Complete is on for today. Come back tomorrow.\n\n` +
-    `${BRAND_NAME}\n` +
-    todayUrl;
-
-  return sendResendEmail({
-    to: email,
-    subject: transactionalSubject("workout-complete"),
-    text,
-    ctaUrl: todayUrl,
-    ctaLabel: "Open Today",
-    tags: [{ name: "category", value: "workout-complete" }],
-  });
+  return false;
 }
