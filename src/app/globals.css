@@ -2410,6 +2410,49 @@ html:has([data-landing-explore="open"]) {
   -webkit-text-fill-color: #111 !important;
 }
 
+/* Light mode: the header uses the same themed chrome as the rest of the page. */
+[data-theme-mode="light"] .landing-nav--over-hero {
+  color: var(--text);
+  border-bottom-color: var(--border) !important;
+  background: color-mix(in srgb, var(--bg) 92%, transparent) !important;
+}
+
+[data-theme-mode="light"] .landing-nav--over-hero .landing-nav__link {
+  color: var(--muted);
+}
+
+[data-theme-mode="light"] .landing-nav--over-hero .landing-nav__link:hover {
+  color: var(--text);
+}
+
+[data-theme-mode="light"] .landing-nav--over-hero .landing-nav__wordmark,
+[data-theme-mode="light"] .landing-nav--over-hero .text-white\/95 {
+  color: var(--text);
+}
+
+[data-theme-mode="light"] .landing-nav--over-hero .landing-nav__menu-btn {
+  color: var(--text);
+  border-color: var(--border);
+  background: var(--surface-2);
+}
+
+[data-theme-mode="light"] .landing-nav--over-hero .theme-mode-toggle {
+  color: var(--ramp-gold-deep);
+  background: var(--surface);
+  border-color: color-mix(in srgb, var(--ramp-gold) 45%, var(--border));
+}
+
+[data-theme-mode="light"] .landing-nav--over-hero .theme-mode-toggle:hover {
+  color: var(--ramp-gold-deep);
+  border-color: var(--ramp-gold-deep);
+}
+
+[data-theme-mode="light"] .landing-nav--over-hero .landing-nav__join {
+  background: var(--accent) !important;
+  color: var(--on-accent) !important;
+  -webkit-text-fill-color: var(--on-accent) !important;
+}
+
 /* Floating (not in-nav) theme control only — in-nav toggle must stay readable */
 body:has(.landing-hero) [data-global-theme-toggle] {
   opacity: 0.55;

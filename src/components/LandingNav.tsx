@@ -37,6 +37,7 @@ export default function LandingNav({
   const onHomePage = pathname === "/";
   const [mobileOpen, setMobileOpen] = useState(false);
   const [heroSolid, setHeroSolid] = useState(false);
+  const [lightMode, setLightMode] = useState(false);
   const menuConvertedRef = useRef(false);
   const purchaseAuth = usePurchaseAuth(purchaseAuthProp);
 
@@ -52,6 +53,15 @@ export default function LandingNav({
     apply();
     const observer = new ResizeObserver(apply);
     observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const sync = () => setLightMode(root.getAttribute("data-theme-mode") === "light");
+    sync();
+    const observer = new MutationObserver(sync);
+    observer.observe(root, { attributes: true, attributeFilter: ["data-theme-mode"] });
     return () => observer.disconnect();
   }, []);
 
@@ -114,9 +124,10 @@ export default function LandingNav({
   }
 
   const isWelcome = variant === "welcome";
-  /** Photo wash + light type only at the top of the hero. After scroll or when
-   *  the hamburger is open, use solid themed chrome so light/dark both read. */
-  const cinematic = overHero && !heroSolid && !mobileOpen;
+  /** Photo wash + light type only at the top of the hero in dark mode. Light
+   *  mode and the scrolled/open-menu states use themed chrome so the header
+   *  follows Light/Dark with the rest of the page. */
+  const cinematic = overHero && !heroSolid && !mobileOpen && !lightMode;
   /** Signed-in members should not re-enter marketing/join surfaces from the nav. */
   const memberHomeHref =
     purchaseAuth.role && isStaffRole(purchaseAuth.role)
