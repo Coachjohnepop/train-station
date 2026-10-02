@@ -10,6 +10,7 @@ import { openCoachHelpPanel } from "@/lib/coach-help-events";
 
 type Props = {
   onOpenMenu: () => void;
+  menuOpen?: boolean;
 };
 
 function tabClass(active: boolean): string {
@@ -18,7 +19,7 @@ function tabClass(active: boolean): string {
   }`;
 }
 
-export default function AdminMobileCoachNav({ onOpenMenu }: Props) {
+export default function AdminMobileCoachNav({ onOpenMenu, menuOpen = false }: Props) {
   const pathname = usePathname();
   const [coachHelp, setCoachHelp] = useState(false);
 
@@ -48,7 +49,17 @@ export default function AdminMobileCoachNav({ onOpenMenu }: Props) {
       aria-label="Coach quick nav"
     >
       <div className="mx-auto flex max-w-lg items-stretch">
-        <Link href="/admin/day" className={tabClass(onDash)}>
+        <Link
+          href="/admin/day"
+          className={tabClass(onDash)}
+          onClick={() => {
+            try {
+              sessionStorage.setItem("ts-admin-prefer-dashboard", "1");
+            } catch {
+              /* private mode */
+            }
+          }}
+        >
           <span className="coach-quick-nav-icon leading-none" aria-hidden>
             ◉
           </span>
@@ -101,11 +112,17 @@ export default function AdminMobileCoachNav({ onOpenMenu }: Props) {
             Grok
           </button>
         ) : null}
-        <button type="button" onClick={onOpenMenu} className={tabClass(false)}>
+        <button
+          type="button"
+          onClick={onOpenMenu}
+          className={tabClass(menuOpen)}
+          aria-label="All admin"
+          aria-expanded={menuOpen}
+        >
           <span className="coach-quick-nav-icon leading-none" aria-hidden>
             ☰
           </span>
-          More
+          Admin
         </button>
       </div>
     </nav>

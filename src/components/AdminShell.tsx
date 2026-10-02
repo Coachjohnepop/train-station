@@ -245,9 +245,9 @@ export default function AdminShell({
           </div>
           {children}
         </main>
-        <AdminMobileCoachNav onOpenMenu={openDrawer} />
+        <AdminMobileCoachNav onOpenMenu={openDrawer} menuOpen={drawerOpen} />
         <UnreadAppBadge role="coach" />
-        {/* Drawer still available via More on bottom nav */}
+        {/* Drawer still available via Admin on bottom nav */}
         {drawerOpen ? (
           <div className="fixed inset-0 z-[60] xl:hidden" role="dialog" aria-modal="true">
             <button
@@ -256,9 +256,9 @@ export default function AdminShell({
               aria-label="Close menu"
               onClick={closeDrawer}
             />
-            <aside className="absolute bottom-0 left-0 right-0 flex max-h-[85vh] flex-col rounded-t-2xl border-t border-[var(--border)] bg-[var(--bg)] shadow-xl">
+            <aside className="absolute bottom-0 left-0 right-0 flex max-h-[92dvh] flex-col rounded-t-2xl border-t border-[var(--border)] bg-[var(--bg)] shadow-xl">
               <div className="flex items-center justify-between gap-2 border-b border-[var(--border)] px-4 py-3">
-                <p className="text-sm font-medium">Menu</p>
+                <p className="text-sm font-medium">All admin</p>
                 <button
                   type="button"
                   onClick={closeDrawer}
@@ -316,7 +316,7 @@ export default function AdminShell({
             type="button"
             onClick={openDrawer}
             className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface-2)]"
-            aria-label="Open menu"
+            aria-label="All admin"
             aria-expanded={drawerOpen}
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden>
@@ -361,14 +361,14 @@ export default function AdminShell({
             aria-label="Close menu"
             onClick={closeDrawer}
           />
-          <aside className="absolute bottom-0 left-0 right-0 flex max-h-[85vh] flex-col rounded-t-2xl border-t border-[var(--border)] bg-[var(--bg)] shadow-xl">
+          <aside className="absolute bottom-0 left-0 right-0 flex max-h-[92dvh] flex-col rounded-t-2xl border-t border-[var(--border)] bg-[var(--bg)] shadow-xl">
             <div className="flex items-center justify-between gap-2 border-b border-[var(--border)] px-4 py-4">
               <div className="flex min-w-0 items-center gap-2.5">
                 <UserBicepAvatar size={36} title={session?.name || "Coach"} />
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-medium">{session?.name || "Coach"}</p>
+                  <p className="truncate text-sm font-medium">All admin</p>
                   <p className="truncate text-[10px] text-[var(--muted)]">
-                    {areaLabel}
+                    {session?.name || "Coach"}
                     {session?.email ? ` · ${session.email}` : ""}
                   </p>
                 </div>
@@ -612,7 +612,7 @@ export default function AdminShell({
         </main>
       </div>
 
-      <AdminMobileCoachNav onOpenMenu={openDrawer} />
+      <AdminMobileCoachNav onOpenMenu={openDrawer} menuOpen={drawerOpen} />
       <UnreadAppBadge role="coach" />
       <CoachHelpAssistant />
     </div>

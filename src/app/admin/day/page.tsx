@@ -1,4 +1,3 @@
-import CoachResumeRedirect from "@/components/CoachResumeRedirect";
 import CoachDashboard from "@/components/CoachDashboard";
 import { buildCoachDayPlan, buildCoachDaySummaries } from "@/lib/coach-day";
 import { hydrateTodaySessions } from "@/lib/today-sessions";
@@ -54,7 +53,6 @@ export default async function AdminDayPage({ searchParams }: Props) {
 
   return (
     <div className="coach-dashboard pb-4">
-      <CoachResumeRedirect />
       <CoachDashboard
         sessionDate={sessionDate}
         calendarToday={todayKey}
