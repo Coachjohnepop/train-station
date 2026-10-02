@@ -79,6 +79,18 @@ Do not offer Venmo on checkout, landing, or Mark paid. It is not PCI-scoped and 
 
 ## Durable product rules (don’t forget)
 
+### Coach email — quiet as of 2026-09-29 (`14711ac`, live)
+
+Code: `src/lib/email-quiet-policy.ts`, applied inside `sendResendEmail`. Workout and warm-up categories never call Resend and do not write an `OutboundNotification` row.
+
+| Who | Still emailed | Not emailed |
+|-----|----------------|-------------|
+| **John** (`john@thetrainstation.co`, `john@lemonvoice.com`, `john@bcxvoice.com`) | New signup (`coach-newMember`), new lead (`lead`), and a password reset he asked for | Paid, intro, staff grant, Business upgrade, coach messages, workout, warm-up |
+| **Jeremy** (`jeremy@thetrainstation.co`) | Signup, paid, intro, lead, staff grant, Business upgrade | Workout and warm-up |
+| **Members** | Welcome, booking confirm, coach Messages, password reset | “Workout logged. Nice work” after each session |
+
+The 2026-09-20 line further down (“key alerts: new member, paid, intro” to both coaches) is the old rule. Do not turn workout mail back on.
+
 ### Audio / video playback — **same rules as Free gag + rest horn**
 Whenever you touch **audio or video**, copy the working implementations. Do not invent a second player.
 
@@ -431,6 +443,27 @@ Mostly **his** work — from `JEREMY_REMAINING_CHECKLIST.md`:
 ---
 
 ## WHERE WE LEFT OFF
+
+**Date:** 2026-09-29 night (usage, sandbox webhook, email quiet)
+
+**Prod HEAD:** `14711ac` on `main` · live https://www.thetrainstation.co · Vercel Ready `dpl_5hxT5hRKbZZuv7AUVQU6LgWK1BCh` (production aliases include www and apex). `npx tsc --noEmit` clean before the push. Commit is only the email quiet policy. Unrelated dirty files (this CONTEXT note, `VENDOR_COSTS.md`, prisma JSON, loop scripts, scratch `scripts/_*.mjs`) were left uncommitted.
+
+**How the site is doing (read of prod that evening, Pacific; loop UAs excluded; house accounts separated).** A handful of members are training. The public site is quiet.
+
+- **Training, last 7 days:** 17 workouts by 4 real people (62 workouts by 7 people over 30 days). Garry Barnes (paid) 7 this week, on the app about 5:00pm. Aiden Koehler (paid) 4, about 1:15pm. Todd Hower (Business, complimentary — Coach Class Stripe price unchanged) 4, about 5:50am. Bella Roy (paid) 2, last workout Sep 25, last seen Sep 28.
+- **Paid and quiet:** Dan Richey paid Sep 15, last workout Sep 17, opened the site Sep 27. Grant Arnold last trained Sep 12. Holly Hower last trained Sep 3. Zedek Chambers paid Sep 19 and has never logged a workout. Jeremy Byrd has been marked paid Business since July and has no workouts. Pending, no workouts: Coop Fletcher (merchandise), Nate Nowotny, Jeremy Blackburn, Anthony W Fiscus (pro).
+- **Visitors, last 7 days:** 55 sessions, 49 visitors, 343 page views. 35 of those sessions were anonymous hits on `/`. Facebook 7, Instagram 1, the rest had no utm. Sep 21–25 ran about 10–15 sessions a day; the weekend fell off; Sep 29 was 5 sessions and those were the members above. Last 30 days: 257 sessions, 244 visitors. Spike was Sep 10 (47), the day Garry signed up. Top pages that week: `/member/today` 146, `/` 55, Eating Log 30.
+- **Not used:** no real member logged a meal in those 7 days (14 Eating Log rows were house accounts). No member chat messages in 7 days. No bookings in 14 days.
+- **Roster shape (not hidden, not example.com, not guest stubs):** 7 paid Coach Class, 5 unpaid explorers, 4 house Business staff grants, 2 paid Business who are not house (Todd and Jeremy Byrd), 2 Coach pending, 1 merchandise pending, 1 pro pending. New accounts in the prior 3 weeks were sparse (Sep 10, 12, 15, 17, 24).
+- **Money, last 30 days:** ledger $160 across 8 paid rows, and $0 in the last 7. Customer-looking rows: Dan $25 (Sep 15), Garry two $25 rows one minute apart (Sep 10), Grant $5 (Sep 3), Holly $5 (Aug 31). The other $75 is Ali Fletcher and Coach Ed. Live account `acct_1TmKSWQWnajU9uyk` (The Train Station) has charges and payouts on. Site is live mode (`stripeTestMode` false). Coach $25 / Business $50 / 1st Class $850 are `stripeReady`.
+
+**Stripe sandbox email (not turned off).** Stripe wrote that **test mode** on the Train Station **sandbox** account is failing to deliver to `https://www.thetrainstation.co/api/stripe/webhook`. That is not a second website. The sandbox webhook is aimed at the live URL. The live site only accepts the live signing secret, so those test deliveries fail. Live charges keep working. The live webhook `we_1U5CI7QWnajU9uykketsny70` is **enabled**, `livemode` true, same URL, 6 events. Live events were still arriving on Sep 26 (`invoice.upcoming`). John said we can turn the sandbox off and keep live. **Not done.** The only Stripe secret on this Mac is the live key in `.env.jeremy.live`. The Stripe CLI login is expired and is not Jeremy Live, so do not disable webhooks from it. Open question John was asked: disable that **sandbox** webhook only (emails stop, sandbox account stays), and leave the same URL alone under **Live**.
+
+**Email (shipped).** John asked to be taken off Train Station mail except when a new person signs up, and to stop workout updates to Jeremy too, because Resend was getting one send per logged session. Last 30 days before the ship: 80 `workout-complete` (still sending the evening of Sep 29), 104 `coach-workoutLogged` and 160 `coach-warmupStarted` (those coach copies had already stopped on Sep 20). Policy is the durable table above. Members no longer get “Workout logged. Nice work.”
+
+**Date:** 2026-09-24 (affiliate program, unlisted)
+
+**Affiliate:** Eco Delight’s affiliate modules now live in this app at one address, `/affiliate` (spelling checked: a-f-f-i-l-i-a-t-e). It is not in the nav, sitemap, or admin search. `robots.txt` disallows it. Sign-in, signup, links, earnings, and a staff desk (only when a staff session is already signed in) are all on that URL. `?ref=` records a click and the first paid Stripe membership creates one commission. Stripe Connect onboarding and payout transfers are in the backend: `POST /api/affiliate/stripe/connect`, `POST /api/affiliate/payout`, and staff `POST /api/admin/affiliates` plus `POST /api/admin/affiliates/[id]/payout`. Transfers use an Express account with the transfers capability, same shape as partner Connect. Webhook `account.updated` marks Stripe connected. Migrations `20260924120000_affiliate_program` and `20260924140000_affiliate_stripe_connect` are in the repo and still need to be applied. Not pushed.
 
 **Date:** 2026-09-20 (A/B + B-fork loop, then real traffic)
 
@@ -1577,3 +1610,23 @@ Signing-off notes from Jeremy’s first AM client era; SMS audit migration **app
 
 ### Branch / deploy
 `main` @ `ebcc168` — notes UX + SMS audit ledger. Vercel Production auto-deploys from `main`. Prod DB migrations applied.
+
+## Remove Eco Delight from The Train Station — priority (added 2026-10-02, Pacific)
+
+**Direction (John, 10/2):** get Eco Delight out of The Train Station completely, as soon as possible. Eco Delight is winding down (John separated 9/14; the Eco Stripe account and services close **10/14/2026**). Nothing in the Train Station should bill, verify, pay out, link or brand through Eco after that.
+
+**What happened 10/2:** Jeremy's card showed **ECO DELIGHT COFFEE BUYECODELIGHT CA 95624, $50.00, 9/28**. Traced to the **Eco Stripe account `acct_1SuLDr…`**: payment 9/27 evening Pacific, "Subscription update", `coachbyrd84@aol.com`, Visa ..2346 — a Train Station Business/Coach Class subscription created while TS Production ran on Eco's Live keys (Aug), still renewing on Eco. Other TS leftovers on Eco: `john@lemonvoice.com` ($0.50), `bellaroyy03@gmail.com` (Isabella Roy, Coach Class), `fletcherboys@att.net` ($5 failed; already Active on Jeremy's TS account since 9/21). **Done 10/2:** Jeremy refunded $50, John refunded $0.50, all TS subscriptions on Eco cancelled (Isabella cancelled now; Jeremy to invite her to re-join on `acct_1TmKSW…`). TS member money collected on the Eco account belongs to The Train Station, not Eco.
+
+**Removal checklist (do in this order):**
+- [ ] Confirm Eco Stripe → Billing → Subscriptions → Active is empty (no TS plan left on `acct_1SuLDr…`).
+- [ ] Isabella Roy re-joins Coach Class on Jeremy's TS account (Jeremy sends the invite).
+- [x] Code (2026-10-02, not yet committed/deployed): `getStripeLegacy` removed from `src/lib/stripe.ts`; `src/lib/stripe-webhook-verify.ts` now verifies only `STRIPE_WEBHOOK_SECRET` and retrieves subscriptions only from Jeremy's account; legacy lines removed from `scripts/wire-jeremy-master-stripe.mjs`, `.env.example`, `.env.jeremy.live(.example)`. tsc + eslint clean.
+- [ ] John: `vercel env rm STRIPE_SECRET_KEY_LEGACY production` and `vercel env rm STRIPE_WEBHOOK_SECRET_LEGACY production` (CLI as john-9066), commit only those four files, push `main` (auto-deploys); then confirm a Jeremy TS webhook delivers 200.
+- [ ] Remove the Eco webhook endpoint pointing at thetrainstation.co from the Eco Stripe dashboard (Developers → Webhooks).
+- [ ] Revoke the old Eco `sk_live` that TS used (rotate in the Eco dashboard; Eco app gets the new one only if still needed before 10/14).
+- [ ] Partners / coffee affiliate: retire the Eco sponsorship (buy link `buyecodelight.com/store/subscriptions?ref=TRAINSTATION&discount=JEREMYDISC`, `/api/affiliate/sponsor-stats`, the `/affiliate` modules, John's Eco partner ref JOHNPARTNER / Express link on the Eco platform). Pay or write off any pending Eco affiliate balance first (~$47 on `john@bcxvoice.com`).
+- [ ] Strip remaining Eco branding/copy from TS (Partners page, any "Eco Delight" strings, checkout text).
+- [ ] Grep the repo for `Eco`, `buyecodelight`, `acct_1SuLDr`, `pk_live_51SuLDr` and clear every hit (docs can keep a dated history note).
+- [ ] Note in this file when done: date, what was removed, and that Eco is no longer referenced anywhere in TS.
+
+**Rule from now on:** no new Eco Delight dependency in The Train Station — keys, webhooks, Connect, links, copy or data. The merchant of record for every TS charge is Jeremy's Train Station Stripe (`acct_1TmKSWQWnajU9uyk`).
