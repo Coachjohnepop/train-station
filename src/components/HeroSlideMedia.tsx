@@ -68,8 +68,10 @@ export default function HeroSlideMedia({
       const duration = Number.isFinite(el.duration) && el.duration > 0 ? el.duration : null;
       if (duration) onDurationRef.current?.(duration);
       const { start, end } = heroTrimWindow(slide, duration);
+      // Safari paints a black frame at t=0 until we seek a hair forward.
+      const paintAt = start < 0.05 ? 0.05 : start;
       if (el.currentTime < start - 0.05 || (end != null && el.currentTime >= end - 0.05)) {
-        el.currentTime = start;
+        el.currentTime = paintAt;
       }
     };
 
@@ -95,6 +97,7 @@ export default function HeroSlideMedia({
     };
 
     el.addEventListener("loadedmetadata", onMeta);
+    el.addEventListener("loadeddata", onMeta);
     el.addEventListener("timeupdate", onTime);
     el.addEventListener("ended", handoff);
     if (el.readyState >= 1) applyWindow();
@@ -111,6 +114,7 @@ export default function HeroSlideMedia({
 
     return () => {
       el.removeEventListener("loadedmetadata", onMeta);
+      el.removeEventListener("loadeddata", onMeta);
       el.removeEventListener("timeupdate", onTime);
       el.removeEventListener("ended", handoff);
     };
@@ -160,15 +164,15 @@ export default function HeroSlideMedia({
       <>
         <video
           ref={videoRef}
-          className={`ts-inapp-video bg-black ${className}`}
+          className={`ts-inapp-video ${className}`}
           src={slide.src}
           muted
           loop={false}
           playsInline
           autoPlay={false}
-          preload="auto"
+          preload={active ? "auto" : "metadata"}
           aria-label={label}
-          style={{ ...crop, backgroundColor: "#000" }}
+          style={crop}
         />
         {bed}
       </>

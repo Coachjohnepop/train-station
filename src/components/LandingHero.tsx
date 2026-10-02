@@ -6,6 +6,7 @@ import LandingSeeInsideTour from "@/components/LandingSeeInsideTour";
 import LandingByowFork from "@/components/LandingByowFork";
 import { FREE_QUICK_TOUR_EVENT } from "@/lib/free-quick-tour";
 import HeroSlideMedia from "@/components/HeroSlideMedia";
+import HeroVideoThumb from "@/components/HeroVideoThumb";
 import {
   activeHeroSlides,
   DEFAULT_HERO_SLIDES,
@@ -247,7 +248,7 @@ export default function LandingHero({
               }}
             />
           ) : (
-            <div className="h-full w-full bg-black" aria-hidden />
+            <HeroVideoThumb slide={image} className="h-full w-full object-cover sm:object-center" />
           )}
         </div>
       ))}

@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 import HeroSlideMedia from "@/components/HeroSlideMedia";
+import HeroVideoThumb from "@/components/HeroVideoThumb";
 import {
   activeHeroSlides,
   DEFAULT_HERO_SLIDES,
@@ -80,7 +81,7 @@ export default function SplashCarousel({
               alt={slide.alt || `Inspiring workout ${index + 1}`}
             />
           ) : (
-            <div className="h-full w-full bg-black" aria-hidden />
+            <HeroVideoThumb slide={slide} className="h-full w-full object-cover" />
           )}
         </div>
       ))}

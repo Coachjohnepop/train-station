@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type PointerEvent } from "react";
 import { upload } from "@vercel/blob/client";
 import { saveHeroSlidesAction, saveThemeSongAction } from "@/app/admin/landing/actions";
 import HeroSlideMedia from "@/components/HeroSlideMedia";
+import HeroVideoThumb from "@/components/HeroVideoThumb";
 import {
   createEmptyHeroSlide,
   formatHeroTime,
@@ -535,8 +536,8 @@ export default function AdminHeroImagesPanel({
         <h2 className="text-lg font-semibold">Hero images &amp; videos</h2>
         <p className="mt-1 text-sm text-[var(--muted)]">
           Cold-traffic home carousel. Drag the play-order strip (or use Earlier / Later) to change
-          which clip leads — order saves live. Video cards stay still until you tap preview so the
-          page can open on a phone. Upload a photo or a phone clip, then use the{" "}
+          which clip leads — order saves live. Video tiles show a still frame; tap a card to
+          preview playback. Upload a photo or a phone clip, then use the{" "}
           <strong className="text-[var(--text)]">Trim</strong>,{" "}
           <strong className="text-[var(--text)]">Crop</strong>,{" "}
           <strong className="text-[var(--text)]">Slow motion</strong>, and{" "}
@@ -688,13 +689,11 @@ export default function AdminHeroImagesPanel({
                   {slide.src && !videoThumb ? (
                     /* eslint-disable-next-line @next/next/no-img-element */
                     <img src={slide.src} alt="" className="h-full w-full object-cover" draggable={false} />
+                  ) : slide.src ? (
+                    <HeroVideoThumb slide={slide} className="pointer-events-none h-full w-full object-cover" />
                   ) : (
-                    <span
-                      className={`flex h-full w-full items-center justify-center px-1 text-center text-[10px] font-semibold ${
-                        videoThumb ? "bg-black text-white" : "bg-[var(--surface-2)] text-[var(--muted)]"
-                      }`}
-                    >
-                      {slide.src ? "Video" : "Empty"}
+                    <span className="flex h-full w-full items-center justify-center bg-[var(--surface-2)] px-1 text-center text-[10px] font-semibold text-[var(--muted)]">
+                      Empty
                     </span>
                   )}
                   <span className="absolute left-1 top-1 rounded-full bg-black/75 px-1.5 text-[10px] font-bold text-white">
@@ -737,12 +736,12 @@ export default function AdminHeroImagesPanel({
                       isVideo && previewId !== slide.id ? (
                         <button
                           type="button"
-                          className="flex h-full w-full flex-col items-center justify-center gap-1 bg-black px-2 text-center text-xs font-semibold text-white"
+                          className="relative h-full w-full"
                           onClick={() => setPreviewId(slide.id)}
                         >
-                          <span>Tap to preview</span>
-                          <span className="text-[10px] font-normal text-white/70">
-                            Skips loading this clip until you ask
+                          <HeroVideoThumb slide={slide} className="h-full w-full object-cover" />
+                          <span className="absolute inset-x-0 bottom-0 bg-black/55 py-1.5 text-center text-[10px] font-semibold text-white">
+                            Tap to preview
                           </span>
                         </button>
                       ) : (
