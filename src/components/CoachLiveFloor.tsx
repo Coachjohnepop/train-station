@@ -296,6 +296,7 @@ export default function CoachLiveFloor({ initialDate }: { initialDate: string })
                       <p className="py-4 text-center text-xs text-[var(--muted)]">Loading workout…</p>
                     ) : loaded ? (
                       <MemberWorkoutConsole
+                        key={`${tile.userId}:${loaded.workout.workoutId}`}
                         workout={loaded.workout}
                         backHref="#"
                         backLabel=""

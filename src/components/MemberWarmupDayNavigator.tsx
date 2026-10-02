@@ -198,6 +198,7 @@ export default function MemberWarmupDayNavigator({
                 </p>
               </div>
               <MemberWorkoutConsole
+                key={warmupWorkout.workoutId}
                 workout={warmupWorkout}
                 backHref="/member/today"
                 programSlug={programSlug}

@@ -465,6 +465,7 @@ export default function MemberTodayShell({
           workoutName={workout.workoutName || "Quick maintain"}
         >
           <MemberWorkoutConsole
+            key={workout.workoutId}
             workout={workout}
             backHref={clearMaintainHref()}
             backLabel="← Today"
@@ -764,6 +765,7 @@ export default function MemberTodayShell({
             <FreeContentLockCard access={contentAccess} />
           ) : (
             <MemberWorkoutConsole
+              key={workout.workoutId}
               workout={workout}
               backHref="/member/today"
               programSlug={programSlug}

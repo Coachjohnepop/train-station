@@ -214,6 +214,7 @@ export default async function MemberWorkoutPage({ searchParams }: Props) {
           )}
 
           <MemberWorkoutConsole
+            key={workout.workoutId}
             workout={workout}
             backHref={backHref}
             backLabel={backLabel}

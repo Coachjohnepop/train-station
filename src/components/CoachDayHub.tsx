@@ -337,6 +337,7 @@ export default function CoachDayHub({
                         <p className="py-4 text-center text-xs text-[var(--muted)]">Loading workout…</p>
                       ) : loaded ? (
                         <MemberWorkoutConsole
+                          key={`${student.id}:${loaded.workout.workoutId}`}
                           workout={loaded.workout}
                           backHref="#"
                           backLabel=""

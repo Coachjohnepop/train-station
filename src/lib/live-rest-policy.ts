@@ -14,6 +14,22 @@ export function remoteRestIsClear(rest: RemoteRestSnapshot): rest is null {
   return rest === null;
 }
 
+/** JSON / SSE can send endsAt as a string. Invalid values must not open a timer. */
+export function normalizeRestEndsAt(value: unknown): number | null {
+  const n = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return n;
+}
+
+/** Class override swaps the workout under an open popup — that block is gone. */
+export function restTimerBlockIsOnWorkout(
+  blockId: string | null | undefined,
+  exerciseIds: readonly string[],
+): boolean {
+  if (!blockId) return false;
+  return exerciseIds.includes(blockId);
+}
+
 /**
  * A poll or stream snapshot from before this rest was saved. Closing on that
  * null makes the popup flash once and disappear.

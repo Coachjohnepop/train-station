@@ -623,6 +623,7 @@ export default async function MemberTodayPage({ searchParams }: Props) {
                 </details>
               )}
               <MemberWorkoutConsole
+                key={workout!.workoutId}
                 workout={workout!}
                 backHref={sp.date ? `/member/today?date=${sp.date}` : "/member/today"}
                 backLabel="← Go to Today"

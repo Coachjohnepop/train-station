@@ -67,9 +67,11 @@ import CoachRestSoundLibrary from "@/components/CoachRestSoundLibrary";
 import { confettiOriginFromElement, fireWorkoutConfetti } from "@/lib/workout-confetti";
 import type { LiveRestActive } from "@/lib/live-workout-session";
 import {
+  normalizeRestEndsAt,
   remoteClearIsStale,
   remoteRestIsClear,
   remoteRestShouldIgnore,
+  restTimerBlockIsOnWorkout,
 } from "@/lib/live-rest-policy";
 import {
   clearMaintainResume,
@@ -460,6 +462,8 @@ export default function MemberWorkoutConsole({
   const [coachExpandedBlockId, setCoachExpandedBlockId] = useState<string | null>(null);
   const [editingExerciseId, setEditingExerciseId] = useState<string | null>(null);
   const restHornPlayedRef = useRef(false);
+  /** Survives countdown-effect remounts so 0:00 still closes after a live retarget. */
+  const restCloseTimerRef = useRef<ReturnType<typeof setTimeout> | 0>(0);
   const hitSeriesRef = useRef<HitSeries | null>(null);
   const restTickAnnouncedRef = useRef<Set<number>>(new Set());
   /** Tracks open timer identity so duration retargets don't re-fire start/tick/complete storms. */
@@ -620,6 +624,11 @@ export default function MemberWorkoutConsole({
     remoteRevision?: number,
   ) => {
     if (rest === undefined) return;
+    const endsAtNorm = rest == null ? null : normalizeRestEndsAt(rest.endsAt);
+    if (rest != null && endsAtNorm == null) return;
+    if (rest != null && endsAtNorm != null && rest.endsAt !== endsAtNorm) {
+      rest = { ...rest, endsAt: endsAtNorm };
+    }
     if (remoteRestIsClear(rest)) {
       const local = restActiveRef.current;
       if (
@@ -1278,7 +1287,11 @@ export default function MemberWorkoutConsole({
     .slice(activeIdx + 1)
     .find((e) => !finishedExercises.has(e.id));
 
-  const clearRestTimer = useCallback(() => {
+  const clearRestTimer = useCallback((opts?: { suppressPartnerEcho?: boolean }) => {
+    if (restCloseTimerRef.current) {
+      window.clearTimeout(restCloseTimerRef.current);
+      restCloseTimerRef.current = 0;
+    }
     hitSeriesRef.current = null;
     ignoredRestEndsAtRef.current =
       restActiveRef.current?.endsAt || lastAppliedRestEndsAt.current || ignoredRestEndsAtRef.current;
@@ -1292,7 +1305,9 @@ export default function MemberWorkoutConsole({
     lastAppliedRestEndsAt.current = 0;
     restTimerIdentityRef.current = "";
     // Block partner echo from re-opening the timer we just skipped.
-    suppressAutoRestUntilRef.current = Date.now() + 4000;
+    if (opts?.suppressPartnerEcho !== false) {
+      suppressAutoRestUntilRef.current = Date.now() + 4000;
+    }
     // Push clear so partner closes the shared rest popup.
     if (livePushEnabled) queueLiveSave(true);
   }, [livePushEnabled, queueLiveSave]);
@@ -1393,11 +1408,11 @@ export default function MemberWorkoutConsole({
         /** Prefer these seconds (e.g. timed hold minutes). */
         secondsOverride?: number;
       },
-    ) => {
-      if (Date.now() < suppressAutoRestUntilRef.current) return;
+    ): boolean => {
+      if (Date.now() < suppressAutoRestUntilRef.current) return false;
 
       const block = workout.exercises.find((e) => e.id === blockId);
-      if (!block) return;
+      if (!block) return false;
 
       // Ensure rest is on for live set checkoffs unless coach explicitly turned it off.
       // Timed "Time of Exercise" still runs even if between-set rest is disabled.
@@ -1408,7 +1423,7 @@ export default function MemberWorkoutConsole({
           : "rest");
 
       if (phase === "rest" && opts?.secondsOverride == null) {
-        if (restSettingsRef.current.enabled === false) return;
+        if (restSettingsRef.current.enabled === false) return false;
       }
 
       let seconds: number | null =
@@ -1421,7 +1436,12 @@ export default function MemberWorkoutConsole({
       if (seconds == null) {
         seconds = resolveSecondsForBlock(block);
       }
-      if (!seconds || seconds <= 0) return;
+      if (!seconds || seconds <= 0) return false;
+
+      if (restCloseTimerRef.current) {
+        window.clearTimeout(restCloseTimerRef.current);
+        restCloseTimerRef.current = 0;
+      }
 
       // Rest after every set including the last set of the exercise.
       // If partner already pushed a shared restActive, prefer that endsAt.
@@ -1473,6 +1493,7 @@ export default function MemberWorkoutConsole({
       if (!opts?.silentStart && !restMutedRef.current) {
         playRestStart();
       }
+      return true;
     },
     [
       workout.exercises,
@@ -1517,12 +1538,13 @@ export default function MemberWorkoutConsole({
 
   /** After timed hold ends (or is skipped), open the between-set rest timer. */
   const flipExerciseTimerToRest = useCallback(
-    (blockId: string, setNum: number) => {
+    (blockId: string, setNum: number): boolean => {
       const block = workout.exercises.find((e) => e.id === blockId);
-      if (block && (block.restSec === 0 || /fasted\s*cardio/i.test(block.name))) {
-        return;
+      if (!block) return false;
+      if (block.restSec === 0 || /fasted\s*cardio/i.test(block.name)) {
+        return false;
       }
-      maybeStartRestTimer(blockId, setNum, { phase: "rest", silentStart: false });
+      return maybeStartRestTimer(blockId, setNum, { phase: "rest", silentStart: false });
     },
     [maybeStartRestTimer, workout.exercises],
   );
@@ -1665,6 +1687,8 @@ export default function MemberWorkoutConsole({
   flipExerciseTimerToRestRef.current = flipExerciseTimerToRest;
   const maybeStartRestTimerRef = useRef(maybeStartRestTimer);
   maybeStartRestTimerRef.current = maybeStartRestTimer;
+  const clearRestTimerRef = useRef(clearRestTimer);
+  clearRestTimerRef.current = clearRestTimer;
   const livePushEnabledRef = useRef(livePushEnabled);
   livePushEnabledRef.current = livePushEnabled;
   const queueLiveSaveRef = useRef(queueLiveSave);
@@ -1675,7 +1699,6 @@ export default function MemberWorkoutConsole({
   useEffect(() => {
     if (!restTimer) return;
 
-    let cancelled = false;
     const endsAt = restTimer.endsAt;
     const phase = restTimer.phase;
     const blockId = restTimer.blockId;
@@ -1688,23 +1711,30 @@ export default function MemberWorkoutConsole({
       restTimerIdentityRef.current = identity;
       restHornPlayedRef.current = false;
       restTickAnnouncedRef.current = new Set();
+      if (restCloseTimerRef.current) {
+        window.clearTimeout(restCloseTimerRef.current);
+        restCloseTimerRef.current = 0;
+      }
     }
-    setRestCompleting(false);
+    if (Date.now() < endsAt) {
+      setRestCompleting(false);
+    }
 
     const finishAndClose = () => {
-      if (restHornPlayedRef.current) return;
-      restHornPlayedRef.current = true;
-      ignoredRestEndsAtRef.current = endsAt;
-      // Horn first, even if this effect is tearing down from a live retarget.
-      if (!restMutedRef.current) {
-        playRestComplete(restSoundRef.current, { force: true });
+      if (!restHornPlayedRef.current) {
+        restHornPlayedRef.current = true;
+        ignoredRestEndsAtRef.current = endsAt;
+        // Horn first, even if this effect is tearing down from a live retarget.
+        if (!restMutedRef.current) {
+          playRestComplete(restSoundRef.current, { force: true });
+        }
+        setRestCompleting(true);
+        setRestSecondsLeft(0);
       }
-      if (cancelled) return;
-      setRestCompleting(true);
-      setRestSecondsLeft(0);
+      if (restCloseTimerRef.current) return;
       // Cybertruck / end samples ~1.1s+ — keep popup open long enough to finish.
-      window.setTimeout(() => {
-        if (cancelled) return;
+      restCloseTimerRef.current = window.setTimeout(() => {
+        restCloseTimerRef.current = 0;
         const hit = hitSeriesRef.current;
         if (hit && hit.blockId === blockId) {
           if (phase === "exercise") {
@@ -1716,58 +1746,40 @@ export default function MemberWorkoutConsole({
               return updated;
             });
             if (hit.omitLastRest && hit.round >= hit.rounds) {
-              hitSeriesRef.current = null;
-              setRestTimer(null);
-              setRestSecondsLeft(0);
-              setRestCompleting(false);
-              restActiveRef.current = null;
-              restActiveDirtyRef.current = true;
-              lastAppliedRestEndsAt.current = 0;
-              if (livePushEnabledRef.current) queueLiveSaveRef.current(true);
+              clearRestTimerRef.current({ suppressPartnerEcho: false });
               return;
             }
             hit.stage = "rest";
-            maybeStartRestTimerRef.current(blockId, hit.round, {
+            const started = maybeStartRestTimerRef.current(blockId, hit.round, {
               phase: "rest",
               secondsOverride: hit.restSec,
             });
+            if (!started) clearRestTimerRef.current({ suppressPartnerEcho: false });
             return;
           }
           if (hit.round >= hit.rounds) {
-            hitSeriesRef.current = null;
-            setRestTimer(null);
-            setRestSecondsLeft(0);
-            setRestCompleting(false);
-            restActiveRef.current = null;
-            restActiveDirtyRef.current = true;
-            lastAppliedRestEndsAt.current = 0;
-            if (livePushEnabledRef.current) queueLiveSaveRef.current(true);
+            clearRestTimerRef.current({ suppressPartnerEcho: false });
             return;
           }
           hit.round += 1;
           hit.stage = "work";
-          maybeStartRestTimerRef.current(blockId, hit.round, {
+          const startedWork = maybeStartRestTimerRef.current(blockId, hit.round, {
             phase: "exercise",
             secondsOverride: hit.workSec,
           });
+          if (!startedWork) clearRestTimerRef.current({ suppressPartnerEcho: false });
           return;
         }
         if (phase === "exercise") {
-          flipExerciseTimerToRestRef.current(blockId, setNum);
+          const started = flipExerciseTimerToRestRef.current(blockId, setNum);
+          if (!started) clearRestTimerRef.current({ suppressPartnerEcho: false });
           return;
         }
-        setRestTimer(null);
-        setRestSecondsLeft(0);
-        setRestCompleting(false);
-        restActiveRef.current = null;
-        restActiveDirtyRef.current = true;
-        lastAppliedRestEndsAt.current = 0;
-        if (livePushEnabledRef.current) queueLiveSaveRef.current(true);
+        clearRestTimerRef.current({ suppressPartnerEcho: false });
       }, hitSeriesRef.current ? 500 : 1600);
     };
 
     const tick = () => {
-      if (cancelled) return;
       const left = Math.max(0, Math.ceil((endsAt - Date.now()) / 1000));
       if (left <= 0) {
         finishAndClose();
@@ -1791,10 +1803,9 @@ export default function MemberWorkoutConsole({
     tick();
     const id = window.setInterval(tick, 200);
     return () => {
-      cancelled = true;
       window.clearInterval(id);
-      // Do not clear closeTimer — a remount mid-horn used to cancel the
-      // 0:00 window and (with the old HTMLAudio path) abort the sample.
+      // Do not clear restCloseTimerRef — a remount mid-horn used to cancel the
+      // 0:00 close and leave the popup stuck.
     };
   }, [restTimer?.endsAt, restTimer?.phase, restTimer?.blockId, restTimer?.completedSetNum]);
 
@@ -1807,6 +1818,15 @@ export default function MemberWorkoutConsole({
     pendingRemoteRestRef.current = false;
     liveRestBaselineReadyRef.current = true;
   }, [completedSets]);
+
+  const workoutExerciseIdsKey = workout.exercises.map((e) => e.id).join(",");
+  useEffect(() => {
+    if (!restTimer) return;
+    if (restTimerBlockIsOnWorkout(restTimer.blockId, workoutExerciseIdsKey.split(",").filter(Boolean))) {
+      return;
+    }
+    clearRestTimer({ suppressPartnerEcho: false });
+  }, [workout.workoutId, workoutExerciseIdsKey, restTimer, clearRestTimer]);
 
   // Re-seed when the workout / past logs change. Keep any in-session edits.
   const weightSeedKey = workout.exercises
@@ -2109,10 +2129,11 @@ export default function MemberWorkoutConsole({
           return;
         }
         hit.stage = "rest";
-        maybeStartRestTimer(blockId, hit.round, {
+        const startedHitRest = maybeStartRestTimer(blockId, hit.round, {
           phase: "rest",
           secondsOverride: hit.restSec,
         });
+        if (!startedHitRest) clearRestTimer();
         return;
       }
       if (hit.round >= hit.rounds) {
@@ -2122,14 +2143,16 @@ export default function MemberWorkoutConsole({
       }
       hit.round += 1;
       hit.stage = "work";
-      maybeStartRestTimer(blockId, hit.round, {
+      const startedHitWork = maybeStartRestTimer(blockId, hit.round, {
         phase: "exercise",
         secondsOverride: hit.workSec,
       });
+      if (!startedHitWork) clearRestTimer();
       return;
     }
     if (phase === "exercise") {
-      flipExerciseTimerToRest(blockId, setNum);
+      const startedRest = flipExerciseTimerToRest(blockId, setNum);
+      if (!startedRest) clearRestTimer();
       return;
     }
     // Overlay can show 0:00 before the 200ms tick fires finishAndClose.

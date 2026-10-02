@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  normalizeRestEndsAt,
   remoteClearIsStale,
   remoteRestIsClear,
   remoteRestShouldIgnore,
+  restTimerBlockIsOnWorkout,
   shouldStartRestFromRemoteSetDiff,
 } from "./live-rest-policy";
 
@@ -91,5 +93,18 @@ describe("live rest policy", () => {
   it("never starts rest from a remote completedSets diff", () => {
     assert.equal(shouldStartRestFromRemoteSetDiff({ restActivePresent: false }), false);
     assert.equal(shouldStartRestFromRemoteSetDiff({ restActivePresent: true }), false);
+  });
+
+  it("coerces string endsAt and rejects junk", () => {
+    assert.equal(normalizeRestEndsAt(1_700_000_000_000), 1_700_000_000_000);
+    assert.equal(normalizeRestEndsAt("1700000000000"), 1_700_000_000_000);
+    assert.equal(normalizeRestEndsAt("nope"), null);
+    assert.equal(normalizeRestEndsAt(0), null);
+  });
+
+  it("treats a class-override workout swap as a missing timer block", () => {
+    assert.equal(restTimerBlockIsOnWorkout("old-hold", ["new-a", "new-b"]), false);
+    assert.equal(restTimerBlockIsOnWorkout("new-a", ["new-a", "new-b"]), true);
+    assert.equal(restTimerBlockIsOnWorkout(null, ["new-a"]), false);
   });
 });
