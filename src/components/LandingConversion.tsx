@@ -141,11 +141,11 @@ export default function LandingConversion({
         <div className="min-h-0 overflow-hidden">
           <div className="explore-feed-scroller">
             {welcomeVideoUrl?.trim() ? (
-              <div className="sticky top-2 z-20 h-0">
-                <div className="flex justify-center">
+              <div className="sticky top-3 z-30 h-0 overflow-visible">
+                <div className="flex justify-center pt-1">
                   <WelcomeVideoPopover
                     welcomeVideoUrl={welcomeVideoUrl}
-                    buttonClassName="rounded-full bg-black/55 px-3 py-1.5 text-sm font-semibold text-white underline decoration-white/40 underline-offset-4"
+                    buttonClassName="explore-watch-intro-cta"
                   >
                     Watch intro
                   </WelcomeVideoPopover>
