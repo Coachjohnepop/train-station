@@ -7,6 +7,8 @@ import {
   getMemberBeforePhotoUrl,
   listUserMeasurements,
 } from "@/lib/measurements-store";
+import { awardMeasurementCheckInPoints } from "@/lib/member-gamification-store";
+import { localTodayIso } from "@/lib/program-calendar";
 
 export const dynamic = "force-dynamic";
 
@@ -65,7 +67,22 @@ export async function POST(
       source: "coach",
       recordedByUserId: auth.session.id,
     });
-    return NextResponse.json({ ok: true, measurement });
+    let gamification = { awarded: false, pointsEarned: 0, totalPoints: 0 };
+    try {
+      gamification = await awardMeasurementCheckInPoints({
+        userId: userId.trim(),
+        dayIso: localTodayIso(),
+      });
+    } catch (e) {
+      console.warn("Measurement points award failed", e);
+    }
+    return NextResponse.json({
+      ok: true,
+      measurement,
+      pointsEarned: gamification.pointsEarned,
+      totalPoints: gamification.totalPoints,
+      awarded: gamification.awarded,
+    });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : "Could not save measurement.";
     return NextResponse.json({ error: message }, { status: 400 });

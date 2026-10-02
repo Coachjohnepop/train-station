@@ -28,6 +28,28 @@ import {
   type PhotoCrop,
 } from "@/lib/photo-crop";
 import { isYoutubeUrl } from "@/lib/youtube";
+import { dispatchMemberScoreCelebrate } from "@/lib/member-score-celebrate";
+
+function celebrateMeasurementPoints(data: {
+  pointsEarned?: unknown;
+  totalPoints?: unknown;
+}) {
+  const pointsEarned =
+    typeof data.pointsEarned === "number" && Number.isFinite(data.pointsEarned)
+      ? data.pointsEarned
+      : 0;
+  const totalPoints =
+    typeof data.totalPoints === "number" && Number.isFinite(data.totalPoints)
+      ? data.totalPoints
+      : 0;
+  if (pointsEarned > 0) {
+    dispatchMemberScoreCelebrate({
+      pointsEarned,
+      totalPoints,
+      label: "Measurements logged",
+    });
+  }
+}
 
 /** Label + original (left) + check-in (right). Left is an input until a start exists. */
 function DualMeasureField({
@@ -480,6 +502,7 @@ export default function MemberMeasurementsClient({
               : "Could not auto-save photo check-in.",
           );
         } else {
+          celebrateMeasurementPoints(persistData);
           setMessage("Now photo saved and showing above. Add numbers, then Save if you want.");
           // Refresh history without wiping the Now frame or typed check-in numbers
           void load({ preserveNow: true, preserveForm: true }).catch(() => undefined);
@@ -590,6 +613,7 @@ export default function MemberMeasurementsClient({
         if (!idRes.ok) {
           throw new Error(idData.error || "Could not save identity.");
         }
+        celebrateMeasurementPoints(idData);
         setMessage(
           hasWeights
             ? "Starting and goal weight saved."
@@ -612,6 +636,7 @@ export default function MemberMeasurementsClient({
       if (!res.ok) {
         throw new Error(data.error || "Save failed.");
       }
+      celebrateMeasurementPoints(data);
       setMessage("Saved to your sheet and the adventure log. Your coach can see this too.");
       if (firstOnboard) {
         window.location.assign("/member/today");

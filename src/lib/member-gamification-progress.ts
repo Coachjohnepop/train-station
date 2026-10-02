@@ -29,6 +29,7 @@ function journeyMilestones(points: GamificationPointsMap): Array<{
   points: number;
   earnHint: string;
   href: string;
+  repeatable?: boolean;
   isComplete: (events: GamificationEvent[], profile: Awaited<ReturnType<typeof getMemberProfile>>) => {
     complete: boolean;
     completedAt: string | null;
@@ -56,11 +57,28 @@ function journeyMilestones(points: GamificationPointsMap): Array<{
     },
   },
   {
+    id: "workout:first",
+    type: "first_workout",
+    points: points.first_workout,
+    earnHint: "Log your first workout from Today.",
+    href: "/member/today",
+    isComplete: (events) => {
+      const event = events.find((e) => e.id === "workout:first" || e.type === "first_workout");
+      if (event) return { complete: true, completedAt: event.at, earnedPoints: event.points };
+      const anyLog = events.find((e) => e.type === "workout_logged");
+      if (anyLog) {
+        return { complete: true, completedAt: anyLog.at, earnedPoints: 0 };
+      }
+      return { complete: false, completedAt: null, earnedPoints: 0 };
+    },
+  },
+  {
     id: "warmup:first",
     type: "warmup_before_live",
     points: points.warmup_before_live,
-    earnHint: "Check off warm-ups on Today before your live session (once per day).",
+    earnHint: "Stretch / warm up on Today before your live session (once per day).",
     href: "/member/today",
+    repeatable: true,
     isComplete: (events) => {
       const warmupEvents = events.filter((e) => e.type === "warmup_before_live");
       if (!warmupEvents.length) {
@@ -110,6 +128,26 @@ function journeyMilestones(points: GamificationPointsMap): Array<{
         };
       }
       return { complete: false, completedAt: null, earnedPoints: 0 };
+    },
+  },
+  {
+    id: "measurements:logged",
+    type: "measurements_logged",
+    points: points.measurements_logged,
+    earnHint: "Log weight and tape on Measure (once per day).",
+    href: "/member/measurements",
+    repeatable: true,
+    isComplete: (events) => {
+      const measureEvents = events.filter((e) => e.type === "measurements_logged");
+      if (!measureEvents.length) {
+        return { complete: false, completedAt: null, earnedPoints: 0 };
+      }
+      const latest = [...measureEvents].sort((a, b) => b.at.localeCompare(a.at))[0];
+      return {
+        complete: true,
+        completedAt: latest.at,
+        earnedPoints: measureEvents.reduce((sum, e) => sum + e.points, 0),
+      };
     },
   },
 ];
@@ -218,16 +256,18 @@ export function buildMemberScoreProgress(
 
   const milestones: ScoreMilestone[] = journeyDefs.map((def) => {
     const state = def.isComplete(events, profile);
+    const complete = state.complete && !def.repeatable;
     return {
       id: def.id,
       type: def.type,
       label: GAMIFICATION_EVENT_LABELS[def.type],
       points: def.points,
-      status: state.complete ? "complete" : "incomplete",
-      earnedPoints: state.complete ? state.earnedPoints || def.points : 0,
+      status: complete ? "complete" : "incomplete",
+      earnedPoints: state.earnedPoints,
       completedAt: state.completedAt,
       earnHint: def.earnHint,
       href: def.href,
+      repeatable: def.repeatable,
     };
   });
 
@@ -248,7 +288,7 @@ export function buildMemberScoreProgress(
     repeatable: true,
     earnHint: `Log a workout from Today — +${nextWorkoutPts} pts once per scheduled workout per day.${
       plan === "explorer" || !plan
-        ? ` Free Explorer steps of 10. Coach, Business, and 1st Class share the ${PAID_CYCLE_GOAL_POINTS.toLocaleString()} pt / 28-day table.`
+        ? ` Free Explorer steps of 10. Coach, Business, and 1st Class share the ${PAID_CYCLE_GOAL_POINTS.toLocaleString()} pt / 28-day table. Stretching, first workout, booking, and measurements add extra on top.`
         : ""
     }`,
     href: "/member/today",

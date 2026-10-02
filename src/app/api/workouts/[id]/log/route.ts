@@ -3,7 +3,10 @@ import { z } from "zod";
 import { requireSession, assertUserScope } from "@/lib/api-auth";
 import { isStaffRole } from "@/lib/staff-access";
 import { createWorkoutLogAndPerformances, type LogExerciseInput } from "@/lib/data/user-data";
-import { awardGamificationPoints } from "@/lib/member-gamification-store";
+import {
+  awardFirstWorkoutBonus,
+  awardGamificationPoints,
+} from "@/lib/member-gamification-store";
 import { getGamificationPointsConfig } from "@/lib/gamification-config";
 import {
   canLogSessionDate,
@@ -168,6 +171,23 @@ export async function POST(request: Request, { params }: Params) {
         label: adjusted.late ? lateScoreLabel(adjusted.hitPercent) : undefined,
         programSlug: parsed.data.programSlug ?? null,
       });
+      if (gamification.awarded) {
+        try {
+          const first = await awardFirstWorkoutBonus({
+            userId: uid,
+            programSlug: parsed.data.programSlug ?? null,
+          });
+          if (first.awarded) {
+            gamification = {
+              ...gamification,
+              pointsEarned: gamification.pointsEarned + first.pointsEarned,
+              totalPoints: first.totalPoints,
+            };
+          }
+        } catch (firstErr: unknown) {
+          console.warn("First-workout bonus failed", firstErr);
+        }
+      }
     } catch (gamErr: unknown) {
       gamificationWarning =
         gamErr instanceof Error

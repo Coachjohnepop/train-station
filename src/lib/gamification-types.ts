@@ -22,26 +22,38 @@ export const PAID_POINTS_MULTIPLIER =
   PAID_CYCLE_GOAL_POINTS /
   (CYCLE_WORKOUT_COUNT * CYCLE_ACTIONS_PER_WORKOUT * FREE_POINT_STEP);
 
+/**
+ * Free-scale awards. set + log stay at 10 so 12 workouts clear the cycle.
+ * Extras are 2× or 3× that unit so stretching, first workout, booking, and
+ * measurements push a member over the goal.
+ */
 export const DEFAULT_GAMIFICATION_POINTS = {
-  warmup_before_live: 10,
-  intake_scheduled: 10,
+  warmup_before_live: 20,
+  first_workout: 30,
+  intake_scheduled: 30,
+  measurements_logged: 20,
   workout_logged: 10,
   set_logged: 10,
-  intake_complete: 10,
-  onboarding_complete: 10,
+  intake_complete: 20,
+  onboarding_complete: 20,
 } as const;
 
 type GamificationPointsMapLike = {
   warmup_before_live: number;
+  first_workout: number;
   intake_scheduled: number;
+  measurements_logged: number;
   workout_logged: number;
   set_logged: number;
   intake_complete: number;
   onboarding_complete: number;
 };
 
+/** Habit actions that make the 2,000-point cycle. Everything else is extra. */
+export const CYCLE_POINT_TYPES = ["set_logged", "workout_logged"] as const;
+
 /** Pre–free-step defaults (used once to migrate stored coach settings). */
-const LEGACY_GAMIFICATION_POINTS: GamificationPointsMapLike = {
+const LEGACY_GAMIFICATION_POINTS: Partial<GamificationPointsMapLike> = {
   warmup_before_live: 50,
   intake_scheduled: 100,
   workout_logged: 25,
@@ -49,6 +61,16 @@ const LEGACY_GAMIFICATION_POINTS: GamificationPointsMapLike = {
   intake_complete: 75,
   onboarding_complete: 25,
 };
+
+/** All-10 table from the 2,000-cycle flatten — extras were accidentally equal to a set. */
+const FLATTENED_TEN_KEYS = [
+  "warmup_before_live",
+  "intake_scheduled",
+  "workout_logged",
+  "set_logged",
+  "intake_complete",
+  "onboarding_complete",
+] as const;
 
 /** @deprecated Use configured points from coach settings; defaults remain for fallbacks. */
 export const GAMIFICATION_POINTS = DEFAULT_GAMIFICATION_POINTS;
@@ -77,7 +99,7 @@ export function roundPointsUpToTen(raw: number): number {
 export function paidAwardFromFreeScale(freeScalePoints: number): number {
   const free = Math.max(0, Math.round(freeScalePoints));
   if (free <= 0) return 0;
-  return roundPointsUpToTen(free * PAID_POINTS_MULTIPLIER);
+  return roundPointsUpToTen(Math.round(free * PAID_POINTS_MULTIPLIER));
 }
 
 /**
@@ -114,19 +136,33 @@ export function isPaidScoringPlan(plan: string | null | undefined): boolean {
   );
 }
 
+function storedLooksLikeFlattenedTen(raw: Record<string, unknown>): boolean {
+  let saw = 0;
+  for (const key of FLATTENED_TEN_KEYS) {
+    const value = raw[key];
+    if (typeof value !== "number") continue;
+    saw += 1;
+    if (value !== FREE_POINT_STEP) return false;
+  }
+  return saw >= 4;
+}
+
 export function normalizeGamificationPoints(raw: unknown): GamificationPointsMap {
   const out: GamificationPointsMap = { ...DEFAULT_GAMIFICATION_POINTS };
   if (!raw || typeof raw !== "object") return out;
+  const rec = raw as Record<string, unknown>;
+  const flattened = storedLooksLikeFlattenedTen(rec);
   for (const key of GAMIFICATION_EVENT_TYPES) {
-    const value = (raw as Record<string, unknown>)[key];
-    if (typeof value === "number" && Number.isFinite(value) && value >= 0) {
-      // One-shot migrate: old coach-wide table → free-step defaults
-      if (value === LEGACY_GAMIFICATION_POINTS[key]) {
-        out[key] = DEFAULT_GAMIFICATION_POINTS[key];
-      } else {
-        out[key] = snapFreePoints(Math.min(10_000, value));
-      }
+    const value = rec[key];
+    if (typeof value !== "number" || !Number.isFinite(value) || value < 0) continue;
+    if (LEGACY_GAMIFICATION_POINTS[key] != null && value === LEGACY_GAMIFICATION_POINTS[key]) {
+      out[key] = DEFAULT_GAMIFICATION_POINTS[key];
+      continue;
     }
+    if (flattened && key !== "set_logged" && key !== "workout_logged") {
+      continue;
+    }
+    out[key] = snapFreePoints(Math.min(10_000, value));
   }
   return out;
 }
@@ -169,8 +205,10 @@ export type LeaderboardPayload = {
 };
 
 export const GAMIFICATION_EVENT_LABELS: Record<GamificationEventType, string> = {
-  warmup_before_live: "Warm-ups before live",
+  warmup_before_live: "Warm-up before live",
+  first_workout: "First workout",
   intake_scheduled: "Booked intro call",
+  measurements_logged: "Logged measurements",
   workout_logged: "Workout logged",
   set_logged: "Logged a set",
   intake_complete: "Intake complete",

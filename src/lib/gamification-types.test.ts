@@ -5,8 +5,10 @@ import {
   CYCLE_ACTIONS_PER_WORKOUT,
   CYCLE_WORKOUT_COUNT,
   cycleGoalForPlan,
+  DEFAULT_GAMIFICATION_POINTS,
   FREE_CYCLE_GOAL_POINTS,
   FREE_POINT_STEP,
+  normalizeGamificationPoints,
   PAID_CYCLE_GOAL_POINTS,
   paidAwardFromFreeScale,
   roundPointsUpToTen,
@@ -51,5 +53,52 @@ describe("paid scoring is the same for Coach, Business, and 1st Class", () => {
     assert.equal(roundPointsUpToTen(83), 90);
     assert.equal(roundPointsUpToTen(83.333), 90);
     assert.equal(paidAwardFromFreeScale(10), 90);
+  });
+
+  it("pays extra actions more than a set so members can go over the goal", () => {
+    assert.equal(DEFAULT_GAMIFICATION_POINTS.set_logged, 10);
+    assert.equal(DEFAULT_GAMIFICATION_POINTS.workout_logged, 10);
+    assert.equal(DEFAULT_GAMIFICATION_POINTS.warmup_before_live, 20);
+    assert.equal(DEFAULT_GAMIFICATION_POINTS.first_workout, 30);
+    assert.equal(DEFAULT_GAMIFICATION_POINTS.intake_scheduled, 30);
+    assert.equal(DEFAULT_GAMIFICATION_POINTS.measurements_logged, 20);
+    assert.equal(DEFAULT_GAMIFICATION_POINTS.intake_complete, 20);
+    assert.equal(DEFAULT_GAMIFICATION_POINTS.onboarding_complete, 20);
+    assert.equal(paidAwardFromFreeScale(20), 170);
+    assert.equal(paidAwardFromFreeScale(30), 250);
+    const extras =
+      paidAwardFromFreeScale(DEFAULT_GAMIFICATION_POINTS.warmup_before_live) +
+      paidAwardFromFreeScale(DEFAULT_GAMIFICATION_POINTS.first_workout) +
+      paidAwardFromFreeScale(DEFAULT_GAMIFICATION_POINTS.intake_scheduled) +
+      paidAwardFromFreeScale(DEFAULT_GAMIFICATION_POINTS.measurements_logged) +
+      paidAwardFromFreeScale(DEFAULT_GAMIFICATION_POINTS.intake_complete) +
+      paidAwardFromFreeScale(DEFAULT_GAMIFICATION_POINTS.onboarding_complete);
+    assert.ok(extras > 0);
+  });
+
+  it("lifts flattened extra awards off the 10-point set table", () => {
+    const lifted = normalizeGamificationPoints({
+      warmup_before_live: 10,
+      intake_scheduled: 10,
+      workout_logged: 10,
+      set_logged: 10,
+      intake_complete: 10,
+      onboarding_complete: 10,
+    });
+    assert.equal(lifted.set_logged, 10);
+    assert.equal(lifted.workout_logged, 10);
+    assert.equal(lifted.warmup_before_live, 20);
+    assert.equal(lifted.first_workout, 30);
+    assert.equal(lifted.intake_scheduled, 30);
+    assert.equal(lifted.measurements_logged, 20);
+    const custom = normalizeGamificationPoints({
+      warmup_before_live: 40,
+      intake_scheduled: 10,
+      workout_logged: 10,
+      set_logged: 10,
+      intake_complete: 10,
+      onboarding_complete: 10,
+    });
+    assert.equal(custom.warmup_before_live, 40);
   });
 });

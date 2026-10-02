@@ -8,6 +8,8 @@ import {
   parsePoundsFromText,
   saveMeasurementSheetIdentity,
 } from "@/lib/measurements-store";
+import { awardMeasurementCheckInPoints } from "@/lib/member-gamification-store";
+import { localTodayIso } from "@/lib/program-calendar";
 
 export const dynamic = "force-dynamic";
 
@@ -174,9 +176,23 @@ export async function POST(request: Request) {
       }
     }
     const identity = await getMeasurementSheetIdentity(auth.session.id);
+    let gamification = { awarded: false, pointsEarned: 0, totalPoints: 0 };
+    if (measurement) {
+      try {
+        gamification = await awardMeasurementCheckInPoints({
+          userId: auth.session.id,
+          dayIso: localTodayIso(),
+        });
+      } catch (e) {
+        console.warn("Measurement points award failed", e);
+      }
+    }
     return NextResponse.json({
       ok: true,
       measurement,
+      pointsEarned: gamification.pointsEarned,
+      totalPoints: gamification.totalPoints,
+      awarded: gamification.awarded,
       identity: {
         name: identity.name,
         ageYears: identity.ageYears,

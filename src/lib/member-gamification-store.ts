@@ -7,6 +7,7 @@ import { isDatabaseConfigured } from "@/lib/database-config";
 import { getGamificationPointsConfig } from "@/lib/gamification-config";
 import {
   awardPointsForPlan,
+  GAMIFICATION_EVENT_LABELS,
   isPaidScoringPlan,
   paidAwardFromFreeScale,
   snapFreePoints,
@@ -476,4 +477,39 @@ export async function awardGamificationPoints(input: {
   }
 
   throw new Error("Could not save gamification points — please try again in a moment.");
+}
+
+/** One-time bonus after the member's first logged workout. */
+export async function awardFirstWorkoutBonus(input: {
+  userId: string;
+  programSlug?: string | null;
+}): Promise<{ awarded: boolean; totalPoints: number; pointsEarned: number }> {
+  const user = await getUserGamification(input.userId);
+  if (user.events.some((e) => e.type === "first_workout" || e.id === "workout:first")) {
+    return { awarded: false, totalPoints: user.totalPoints, pointsEarned: 0 };
+  }
+  const workoutLogs = user.events.filter((e) => e.type === "workout_logged");
+  if (workoutLogs.length !== 1) {
+    return { awarded: false, totalPoints: user.totalPoints, pointsEarned: 0 };
+  }
+  return awardGamificationPoints({
+    userId: input.userId,
+    eventId: "workout:first",
+    type: "first_workout",
+    label: GAMIFICATION_EVENT_LABELS.first_workout,
+    programSlug: input.programSlug ?? null,
+  });
+}
+
+/** Once per calendar day when a measurement check-in is saved. */
+export async function awardMeasurementCheckInPoints(input: {
+  userId: string;
+  dayIso: string;
+}): Promise<{ awarded: boolean; totalPoints: number; pointsEarned: number }> {
+  return awardGamificationPoints({
+    userId: input.userId,
+    eventId: `measurements:${input.dayIso}`,
+    type: "measurements_logged",
+    label: GAMIFICATION_EVENT_LABELS.measurements_logged,
+  });
 }

@@ -476,10 +476,11 @@ export default function CoachSettingsPanel() {
           <h2 className="text-lg font-semibold">Gamification points</h2>
           <p className="mt-1 text-sm text-[var(--muted)]">
             Values below are <strong className="text-[var(--text)]">Free Explorer</strong> awards
-            (steps of 10). Coach Class, Business, and 1st Class share one paid table — each award
-            rounds up to the nearest 10 so 3 workouts a week for 28 days clears{" "}
-            <strong className="text-[var(--text)]">2,000</strong>. Changes apply to new awards
-            only — past ledger entries keep their original values.
+            (steps of 10). Set + log stay at 10 so 3 workouts a week clears{" "}
+            <strong className="text-[var(--text)]">2,000</strong>. Stretching, first workout,
+            booking, measurements, and the other extras are worth more and stack on top. Paid
+            tickets round each award up to the nearest 10. Changes apply to new awards only —
+            past ledger entries keep their original values.
           </p>
         </div>
         <div className="space-y-2">
