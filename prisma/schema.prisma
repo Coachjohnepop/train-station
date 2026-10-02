@@ -95,6 +95,7 @@ model User {
   acctParties          AcctParty[]
   acctJournalCreated   AcctJournalEntry[] @relation("AcctJournalCreatedBy")
   foodEntries          FoodEntry[]
+  foodTrackDays        FoodTrackDay[]
   activityEntries      ActivityEntry[]
 }
 
@@ -135,6 +136,21 @@ model FoodEntry {
   createdAt DateTime @default(now())
 
   @@index([userId, eatenOn])
+}
+
+/// Declared full-day eating log. Two completed days fill the 28-day cycle.
+model FoodTrackDay {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  eatenOn     String
+  seasonKey   String
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@unique([userId, eatenOn])
+  @@index([userId, seasonKey])
 }
 
 model SubscriptionTier {

@@ -17,6 +17,7 @@ import {
 } from "@/lib/food-log";
 import { getMemberProfile } from "@/lib/member-profiles-store";
 import { burnForDates } from "@/lib/burn-day";
+import { loadFoodTrackDashboard, startFoodTrackDay } from "@/lib/food-track-store";
 
 export const dynamic = "force-dynamic";
 
@@ -143,6 +144,12 @@ export async function GET(request: Request) {
           hardMax: profile.calorieHardMax,
         }
       : null;
+  let track = null;
+  try {
+    track = await loadFoodTrackDashboard(userId, eatenOn);
+  } catch (error) {
+    console.warn("[food] track dashboard skipped", error);
+  }
   return NextResponse.json({
     eatenOn,
     monday: days[0],
@@ -152,6 +159,7 @@ export async function GET(request: Request) {
     thresholds: thresholdsWithBurn(thresholds, burn?.todayCalories ?? 0),
     days: byDay,
     burn,
+    track,
   });
 }
 
@@ -182,6 +190,11 @@ export async function POST(request: Request) {
         source: "ai" as const,
       }
     : await estimateFoodParts(parts);
+  try {
+    await startFoodTrackDay(userId, eatenOn);
+  } catch (error) {
+    console.warn("[food] auto-start track day failed", error);
+  }
   const saved = await prisma.foodEntry.create({
     data: {
       userId,

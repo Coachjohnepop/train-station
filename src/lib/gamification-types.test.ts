@@ -62,6 +62,7 @@ describe("paid scoring is the same for Coach, Business, and 1st Class", () => {
     assert.equal(DEFAULT_GAMIFICATION_POINTS.first_workout, 30);
     assert.equal(DEFAULT_GAMIFICATION_POINTS.intake_scheduled, 30);
     assert.equal(DEFAULT_GAMIFICATION_POINTS.measurements_logged, 20);
+    assert.equal(DEFAULT_GAMIFICATION_POINTS.food_track_day, 20);
     assert.equal(DEFAULT_GAMIFICATION_POINTS.intake_complete, 20);
     assert.equal(DEFAULT_GAMIFICATION_POINTS.onboarding_complete, 20);
     assert.equal(paidAwardFromFreeScale(20), 170);
@@ -71,6 +72,7 @@ describe("paid scoring is the same for Coach, Business, and 1st Class", () => {
       paidAwardFromFreeScale(DEFAULT_GAMIFICATION_POINTS.first_workout) +
       paidAwardFromFreeScale(DEFAULT_GAMIFICATION_POINTS.intake_scheduled) +
       paidAwardFromFreeScale(DEFAULT_GAMIFICATION_POINTS.measurements_logged) +
+      paidAwardFromFreeScale(DEFAULT_GAMIFICATION_POINTS.food_track_day) +
       paidAwardFromFreeScale(DEFAULT_GAMIFICATION_POINTS.intake_complete) +
       paidAwardFromFreeScale(DEFAULT_GAMIFICATION_POINTS.onboarding_complete);
     assert.ok(extras > 0);
@@ -91,6 +93,7 @@ describe("paid scoring is the same for Coach, Business, and 1st Class", () => {
     assert.equal(lifted.first_workout, 30);
     assert.equal(lifted.intake_scheduled, 30);
     assert.equal(lifted.measurements_logged, 20);
+    assert.equal(lifted.food_track_day, 20);
     const custom = normalizeGamificationPoints({
       warmup_before_live: 40,
       intake_scheduled: 10,

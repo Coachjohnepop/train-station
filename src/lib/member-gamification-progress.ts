@@ -131,6 +131,26 @@ function journeyMilestones(points: GamificationPointsMap): Array<{
     },
   },
   {
+    id: "food:track",
+    type: "food_track_day",
+    points: points.food_track_day,
+    earnHint: "Log everything you eat and drink on two days this cycle.",
+    href: "/member/nutrition/log",
+    repeatable: true,
+    isComplete: (events) => {
+      const rows = events.filter((e) => e.type === "food_track_day");
+      if (!rows.length) {
+        return { complete: false, completedAt: null, earnedPoints: 0 };
+      }
+      const latest = [...rows].sort((a, b) => b.at.localeCompare(a.at))[0];
+      return {
+        complete: true,
+        completedAt: latest.at,
+        earnedPoints: rows.reduce((sum, e) => sum + e.points, 0),
+      };
+    },
+  },
+  {
     id: "measurements:logged",
     type: "measurements_logged",
     points: points.measurements_logged,
@@ -288,7 +308,7 @@ export function buildMemberScoreProgress(
     repeatable: true,
     earnHint: `Log a workout from Today — +${nextWorkoutPts} pts once per scheduled workout per day.${
       plan === "explorer" || !plan
-        ? ` Free Explorer steps of 10. Coach, Business, and 1st Class share the ${PAID_CYCLE_GOAL_POINTS.toLocaleString()} pt / 28-day table. Stretching, first workout, booking, and measurements add extra on top.`
+        ? ` Free Explorer steps of 10. Coach, Business, and 1st Class share the ${PAID_CYCLE_GOAL_POINTS.toLocaleString()} pt / 28-day table. Stretching, first workout, booking, measurements, and two food track days add extra on top.`
         : ""
     }`,
     href: "/member/today",

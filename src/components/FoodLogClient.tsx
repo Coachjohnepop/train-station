@@ -10,6 +10,7 @@ import {
   type CalorieThresholds,
   type FoodNutrients,
 } from "@/lib/food-log";
+import { dispatchMemberScoreCelebrate } from "@/lib/member-score-celebrate";
 
 type FoodRow = FoodNutrients & {
   id: string;
@@ -49,6 +50,28 @@ type DayBurn = {
   lines: BurnLine[];
 };
 
+type TrackDay = {
+  eatenOn: string;
+  startedAt: string;
+  completedAt: string | null;
+  calories: number;
+  entryCount: number;
+  label: string;
+  weekday: string;
+};
+
+type TrackPayload = {
+  goal: number;
+  completedCount: number;
+  remaining: number;
+  todayIso: string;
+  todayStarted: boolean;
+  todayCompleted: boolean;
+  lastTwo: TrackDay[];
+  weekdays: { name: string; logged: boolean }[];
+  seasonDays: number;
+};
+
 type LogResponse = {
   eatenOn: string;
   dayCalories: number;
@@ -56,6 +79,7 @@ type LogResponse = {
   thresholds: CalorieThresholds | null;
   days: DayBucket[];
   burn?: DayBurn | null;
+  track?: TrackPayload | null;
 };
 
 type PhotoDraft = FoodNutrients & {
@@ -246,6 +270,41 @@ export default function FoodLogClient() {
 
   const todayRows = today?.entries ?? [];
 
+  async function trackAction(action: "start" | "complete") {
+    setBusy(true);
+    setError("");
+    setNote("");
+    try {
+      const res = await fetch("/api/member/food/track", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(typeof data.error === "string" ? data.error : "Could not update that track day.");
+        return;
+      }
+      if (action === "complete") {
+        const pointsEarned = typeof data.pointsEarned === "number" ? data.pointsEarned : 0;
+        const totalPoints = typeof data.totalPoints === "number" ? data.totalPoints : 0;
+        if (pointsEarned > 0) {
+          dispatchMemberScoreCelebrate({
+            pointsEarned,
+            totalPoints,
+            label: "Food track day",
+          });
+        }
+        setNote("Day is done. Two of these fill the cycle.");
+      } else {
+        setNote("Tracking today. Log everything you eat and drink, then mark the day done after the last one.");
+      }
+      await load();
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div className="mx-auto max-w-3xl space-y-4">
       <div className="flex items-baseline justify-between gap-3">
@@ -254,6 +313,18 @@ export default function FoodLogClient() {
           Today
         </Link>
       </div>
+
+      {log?.track ? (
+        <TrackCycleBoard
+          track={log.track}
+          eaten={log.dayCalories}
+          thresholds={log.thresholds}
+          entryCount={todayRows.length}
+          busy={busy}
+          onStart={() => void trackAction("start")}
+          onComplete={() => void trackAction("complete")}
+        />
+      ) : null}
 
       <form id="food-entry-form" onSubmit={(event) => void save(event)} className="card space-y-3 p-4">
         {editingId ? (
@@ -353,6 +424,123 @@ export default function FoodLogClient() {
         </section>
       ) : null}
     </div>
+  );
+}
+
+function TrackCycleBoard({
+  track,
+  eaten,
+  thresholds,
+  entryCount,
+  busy,
+  onStart,
+  onComplete,
+}: {
+  track: TrackPayload;
+  eaten: number;
+  thresholds: CalorieThresholds | null;
+  entryCount: number;
+  busy: boolean;
+  onStart: () => void;
+  onComplete: () => void;
+}) {
+  const leftToRange =
+    thresholds && track.todayStarted && !track.todayCompleted
+      ? Math.max(0, thresholds.rangeMax - eaten)
+      : null;
+  const leftToHard =
+    thresholds && track.todayStarted && !track.todayCompleted
+      ? Math.max(0, thresholds.hardMax - eaten)
+      : null;
+
+  return (
+    <section className="card space-y-3 p-4">
+      <div className="flex items-baseline justify-between gap-3">
+        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--muted)]">
+          {track.seasonDays}-day cycle
+        </p>
+        <p className="text-sm font-semibold tabular-nums">
+          {track.completedCount}/{track.goal} track days
+        </p>
+      </div>
+      <p className="text-sm text-[var(--muted)]">
+        Two days this cycle of everything you eat and drink is enough. Pick a dinner-out day so you
+        know where you stand before the meal.
+      </p>
+
+      <div className="grid grid-cols-7 gap-1">
+        {track.weekdays.map((day) => (
+          <div
+            key={day.name}
+            className={`rounded-lg px-1 py-2 text-center text-[11px] font-semibold ${
+              day.logged
+                ? "bg-[var(--accent)]/20 text-[var(--text)]"
+                : "bg-[var(--surface)] text-[var(--muted)]"
+            }`}
+          >
+            {day.name}
+          </div>
+        ))}
+      </div>
+
+      {track.lastTwo.length > 0 ? (
+        <ul className="space-y-1.5">
+          {track.lastTwo.map((day) => (
+            <li key={day.eatenOn} className="flex items-baseline justify-between gap-3 text-sm">
+              <span>
+                {day.label}
+                <span className="text-[var(--muted)]">
+                  {day.completedAt ? " · done" : " · in progress"}
+                </span>
+              </span>
+              <span className="tabular-nums font-semibold">{day.calories}</span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-sm text-[var(--muted)]">No track days yet this cycle.</p>
+      )}
+
+      {leftToRange != null && thresholds ? (
+        <p className="text-sm">
+          Running total <span className="font-semibold tabular-nums">{eaten}</span>
+          {leftToHard != null && leftToHard > 0
+            ? ` · ${leftToRange} to the range, ${leftToHard} to the hard total.`
+            : leftToRange > 0
+              ? ` · ${leftToRange} left in the range before dinner.`
+              : " · you are at or over the range."}
+        </p>
+      ) : null}
+
+      <div className="flex flex-wrap gap-2">
+        {!track.todayStarted ? (
+          <button
+            type="button"
+            className="btn-primary px-4 py-2 text-sm font-semibold"
+            disabled={busy}
+            onClick={onStart}
+          >
+            Start tracking today
+          </button>
+        ) : null}
+        {track.todayStarted && !track.todayCompleted ? (
+          <button
+            type="button"
+            className="btn-primary px-4 py-2 text-sm font-semibold"
+            disabled={busy || entryCount < 1}
+            onClick={onComplete}
+          >
+            Mark this day done
+          </button>
+        ) : null}
+        {track.todayCompleted ? (
+          <p className="text-sm font-semibold text-[var(--accent)]">Today is logged.</p>
+        ) : null}
+        {track.remaining === 0 && !track.todayStarted ? (
+          <p className="text-sm text-[var(--muted)]">Cycle filled. Start another day anytime.</p>
+        ) : null}
+      </div>
+    </section>
   );
 }
 

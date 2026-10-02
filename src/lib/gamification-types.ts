@@ -32,6 +32,7 @@ export const DEFAULT_GAMIFICATION_POINTS = {
   first_workout: 30,
   intake_scheduled: 30,
   measurements_logged: 20,
+  food_track_day: 20,
   workout_logged: 10,
   set_logged: 10,
   intake_complete: 20,
@@ -43,6 +44,7 @@ type GamificationPointsMapLike = {
   first_workout: number;
   intake_scheduled: number;
   measurements_logged: number;
+  food_track_day: number;
   workout_logged: number;
   set_logged: number;
   intake_complete: number;
@@ -209,6 +211,7 @@ export const GAMIFICATION_EVENT_LABELS: Record<GamificationEventType, string> = 
   first_workout: "First workout",
   intake_scheduled: "Booked intro call",
   measurements_logged: "Logged measurements",
+  food_track_day: "Food track day",
   workout_logged: "Workout logged",
   set_logged: "Logged a set",
   intake_complete: "Intake complete",

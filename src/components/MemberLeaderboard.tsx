@@ -391,7 +391,7 @@ export default function MemberLeaderboard() {
               <li>
                 Score resets every 28 days. Coach Class, Business Class, and 1st Class earn the
                 same points. 3 workouts a week (set + log) clears the 2,000-point cycle.
-                Stretching early, first workout, booking, and measurements add extra on top.
+                Stretching early, first workout, booking, measurements, and two food track days add extra on top.
               </li>
               <li>
                 Warm-up / stretch before live — Free {pointValues.warmup_before_live} / paid{" "}
@@ -408,6 +408,10 @@ export default function MemberLeaderboard() {
               <li>
                 Log measurements — Free {pointValues.measurements_logged} / paid{" "}
                 {paidAwardFromFreeScale(pointValues.measurements_logged)} pts (once per day)
+              </li>
+              <li>
+                Food track day — Free {pointValues.food_track_day} / paid{" "}
+                {paidAwardFromFreeScale(pointValues.food_track_day)} pts (two days this cycle)
               </li>
               <li>
                 Log a workout — Free {pointValues.workout_logged} / paid{" "}

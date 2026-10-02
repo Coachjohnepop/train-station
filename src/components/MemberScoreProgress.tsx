@@ -113,8 +113,8 @@ export default function MemberScoreProgressPanel({ progress }: { progress: Membe
         </p>
         <p className="mt-1 text-center text-[10px] text-[var(--muted)]">
           {goal >= 1000
-            ? "Coach Class, Business Class, and 1st Class earn the same. 3 workouts a week (set + log) is the 2,000-point cycle. Stretching, first workout, booking, and measurements add extra."
-            : "3 workouts a week (set + log) fills this 28-day cycle. Stretching, first workout, booking, and measurements add extra."}
+            ? "Coach Class, Business Class, and 1st Class earn the same. 3 workouts a week (set + log) is the 2,000-point cycle. Stretching, first workout, booking, measurements, and two food track days add extra."
+            : "3 workouts a week (set + log) fills this 28-day cycle. Stretching, first workout, booking, measurements, and two food track days add extra."}
         </p>
       </div>
 

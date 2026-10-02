@@ -478,9 +478,9 @@ export default function CoachSettingsPanel() {
             Values below are <strong className="text-[var(--text)]">Free Explorer</strong> awards
             (steps of 10). Set + log stay at 10 so 3 workouts a week clears{" "}
             <strong className="text-[var(--text)]">2,000</strong>. Stretching, first workout,
-            booking, measurements, and the other extras are worth more and stack on top. Paid
-            tickets round each award up to the nearest 10. Changes apply to new awards only —
-            past ledger entries keep their original values.
+            booking, measurements, two food track days, and the other extras are worth more and
+            stack on top. Paid tickets round each award up to the nearest 10. Changes apply to
+            new awards only — past ledger entries keep their original values.
           </p>
         </div>
         <div className="space-y-2">

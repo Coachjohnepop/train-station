@@ -513,3 +513,16 @@ export async function awardMeasurementCheckInPoints(input: {
     label: GAMIFICATION_EVENT_LABELS.measurements_logged,
   });
 }
+
+/** Once per completed food track day. */
+export async function awardFoodTrackDayPoints(input: {
+  userId: string;
+  dayIso: string;
+}): Promise<{ awarded: boolean; totalPoints: number; pointsEarned: number }> {
+  return awardGamificationPoints({
+    userId: input.userId,
+    eventId: `food_track:${input.dayIso}`,
+    type: "food_track_day",
+    label: GAMIFICATION_EVENT_LABELS.food_track_day,
+  });
+}

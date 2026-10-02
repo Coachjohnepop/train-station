@@ -38,6 +38,19 @@ export function weekdayLabel(iso: string): string {
   }).format(new Date(Date.UTC(year, month - 1, day)));
 }
 
+/** Monday = 0 … Sunday = 6 for a YYYY-MM-DD calendar date. */
+export function weekdayIndexMon0(iso: string): number {
+  const [year, month, day] = iso.split("-").map(Number);
+  const dow = new Date(Date.UTC(year, month - 1, day)).getUTCDay();
+  return dow === 0 ? 6 : dow - 1;
+}
+
+export const WEEKDAY_NAMES_MON = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
+
+export function weekdayShort(iso: string): string {
+  return WEEKDAY_NAMES_MON[weekdayIndexMon0(iso)] ?? "";
+}
+
 export type FoodParts = {
   protein: string;
   starch: string;
