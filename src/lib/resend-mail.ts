@@ -340,6 +340,8 @@ export function transactionalSubject(kind: string): string {
       return `${BRAND_NAME} message from your coach`;
     case "welcome":
       return `Welcome to ${BRAND_NAME}`;
+    case "join-link":
+      return `Your invite to ${BRAND_NAME}`;
     case "intro booked":
       return `You're booked with Jeremy`;
     case "workout-complete":

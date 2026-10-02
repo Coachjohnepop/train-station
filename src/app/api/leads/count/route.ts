@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { listLeads } from "@/lib/waitlist";
 import { getSessionUser, isStaffRole } from "@/lib/auth";
+import { normalizeLeadLane } from "@/lib/waitlist-lane";
 
 export const dynamic = "force-dynamic";
 
@@ -17,13 +18,14 @@ export async function GET(request: NextRequest) {
   }
 
   const leads = await listLeads();
-  const total = leads.length;
+  const active = leads.filter((lead) => normalizeLeadLane(lead.lane) !== "archive");
+  const total = active.length;
 
   const since = request.nextUrl.searchParams.get("since");
   const sinceTime = since ? new Date(since).getTime() : NaN;
   const newCount = Number.isNaN(sinceTime)
     ? total
-    : leads.filter((l) => new Date(l.createdAt).getTime() > sinceTime).length;
+    : active.filter((l) => new Date(l.createdAt).getTime() > sinceTime).length;
 
   return NextResponse.json({ total, new: newCount });
 }

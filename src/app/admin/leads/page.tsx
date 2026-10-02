@@ -14,9 +14,13 @@ export default async function AdminLeadsPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Leads</h1>
           <p className="text-sm text-[var(--muted)]">
-            Everyone who pre-signed up from the landing page. Click{" "}
-            <strong className="font-medium text-[var(--text)]">Date</strong> to
-            sort newest ↔ oldest.
+            Everyone who pre-signed up from the landing page. Use{" "}
+            <strong className="font-medium text-[var(--text)]">Drip Campaign</strong>,{" "}
+            <strong className="font-medium text-[var(--text)]">Convert and send join link</strong>,
+            or <strong className="font-medium text-[var(--text)]">Archive</strong> to sort the
+            list. Click{" "}
+            <strong className="font-medium text-[var(--text)]">Date</strong> to sort newest ↔
+            oldest.
           </p>
         </div>
         <div className="rounded-lg border border-[var(--border)] bg-[var(--surface-2)] px-4 py-2 text-center">
@@ -27,16 +31,7 @@ export default async function AdminLeadsPage() {
         </div>
       </div>
 
-      {leads.length === 0 ? (
-        <div className="card flex flex-col items-center justify-center gap-2 py-16 text-center">
-          <p className="text-sm font-medium">No leads yet.</p>
-          <p className="text-xs text-[var(--muted)]">
-            New pre-sign-ups from the landing page will appear here.
-          </p>
-        </div>
-      ) : (
-        <AdminLeadsTable leads={leads} />
-      )}
+      <AdminLeadsTable leads={leads} />
     </div>
   );
 }

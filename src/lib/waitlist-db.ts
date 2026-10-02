@@ -2,6 +2,7 @@ import "server-only";
 
 import type { WaitlistEntry } from "@/lib/waitlist";
 import { prisma } from "@/lib/prisma";
+import { normalizeLeadLane } from "@/lib/waitlist-lane";
 
 function toIso(value: Date): string {
   return value.toISOString();
@@ -17,6 +18,9 @@ function rowToEntry(row: {
   plan: string | null;
   source: string | null;
   createdAt: Date;
+  lane: string;
+  laneAt: Date | null;
+  joinLinkSentAt: Date | null;
 }): WaitlistEntry {
   return {
     id: row.id,
@@ -28,6 +32,9 @@ function rowToEntry(row: {
     plan: row.plan,
     source: row.source,
     createdAt: toIso(row.createdAt),
+    lane: normalizeLeadLane(row.lane),
+    laneAt: row.laneAt ? toIso(row.laneAt) : null,
+    joinLinkSentAt: row.joinLinkSentAt ? toIso(row.joinLinkSentAt) : null,
   };
 }
 
@@ -42,6 +49,9 @@ function entryToRow(entry: WaitlistEntry) {
     plan: entry.plan ?? null,
     source: entry.source ?? null,
     createdAt: new Date(entry.createdAt),
+    lane: normalizeLeadLane(entry.lane),
+    laneAt: entry.laneAt ? new Date(entry.laneAt) : null,
+    joinLinkSentAt: entry.joinLinkSentAt ? new Date(entry.joinLinkSentAt) : null,
   };
 }
 
@@ -69,6 +79,9 @@ export async function upsertWaitlistEntryToDb(entry: WaitlistEntry): Promise<voi
       phone: data.phone,
       plan: data.plan,
       source: data.source,
+      lane: data.lane,
+      laneAt: data.laneAt,
+      joinLinkSentAt: data.joinLinkSentAt,
     },
   });
 }

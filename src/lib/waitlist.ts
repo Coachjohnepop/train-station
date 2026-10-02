@@ -14,6 +14,7 @@ import {
   listWaitlistFromDb,
   upsertWaitlistEntryToDb,
 } from "@/lib/waitlist-db";
+import { normalizeLeadLane, type LeadLane } from "@/lib/waitlist-lane";
 
 export type WaitlistEntry = {
   id: string;
@@ -25,7 +26,19 @@ export type WaitlistEntry = {
   plan?: string | null;
   source?: string | null;
   createdAt: string;
+  lane?: LeadLane;
+  laneAt?: string | null;
+  joinLinkSentAt?: string | null;
 };
+
+function withLane(entry: WaitlistEntry): WaitlistEntry {
+  return {
+    ...entry,
+    lane: normalizeLeadLane(entry.lane),
+    laneAt: entry.laneAt ?? null,
+    joinLinkSentAt: entry.joinLinkSentAt ?? null,
+  };
+}
 
 type WaitlistStore = {
   entries: WaitlistEntry[];
@@ -65,7 +78,7 @@ export async function addToWaitlist(input: {
   if (!isDemoMode()) {
     const existing = await getWaitlistEntryByEmailFromDb(email);
     if (existing) {
-      const updated: WaitlistEntry = {
+      const updated: WaitlistEntry = withLane({
         ...existing,
         firstName: firstName ?? existing.firstName,
         lastName: lastName ?? existing.lastName,
@@ -73,12 +86,12 @@ export async function addToWaitlist(input: {
         name: name !== "Guest" ? name : existing.name,
         plan: input.plan ?? existing.plan,
         source: input.source ?? existing.source,
-      };
+      });
       await upsertWaitlistEntryToDb(updated);
       return updated;
     }
 
-    const entry: WaitlistEntry = {
+    const entry: WaitlistEntry = withLane({
       id: randomUUID(),
       email,
       name,
@@ -88,7 +101,8 @@ export async function addToWaitlist(input: {
       plan: input.plan || null,
       source: input.source || null,
       createdAt: new Date().toISOString(),
-    };
+      lane: "inbox",
+    });
     await upsertWaitlistEntryToDb(entry);
     return entry;
   }
@@ -104,10 +118,10 @@ export async function addToWaitlist(input: {
     if (input.plan) existing.plan = input.plan;
     if (input.source) existing.source = input.source;
     await writeStore(store);
-    return existing;
+    return withLane(existing);
   }
 
-  const entry: WaitlistEntry = {
+  const entry: WaitlistEntry = withLane({
     id: randomUUID(),
     email,
     name,
@@ -117,7 +131,8 @@ export async function addToWaitlist(input: {
     plan: input.plan || null,
     source: input.source || null,
     createdAt: new Date().toISOString(),
-  };
+    lane: "inbox",
+  });
 
   store.entries.unshift(entry);
   await writeStore(store);
@@ -125,8 +140,8 @@ export async function addToWaitlist(input: {
 }
 
 export async function listWaitlist(): Promise<WaitlistEntry[]> {
-  if (!isDemoMode()) return listWaitlistFromDb();
-  return (await readStore()).entries;
+  if (!isDemoMode()) return (await listWaitlistFromDb()).map(withLane);
+  return (await readStore()).entries.map(withLane);
 }
 
 export async function clearWaitlist(): Promise<void> {
@@ -169,20 +184,54 @@ export async function listLeads(): Promise<WaitlistEntry[]> {
     const firstName = nameParts.shift() || null;
     const lastName = nameParts.join(" ") || null;
 
-    byEmail.set(key, {
-      id: account.userId,
-      email: key,
-      name: account.name || "Member",
-      firstName,
-      lastName,
-      phone: account.phone ?? profile?.phone ?? null,
-      plan: profile?.plan ?? null,
-      source: "signup-register",
-      createdAt: account.createdAt,
-    });
+    byEmail.set(
+      key,
+      withLane({
+        id: account.userId,
+        email: key,
+        name: account.name || "Member",
+        firstName,
+        lastName,
+        phone: account.phone ?? profile?.phone ?? null,
+        plan: profile?.plan ?? null,
+        source: "signup-register",
+        createdAt: account.createdAt,
+        lane: "inbox",
+      }),
+    );
   }
 
-  return [...byEmail.values()].sort(
-    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-  );
+  return [...byEmail.values()]
+    .map(withLane)
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+}
+
+export async function setLeadLane(
+  email: string,
+  lane: LeadLane,
+): Promise<WaitlistEntry | null> {
+  const normalized = email.trim().toLowerCase();
+  const now = new Date().toISOString();
+  const existing = (await listLeads()).find((entry) => entry.email.toLowerCase() === normalized);
+  if (!existing) return null;
+
+  const updated = withLane({
+    ...existing,
+    email: normalized,
+    lane,
+    laneAt: now,
+    joinLinkSentAt: lane === "convert" ? now : existing.joinLinkSentAt ?? null,
+  });
+
+  if (!isDemoMode()) {
+    await upsertWaitlistEntryToDb(updated);
+    return updated;
+  }
+
+  const store = await readStore();
+  const index = store.entries.findIndex((entry) => entry.email.toLowerCase() === normalized);
+  if (index >= 0) store.entries[index] = updated;
+  else store.entries.unshift(updated);
+  await writeStore(store);
+  return updated;
 }

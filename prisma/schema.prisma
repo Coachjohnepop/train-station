@@ -1166,18 +1166,22 @@ model StripeWebhookEvent {
 }
 
 model WaitlistEntry {
-  id        String   @id
-  email     String   @unique
-  name      String
-  firstName String?
-  lastName  String?
-  phone     String?
-  plan      String?
-  source    String?
-  createdAt DateTime
+  id             String    @id
+  email          String    @unique
+  name           String
+  firstName      String?
+  lastName       String?
+  phone          String?
+  plan           String?
+  source         String?
+  createdAt      DateTime
+  lane           String    @default("inbox")
+  laneAt         DateTime?
+  joinLinkSentAt DateTime?
 
   @@index([createdAt])
   @@index([plan])
+  @@index([lane])
 }
 
 model CustomTrainingOffer {
