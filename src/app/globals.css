@@ -593,6 +593,16 @@ a {
   box-shadow: 0 0 0 3px var(--accent-glow);
 }
 
+/* Native menus must paint above clipped cards — iOS Safari drops <select>
+   when an ancestor is overflow:hidden or appearance is stripped. */
+select.input {
+  appearance: auto;
+  -webkit-appearance: menulist;
+  position: relative;
+  z-index: 10;
+  min-height: 44px;
+}
+
 /* Scroll-snap time wheels (mobile-friendly) */
 .time-wheel-column {
   -webkit-overflow-scrolling: touch;

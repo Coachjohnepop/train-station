@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import AdminMemberEquipmentModal from "@/components/AdminMemberEquipmentModal";
 import AdminMemberMeasurementsModal from "@/components/AdminMemberMeasurementsModal";
 import PhoneInput from "@/components/PhoneInput";
@@ -154,6 +154,7 @@ export default function AdminMemberCard({ userId }: { userId: string }) {
   const [equipmentOpen, setEquipmentOpen] = useState(false);
   const [measurementsOpen, setMeasurementsOpen] = useState(false);
   const [upgradeActing, setUpgradeActing] = useState<"approve" | "decline" | null>(null);
+  const calorieRef = useRef<HTMLDivElement>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -182,6 +183,13 @@ export default function AdminMemberCard({ userId }: { userId: string }) {
     const id = window.setTimeout(() => setSaveFlash(0), 1800);
     return () => window.clearTimeout(id);
   }, [saveFlash]);
+
+  useEffect(() => {
+    if (!card) return;
+    if (typeof window === "undefined") return;
+    if (window.location.hash !== "#intake-calorie-thresholds") return;
+    calorieRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }, [card]);
 
   const dirty = useMemo(() => {
     if (!card) return false;
@@ -253,6 +261,8 @@ export default function AdminMemberCard({ userId }: { userId: string }) {
       setError(
         "Set the daily calorie minimum, range top, and hard total before signing off the 15-minute intro.",
       );
+      calorieRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      calorieRef.current?.querySelector("input")?.focus();
       return;
     }
     setIntakeSigning(true);
@@ -404,7 +414,7 @@ export default function AdminMemberCard({ userId }: { userId: string }) {
         </div>
       ) : null}
 
-      <section className="relative overflow-hidden rounded-[28px] border-2 border-[color-mix(in_srgb,var(--ramp-gold)_42%,var(--border))] bg-[var(--surface)] shadow-[0_24px_60px_rgba(0,0,0,0.28)]">
+      <section className="relative overflow-visible rounded-[28px] border-2 border-[color-mix(in_srgb,var(--ramp-gold)_42%,var(--border))] bg-[var(--surface)] shadow-[0_24px_60px_rgba(0,0,0,0.28)]">
         {saveFlash > 0 ? (
           <div key={saveFlash} className="pointer-events-none absolute inset-0 z-20" aria-live="polite">
             <div className="member-card-save-ring absolute inset-0 rounded-[26px]" />
@@ -705,6 +715,8 @@ export default function AdminMemberCard({ userId }: { userId: string }) {
             </div>
 
             <div
+              id="intake-calorie-thresholds"
+              ref={calorieRef}
               className={`rounded-xl border p-4 ${
                 !intakeDone && !calorieThresholdsReady()
                   ? "border-amber-400/50"
@@ -773,7 +785,8 @@ export default function AdminMemberCard({ userId }: { userId: string }) {
           </div>
         </div>
 
-        <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--border)] px-6 py-4">
+        <footer className="sticky z-30 flex flex-wrap items-center justify-between gap-3 border-t border-[var(--border)] bg-[var(--surface)] px-6 py-4 max-xl:bottom-[calc(var(--app-bottom-nav-height)+env(safe-area-inset-bottom,0px))] xl:bottom-0">
+          {error ? <p className="w-full text-sm text-amber-300">{error}</p> : null}
           <p className="text-[11px] text-[var(--muted)]">
             Signed up {formatWhen(card.createdAt)}
             {profile.introBookedAt ? ` · Intro booked ${formatWhen(profile.introBookedAt)}` : ""}
@@ -802,13 +815,8 @@ export default function AdminMemberCard({ userId }: { userId: string }) {
               <button
                 type="button"
                 onClick={() => void signOffIntake()}
-                disabled={intakeSigning || !calorieThresholdsReady()}
-                title={
-                  calorieThresholdsReady()
-                    ? "Sign off the 15-minute intro"
-                    : "Set calorie thresholds first"
-                }
-                className="btn-ghost text-xs px-4 py-2 ring-1 ring-sky-500/40 text-sky-300 disabled:opacity-50"
+                disabled={intakeSigning}
+                className="btn-primary min-h-[44px] px-4 py-2 text-sm font-semibold"
               >
                 {intakeSigning ? "…" : "Sign off intake"}
               </button>

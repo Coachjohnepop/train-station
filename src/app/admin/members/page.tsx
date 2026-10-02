@@ -255,6 +255,12 @@ export default function AdminMembersPage() {
   }
 
   async function completeIntake(userId: string) {
+    const member = members.find((row) => row.userId === userId);
+    if (member && !member.calorieThresholdsReady) {
+      setError("Set calorie thresholds on the member card, then sign off intake.");
+      window.location.assign(`${memberCardPath(userId)}#intake-calorie-thresholds`);
+      return;
+    }
     setIntakeSigning(userId);
     setError("");
     const res = await fetch(`/api/admin/members/${encodeURIComponent(userId)}/intake`, {
@@ -650,7 +656,57 @@ export default function AdminMembersPage() {
           </p>
         </div>
       ) : (
-        <div className="card overflow-x-auto p-0">
+        <>
+        <div className="space-y-3 md:hidden">
+          {visibleMembers.map((member) => (
+            <article
+              key={member.userId}
+              className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4"
+            >
+              <Link
+                href={memberCardPath(member.userId)}
+                className="text-base font-semibold hover:text-accent"
+              >
+                {member.name}
+              </Link>
+              <p className="mt-0.5 text-xs text-[var(--muted)]">
+                {member.planLabel || signupPlanLabel(member.plan as "explorer")} · {member.email}
+              </p>
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {member.coachIntakeCompleteAt ? (
+                  <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase text-emerald-300">
+                    Intake done
+                  </span>
+                ) : member.onboardingComplete ? (
+                  <span className="rounded-full bg-sky-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase text-sky-300">
+                    Needs intake
+                  </span>
+                ) : null}
+                {statusChip(member.approvalStatus, "approval")}
+                {statusChip(member.paymentStatus, "payment")}
+              </div>
+              <div className="mt-3 flex flex-col gap-2">
+                <Link
+                  href={memberCardPath(member.userId)}
+                  className="btn-primary flex min-h-[44px] items-center justify-center px-4 text-sm font-semibold"
+                >
+                  Open member card
+                </Link>
+                {member.onboardingComplete && !member.coachIntakeCompleteAt ? (
+                  <button
+                    type="button"
+                    onClick={() => void completeIntake(member.userId)}
+                    disabled={intakeSigning === member.userId}
+                    className="btn-ghost min-h-[44px] px-4 text-sm font-semibold ring-1 ring-sky-500/40 text-sky-300"
+                  >
+                    {intakeSigning === member.userId ? "…" : "Sign off intake"}
+                  </button>
+                ) : null}
+              </div>
+            </article>
+          ))}
+        </div>
+        <div className="card hidden overflow-x-auto p-0 md:block">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-[var(--border)] text-left text-[10px] uppercase tracking-[2px] text-[var(--muted)]">
@@ -881,13 +937,8 @@ export default function AdminMembersPage() {
                         <button
                           type="button"
                           onClick={() => void completeIntake(member.userId)}
-                          disabled={intakeSigning === member.userId || !member.calorieThresholdsReady}
-                          title={
-                            member.calorieThresholdsReady
-                              ? "Sign off the 15-minute intro"
-                              : "Open the member card and set calorie thresholds first"
-                          }
-                          className="btn-ghost text-xs px-3 py-1.5 ring-1 ring-sky-500/40 text-sky-300 disabled:opacity-50"
+                          disabled={intakeSigning === member.userId}
+                          className="btn-ghost min-h-[44px] px-3 py-1.5 text-xs ring-1 ring-sky-500/40 text-sky-300 sm:min-h-0"
                         >
                           {intakeSigning === member.userId ? "…" : "Sign off intake"}
                         </button>
@@ -957,6 +1008,7 @@ export default function AdminMembersPage() {
             </tbody>
           </table>
         </div>
+        </>
       )}
       </div>
 

@@ -67,6 +67,12 @@ export default function AdminQueuePanel() {
   }
 
   async function completeIntake(userId: string) {
+    const item = items.find((row) => row.userId === userId);
+    if (item && !item.calorieThresholdsReady) {
+      setError("Set calorie thresholds on the member card, then sign off intake.");
+      window.location.assign(`${memberCardPath(userId)}#intake-calorie-thresholds`);
+      return;
+    }
     setIntakeSigning(userId);
     setError("");
     const res = await fetch(`/api/admin/members/${encodeURIComponent(userId)}/intake`, {
@@ -155,21 +161,16 @@ export default function AdminQueuePanel() {
         return (
           <>
             <Link
-              href={memberCardPath(item.userId)}
-              className="btn-ghost text-xs px-3 py-1.5 ring-1 ring-[color-mix(in_srgb,var(--ramp-gold)_50%,transparent)] text-[var(--ramp-gold-light)]"
+              href={`${memberCardPath(item.userId)}#intake-calorie-thresholds`}
+              className="btn-ghost min-h-[44px] px-3 py-2 text-sm ring-1 ring-[color-mix(in_srgb,var(--ramp-gold)_50%,transparent)] text-[var(--ramp-gold-light)] sm:min-h-0 sm:px-3 sm:py-1.5 sm:text-xs"
             >
               Member card
             </Link>
             <button
               type="button"
               onClick={() => void completeIntake(item.userId)}
-              disabled={intakeSigning === item.userId || !item.calorieThresholdsReady}
-              title={
-                item.calorieThresholdsReady
-                  ? "Sign off the 15-minute intro"
-                  : "Open the member card and set calorie thresholds first"
-              }
-              className="btn-ghost text-xs px-3 py-1.5 ring-1 ring-sky-500/40 text-sky-300 disabled:opacity-50"
+              disabled={intakeSigning === item.userId}
+              className="btn-ghost min-h-[44px] px-3 py-2 text-sm ring-1 ring-sky-500/40 text-sky-300 sm:min-h-0 sm:px-3 sm:py-1.5 sm:text-xs"
             >
               {intakeSigning === item.userId ? "…" : "Accept intake"}
             </button>
