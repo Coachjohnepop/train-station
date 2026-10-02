@@ -265,8 +265,9 @@ export default function LandingHero({
             : "pb-[max(2.75rem,calc(env(safe-area-inset-bottom)+4.5rem))]"
         }`}>
           <div className="landing-hero-stack flex w-full max-w-md flex-col items-center sm:max-w-xl">
-            <p className="landing-hero-kicker mb-2.5 font-extrabold uppercase text-[#e9d5ff] drop-shadow-[0_2px_14px_rgba(0,0,0,0.95)] sm:mb-3">
-              The Train Station
+            <p className="landing-hero-kicker mb-3 font-black uppercase text-[#e9d5ff] drop-shadow-[0_2px_14px_rgba(0,0,0,0.95)] sm:mb-4">
+              <span className="block">The Train</span>
+              <span className="block">Station</span>
             </p>
 
             {variant === "jeremy" ? (
@@ -313,7 +314,7 @@ export default function LandingHero({
                     markLandingConverted();
                     fireLandingJoinHook(e.currentTarget);
                   }}
-                  className={`${primaryCta} min-h-[4.05rem] text-[23.5px] sm:min-h-[4.05rem] sm:text-[24px]`}
+                  className={`${primaryCta} h-[2.05rem] min-h-[2.05rem] px-4 text-[12px] sm:h-[2.05rem] sm:min-h-[2.05rem] sm:text-[12px]`}
                 >
                   Grab Your Ticket
                 </Link>
@@ -321,7 +322,7 @@ export default function LandingHero({
                   type="button"
                   data-analytics-action={returnMode ? "hero-free-tour-return" : "hero-free-tour"}
                   onClick={() => setTourOpen(true)}
-                  className={`${secondaryCta} min-h-[4.05rem] text-[22.5px] sm:min-h-[4.05rem] sm:text-[23.2px]`}
+                  className={`${secondaryCta} h-[2.05rem] min-h-[2.05rem] px-4 text-[11px] sm:h-[2.05rem] sm:min-h-[2.05rem] sm:text-[11.6px]`}
                 >
                   How it Works
                 </button>
@@ -331,7 +332,7 @@ export default function LandingHero({
                   aria-expanded={exploreOpen}
                   aria-controls="explore-content"
                   onClick={(e) => onExplore?.(e.currentTarget)}
-                  className="landing-hero-explore-cta inline-flex min-h-[3.45rem] w-full items-center justify-center gap-2.5 rounded-full px-8 text-[21px] font-bold tracking-tight sm:min-h-[3.7rem] sm:text-[21.6px]"
+                  className="landing-hero-explore-cta inline-flex h-[1.75rem] min-h-[1.75rem] w-full items-center justify-center gap-1.5 rounded-full px-4 text-[10.5px] font-bold tracking-tight sm:h-[1.85rem] sm:min-h-[1.85rem] sm:text-[11px]"
                 >
                   Explore Content
                   <span
@@ -478,7 +479,7 @@ function JeremyHeroStack({
               markLandingConverted();
               fireLandingJoinHook(e.currentTarget);
             }}
-            className={`${primaryCta} min-h-[4.05rem] text-[23.5px] sm:min-h-[4.05rem] sm:text-[24px]`}
+            className={`${primaryCta} h-[2.05rem] min-h-[2.05rem] px-4 text-[12px] sm:h-[2.05rem] sm:min-h-[2.05rem] sm:text-[12px]`}
           >
             Grab Your Ticket
           </Link>
@@ -486,7 +487,7 @@ function JeremyHeroStack({
             type="button"
             data-analytics-action="hero-b-want-jeremy"
             onClick={() => onTour("jeremy")}
-            className={`${secondaryCta} min-h-[4.05rem] text-[22.5px] sm:min-h-[4.05rem] sm:text-[23.2px]`}
+            className={`${secondaryCta} h-[2.05rem] min-h-[2.05rem] px-4 text-[11px] sm:h-[2.05rem] sm:min-h-[2.05rem] sm:text-[11.6px]`}
           >
             See the program
           </button>
@@ -494,7 +495,7 @@ function JeremyHeroStack({
             type="button"
             data-analytics-action="hero-b-have-workout"
             onClick={() => onTour("today")}
-            className="landing-hero-explore-cta inline-flex min-h-[3.45rem] w-full items-center justify-center rounded-full px-8 text-[21px] font-bold tracking-tight sm:min-h-[3.7rem] sm:text-[21.6px]"
+            className="landing-hero-explore-cta inline-flex h-[1.75rem] min-h-[1.75rem] w-full items-center justify-center rounded-full px-4 text-[10.5px] font-bold tracking-tight sm:h-[1.85rem] sm:min-h-[1.85rem] sm:text-[11px]"
           >
             Track Your Current Workout
           </button>

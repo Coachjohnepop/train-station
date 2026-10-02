@@ -1887,20 +1887,23 @@ html:has([data-landing-explore="open"]) {
     0 2px 12px rgba(0, 0, 0, 0.7);
 }
 
-/* +8 from 10px. 320px phones cannot hold 18px with this tracking, so only that width steps back to 16px. */
+/* Two-line wordmark: 2× the old 18/19px kicker, heavier, stacked The Train / Station. */
 .landing-hero-kicker {
-  font-size: 18px !important;
-  letter-spacing: 0.4em !important;
+  font-size: 36px !important;
+  font-weight: 900 !important;
+  letter-spacing: 0.12em !important;
+  line-height: 0.92 !important;
 }
 @media (max-width: 339px) {
   .landing-hero-kicker {
-    font-size: 16px !important;
+    font-size: 32px !important;
+    letter-spacing: 0.08em !important;
   }
 }
 @media (min-width: 640px) {
   .landing-hero-kicker {
-    font-size: 19px !important;
-    letter-spacing: 0.45em !important;
+    font-size: 38px !important;
+    letter-spacing: 0.14em !important;
   }
 }
 
@@ -2020,6 +2023,10 @@ html:has([data-landing-explore="open"]) {
   overflow: visible;
 }
 
+.landing-b-start-btns .choice-stack > div {
+  gap: 0.375rem !important;
+}
+
 /* B hero: 35% see-through so less of Jeremy shows. Gold stays rich. Letters stay solid. */
 .landing-b-start-btns .landing-hero-early-signup,
 .landing-b-start-btns .landing-hero-explore-cta {
@@ -2030,20 +2037,20 @@ html:has([data-landing-explore="open"]) {
     rgba(124, 58, 237, 0.65) 58%,
     rgba(91, 33, 182, 0.65) 100%
   ) !important;
-  border: 3px solid rgba(76, 29, 149, 0.65) !important;
+  border: 2px solid rgba(76, 29, 149, 0.65) !important;
   box-shadow:
-    0 3px 0 rgba(91, 33, 182, 0.65),
-    0 7px 0 rgba(59, 7, 100, 0.65),
-    0 11px 0 rgba(46, 16, 101, 0.65),
+    0 1.5px 0 rgba(91, 33, 182, 0.65),
+    0 3.5px 0 rgba(59, 7, 100, 0.65),
+    0 5.5px 0 rgba(46, 16, 101, 0.65),
     inset 0 1px 0 rgba(255, 255, 255, 0.22),
-    0 14px 22px rgba(0, 0, 0, 0.22) !important;
+    0 7px 11px rgba(0, 0, 0, 0.22) !important;
 }
 
 .landing-b-start-btns .landing-hero-early-signup,
 .landing-b-start-btns .landing-hero-early-signup:hover {
   color: #ffd24a !important;
   -webkit-text-fill-color: #ffd24a !important;
-  -webkit-text-stroke: 1.6px #000;
+  -webkit-text-stroke: 0.8px #000;
   paint-order: stroke fill;
   text-shadow: none;
 }
@@ -2069,18 +2076,18 @@ html:has([data-landing-explore="open"]) {
     rgba(196, 132, 6, 0.92) 68%,
     rgba(138, 90, 4, 0.92) 100%
   ) !important;
-  border: 3px solid rgba(122, 84, 4, 0.92) !important;
+  border: 2px solid rgba(122, 84, 4, 0.92) !important;
   color: #5b21b6 !important;
   -webkit-text-fill-color: #5b21b6 !important;
-  -webkit-text-stroke: 1.35px #ffffff;
+  -webkit-text-stroke: 0.7px #ffffff;
   paint-order: stroke fill;
   text-shadow: none;
   box-shadow:
-    0 3px 0 rgba(196, 132, 6, 0.85),
-    0 7px 0 rgba(138, 90, 4, 0.85),
-    0 11px 0 rgba(92, 58, 2, 0.85),
+    0 1.5px 0 rgba(196, 132, 6, 0.85),
+    0 3.5px 0 rgba(138, 90, 4, 0.85),
+    0 5.5px 0 rgba(92, 58, 2, 0.85),
     inset 0 1px 0 rgba(255, 236, 160, 0.45),
-    0 14px 22px rgba(0, 0, 0, 0.22) !important;
+    0 7px 11px rgba(0, 0, 0, 0.22) !important;
 }
 
 .landing-b-start-btns .landing-hero-secondary-cta:hover {
@@ -2096,29 +2103,38 @@ html:has([data-landing-explore="open"]) {
 .landing-b-start-btns .landing-hero-explore-cta:hover {
   color: #ffd24a !important;
   -webkit-text-fill-color: #ffd24a !important;
-  -webkit-text-stroke: 1.35px #000;
+  -webkit-text-stroke: 0.7px #000;
   paint-order: stroke fill;
   text-shadow: none;
 }
 
-.landing-b-start-btns .landing-hero-early-signup {
-  font-size: 23.5px !important;
-}
+.landing-b-start-btns .landing-hero-early-signup,
 .landing-b-start-btns .landing-hero-secondary-cta {
-  font-size: 22.5px !important;
+  height: 2.05rem !important;
+  min-height: 2.05rem !important;
 }
 .landing-b-start-btns .landing-hero-explore-cta {
-  font-size: 21px !important;
+  height: 1.75rem !important;
+  min-height: 1.75rem !important;
+}
+.landing-b-start-btns .landing-hero-early-signup {
+  font-size: 12px !important;
+}
+.landing-b-start-btns .landing-hero-secondary-cta {
+  font-size: 11px !important;
+}
+.landing-b-start-btns .landing-hero-explore-cta {
+  font-size: 10.5px !important;
 }
 @media (min-width: 640px) {
   .landing-b-start-btns .landing-hero-early-signup {
-    font-size: 24px !important;
+    font-size: 12px !important;
   }
   .landing-b-start-btns .landing-hero-secondary-cta {
-    font-size: 23.2px !important;
+    font-size: 11.6px !important;
   }
   .landing-b-start-btns .landing-hero-explore-cta {
-    font-size: 21.6px !important;
+    font-size: 10.8px !important;
   }
 }
 
@@ -2143,9 +2159,9 @@ html:has([data-landing-explore="open"]) {
   display: inline-block;
   width: 0;
   height: 0;
-  border-left: 7px solid transparent;
-  border-right: 7px solid transparent;
-  border-top: 8px solid currentColor;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 4px solid currentColor;
   transform: translateY(1px);
   transition: transform 0.25s ease;
 }
