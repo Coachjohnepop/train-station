@@ -49,6 +49,19 @@ export function normalizeCoachLoginRedirect(redirect: string | null | undefined)
   return raw.startsWith("/admin") ? raw : defaultCoachAdminPath();
 }
 
+/** Honor Member / Coach / Admin picks from the site login menu. */
+export function staffLoginDestination(
+  role: UserRole,
+  redirect?: string | null,
+): string {
+  const fallback = defaultStaffLandingPath(role);
+  const raw = redirect?.trim();
+  if (!raw || !raw.startsWith("/") || raw.startsWith("//")) return fallback;
+  if (raw.startsWith("/admin")) return normalizeCoachLoginRedirect(raw);
+  if (raw.startsWith("/member")) return raw;
+  return fallback;
+}
+
 export function staffWorkspaceLabel(role: UserRole): string {
   if (hasDualStaffWorkspace(role)) return "Staff";
   if (role === "PLATFORM_ADMIN") return "Platform admin";

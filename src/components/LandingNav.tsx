@@ -11,6 +11,7 @@ import {
 } from "@/lib/landing-nav";
 import { signOutNow } from "@/lib/logout-url";
 import ThemeModeToggle from "@/components/ThemeModeToggle";
+import SiteLoginMenu from "@/components/SiteLoginMenu";
 import { type PurchaseAuth } from "@/lib/member-purchase-path";
 import { isStaffRole, signedInAppPath } from "@/lib/staff-access";
 import { openFreeQuickTour } from "@/lib/free-quick-tour";
@@ -243,9 +244,18 @@ export default function LandingNav({
             ) : null}
             {!isWelcome && purchaseAuth.signedIn ? (
               <>
-                <Link href={memberHomeHref} className="landing-nav__link" onClick={closeMenus}>
-                  Today
-                </Link>
+                {purchaseAuth.role && isStaffRole(purchaseAuth.role) ? (
+                  <SiteLoginMenu
+                    variant="nav"
+                    signedIn
+                    currentEmail={purchaseAuth.email}
+                    onNavigate={closeMenus}
+                  />
+                ) : (
+                  <Link href={memberHomeHref} className="landing-nav__link" onClick={closeMenus}>
+                    Today
+                  </Link>
+                )}
                 <button
                   type="button"
                   onClick={() => {
@@ -259,14 +269,15 @@ export default function LandingNav({
             ) : null}
             {/* Desktop has no hamburger — keep Sign in available (muted). Free Tour is top-right. */}
             {!isWelcome && !purchaseAuth.signedIn ? (
-              <Link href="/login" className="landing-nav__link text-[var(--muted)]" onClick={closeMenus}>
-                Sign in
-              </Link>
+              <SiteLoginMenu variant="nav" onNavigate={closeMenus} />
             ) : null}
           </nav>
         </div>
 
         <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
+          {guestHome && !purchaseAuth.signedIn ? (
+            <SiteLoginMenu variant="nav-compact" onNavigate={closeMenus} />
+          ) : null}
           {!isWelcome && purchaseAuth.signedIn ? (
             <button
               type="button"
@@ -367,13 +378,22 @@ export default function LandingNav({
               : null}
             {purchaseAuth.signedIn ? (
               <>
-                <a
-                  href={memberHomeHref}
-                  className="block rounded-lg px-2 py-2 text-sm font-semibold text-[var(--accent-fg)] hover:bg-[var(--surface-2)]"
-                  onClick={closeMenus}
-                >
-                  Today
-                </a>
+                {purchaseAuth.role && isStaffRole(purchaseAuth.role) ? (
+                  <SiteLoginMenu
+                    variant="panel"
+                    signedIn
+                    currentEmail={purchaseAuth.email}
+                    onNavigate={closeMenus}
+                  />
+                ) : (
+                  <a
+                    href={memberHomeHref}
+                    className="block rounded-lg px-2 py-2 text-sm font-semibold text-[var(--accent-fg)] hover:bg-[var(--surface-2)]"
+                    onClick={closeMenus}
+                  >
+                    Today
+                  </a>
+                )}
                 <a
                   href={memberHomeHref}
                   className="block rounded-lg px-2 py-2 text-sm text-[var(--text)] hover:bg-[var(--surface-2)]"
@@ -431,17 +451,13 @@ export default function LandingNav({
                 >
                   How it Works
                 </button>
-                <Link
-                  href="/login"
-                  data-analytics-action="menu-sign-in"
-                  className="block rounded-lg px-2 py-2 text-sm text-[var(--text)] hover:bg-[var(--surface-2)]"
-                  onClick={() => {
+                <SiteLoginMenu
+                  variant="panel"
+                  onNavigate={() => {
                     noteConverted();
                     closeMenus();
                   }}
-                >
-                  Sign in
-                </Link>
+                />
               </>
             )}
           </div>

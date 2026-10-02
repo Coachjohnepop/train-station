@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import EmailInput, { rememberEmail } from "@/components/EmailInput";
 import PasswordInput from "@/components/PasswordInput";
+import SiteLoginMenu from "@/components/SiteLoginMenu";
+import type { LoginAccountOption } from "@/lib/login-accounts";
 import { offerSavePassword, offerSavePasswordFromForm } from "@/lib/browser-credentials";
 import { useFormAutofillSync } from "@/hooks/useFormAutofillSync";
 import { clearRememberedEmail, getLastEmail } from "@/lib/email-history";
@@ -35,7 +37,9 @@ function LoginForm() {
   const switchAccount = searchParams.get("switch") === "1";
   const passwordUpdated = searchParams.get("passwordUpdated") === "1";
   const oauthError = searchParams.get("oauthError");
-  const coachLogin = redirect.startsWith("/admin");
+  const [workspaceRedirect, setWorkspaceRedirect] = useState(redirect);
+  const coachLogin = (workspaceRedirect || redirect).startsWith("/admin");
+  const adminLogin = (workspaceRedirect || redirect).startsWith("/admin/platform");
 
   const [email, setEmail] = useState(() => {
     if (switchAccount) return "";
@@ -128,6 +132,19 @@ function LoginForm() {
     }
   }
 
+  function pickLoginAccount(option: LoginAccountOption) {
+    emailTouchedRef.current = true;
+    setEmail(option.email);
+    setWorkspaceRedirect(option.redirect);
+    setError(null);
+    setShowPasswordForm(false);
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("email", option.email);
+    params.set("redirect", option.redirect);
+    params.delete("switch");
+    router.replace(`/login?${params.toString()}`, { scroll: false });
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (switchAccount && !passwordTouchedRef.current) {
@@ -140,7 +157,7 @@ function LoginForm() {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, redirect }),
+        body: JSON.stringify({ email, password, redirect: workspaceRedirect || redirect }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -235,9 +252,10 @@ function LoginForm() {
           </p>
         )}
 
-        <OAuthButtons mode="login" redirect={redirect} className="mb-4" />
+        <OAuthButtons mode="login" redirect={workspaceRedirect || redirect} className="mb-4" />
         <p className="mb-4 text-center text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">
-          or sign in with email {coachLogin ? "(coach)" : ""}
+          or sign in with email{" "}
+          {adminLogin ? "(admin)" : coachLogin ? "(coach)" : ""}
         </p>
 
         <div className="card mb-4 space-y-3">
@@ -245,16 +263,23 @@ function LoginForm() {
             <label htmlFor="login-username" className="mb-1 block text-xs text-[var(--muted)]">
               Email
             </label>
-            <EmailInput
-              id="login-username"
-              name="username"
-              autoComplete="username"
-              required
-              value={email}
-              onChange={handleEmailChange}
-              placeholder="you@thetrainstation.co"
-              prefillFromHistory={!prefillEmail && !switchAccount}
-            />
+            <div className="relative">
+              <EmailInput
+                id="login-username"
+                name="username"
+                autoComplete="username"
+                required
+                value={email}
+                onChange={handleEmailChange}
+                placeholder="you@thetrainstation.co"
+                prefillFromHistory={!prefillEmail && !switchAccount}
+                className="input w-full pr-12"
+              />
+              <SiteLoginMenu variant="field" onPick={pickLoginAccount} />
+            </div>
+            <p className="mt-1.5 text-[11px] text-[var(--muted)]">
+              John &amp; Jeremy — open the triangle to pick Member, Coach, or Admin.
+            </p>
           </div>
           {email.trim() && (
             <button
@@ -271,7 +296,7 @@ function LoginForm() {
           <>
             <QuickAuthLogin
               email={email}
-              redirect={redirect}
+              redirect={workspaceRedirect || redirect}
               autoStart={!switchAccount}
               onUsePassword={() => setShowPasswordForm(true)}
               onSwitchAccount={switchToDifferentAccount}

@@ -9,7 +9,13 @@ type PurchaseAuthState = PurchaseAuth & { ready: boolean };
 export function usePurchaseAuth(initial?: PurchaseAuth): PurchaseAuthState {
   const [auth, setAuth] = useState<PurchaseAuthState>(() =>
     initial?.signedIn
-      ? { signedIn: true, role: initial.role, ready: true }
+      ? {
+          signedIn: true,
+          role: initial.role,
+          email: initial.email,
+          name: initial.name,
+          ready: true,
+        }
       : { signedIn: false, ready: !initial },
   );
 
@@ -30,6 +36,8 @@ export function usePurchaseAuth(initial?: PurchaseAuth): PurchaseAuthState {
           setAuth({
             signedIn: true,
             role: data.user.role as UserRole,
+            email: typeof data.user.email === "string" ? data.user.email : undefined,
+            name: typeof data.user.name === "string" ? data.user.name : undefined,
             ready: true,
           });
         } else {

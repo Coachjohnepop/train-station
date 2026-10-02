@@ -5,6 +5,8 @@ import { isSignupPlan, normalizeSignupPlan } from "@/lib/signup-plans";
 export type PurchaseAuth = {
   signedIn: boolean;
   role?: UserRole;
+  email?: string;
+  name?: string;
 };
 
 export type PurchaseOptions = {

@@ -359,6 +359,15 @@ async function runMiddleware(request: NextRequest) {
         return NextResponse.redirect(new URL(memberEntryFromRequest(request), request.url));
       }
       if (session && isStaffRole(session.role)) {
+        const redirectParam = request.nextUrl.searchParams.get("redirect");
+        if (
+          redirectParam &&
+          redirectParam.startsWith("/") &&
+          !redirectParam.startsWith("//") &&
+          (redirectParam.startsWith("/member") || redirectParam.startsWith("/admin"))
+        ) {
+          return NextResponse.redirect(new URL(redirectParam, request.url));
+        }
         return NextResponse.redirect(new URL("/admin", request.url));
       }
     }

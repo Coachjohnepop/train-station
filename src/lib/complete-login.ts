@@ -11,7 +11,7 @@ import {
 import {
   defaultStaffLandingPath,
   isStaffRole,
-  normalizeCoachLoginRedirect,
+  staffLoginDestination,
 } from "@/lib/staff-access";
 import {
   applyEmailHistoryCookies,
@@ -68,10 +68,8 @@ export async function resolveLoginDestination(
         destination = redirect;
       }
     }
-  } else if (redirect && redirect.startsWith("/") && !redirect.startsWith("//")) {
-    if (redirect.startsWith("/admin")) {
-      destination = normalizeCoachLoginRedirect(redirect);
-    }
+  } else {
+    destination = staffLoginDestination(user.role, redirect);
   }
 
   return destination;
