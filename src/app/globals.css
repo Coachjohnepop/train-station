@@ -1887,6 +1887,22 @@ html:has([data-landing-explore="open"]) {
     0 2px 12px rgba(0, 0, 0, 0.7);
 }
 
+/* Hero jelly beans: half the screen on every landing (/ , /a, /b, class, floor). */
+.landing-hero-stack .choice-stack > div {
+  align-items: center;
+}
+.landing-hero-stack .landing-hero-early-signup,
+.landing-hero-stack .landing-hero-secondary-cta,
+.landing-hero-stack .landing-hero-explore-cta {
+  width: 50vw !important;
+  max-width: 50vw !important;
+  margin-inline: auto;
+  box-sizing: border-box;
+  padding-left: 0.7rem !important;
+  padding-right: 0.7rem !important;
+  white-space: nowrap;
+}
+
 /* Two-line wordmark: 2× the old 18/19px kicker, heavier, stacked The Train / Station. */
 .landing-hero-kicker {
   font-size: 36px !important;
