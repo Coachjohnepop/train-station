@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import ComingSoonPrograms from "@/components/ComingSoonPrograms";
 import LandingTicketPicker from "@/components/LandingTicketPicker";
+import type { ResolvedExploreCard } from "@/lib/explore-content";
 import { TOP_LEVEL_PROGRAMS } from "@/lib/programs";
 
 /**
@@ -14,11 +15,13 @@ export default function JoinProgramThenTickets({
   welcomeVideoUrl = null,
   gagFullSrc = undefined,
   fromTour = false,
+  exploreCards,
 }: {
   freeChastiseVideoUrl?: string | null;
   welcomeVideoUrl?: string | null;
   gagFullSrc?: string;
   fromTour?: boolean;
+  exploreCards?: ResolvedExploreCard[];
 }) {
   const [program, setProgram] = useState<string | null>(null);
 
@@ -81,8 +84,11 @@ export default function JoinProgramThenTickets({
           {TOP_LEVEL_PROGRAMS.filter(
             (p) => p.catalogStatus !== "hidden" && p.category === "workout",
           ).map((p) => {
+            const copy = exploreCards?.find((card) => card.id === p.slug);
             const active = program === p.slug;
             const soon = p.catalogStatus === "coming_soon";
+            const name = copy?.name || p.name;
+            const description = copy?.description || p.description;
             return (
               <button
                 key={p.slug}
@@ -99,10 +105,10 @@ export default function JoinProgramThenTickets({
                     Soon
                   </span>
                 ) : null}
-                <p className="text-sm font-semibold text-[var(--text)]">{p.name}</p>
-                {p.description ? (
+                <p className="text-sm font-semibold text-[var(--text)]">{name}</p>
+                {description ? (
                   <p className="mt-1 line-clamp-2 text-[11px] leading-snug text-[var(--muted)]">
-                    {p.description}
+                    {description}
                   </p>
                 ) : null}
                 <span
@@ -121,7 +127,7 @@ export default function JoinProgramThenTickets({
         </p>
       </section>
 
-      <ComingSoonPrograms compact />
+      <ComingSoonPrograms compact cards={exploreCards} />
     </div>
   );
 }

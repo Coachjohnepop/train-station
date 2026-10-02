@@ -10,6 +10,10 @@ import {
 import type { IntroTrims } from "@/lib/intro-trim";
 import type { HowItWorksConfig } from "@/lib/how-it-works";
 import {
+  normalizeExploreContent,
+  type ExploreContentConfig,
+} from "@/lib/explore-content";
+import {
   assignmentsFromLanding,
   setSlotUrl,
   type CoachIntroSlotId,
@@ -45,6 +49,7 @@ export async function saveLandingMediaAction(input: {
   themeSongClickStarts?: number;
   introTrims?: IntroTrims;
   howItWorks?: HowItWorksConfig;
+  exploreContent?: ExploreContentConfig;
 }) {
   const session = await getSessionUser();
   if (!session || !isStaffRole(session.role)) {
@@ -73,7 +78,11 @@ export async function saveLandingMediaAction(input: {
       themeSongClickStarts: input.themeSongClickStarts,
       introTrims: input.introTrims,
       howItWorks: input.howItWorks,
+      exploreContent: input.exploreContent,
     });
+    if (input.exploreContent) {
+      await syncProgramCopyFromExplore(config.exploreContent);
+    }
     return {
       ok: true as const,
       storedWelcomeVideoUrl: config.welcomeVideoUrl,
@@ -96,6 +105,7 @@ export async function saveLandingMediaAction(input: {
       storedThemeSongClickStarts: config.themeSongClickStarts,
       storedIntroTrims: config.introTrims,
       storedHowItWorks: config.howItWorks,
+      storedExploreContent: config.exploreContent,
       updatedAt: config.updatedAt,
     };
   } catch (e: unknown) {
@@ -143,6 +153,47 @@ export async function publishIntroSlotAction(input: {
     };
   } catch (e: unknown) {
     return { error: e instanceof Error ? e.message : "Publish failed" };
+  }
+}
+
+/** Save Explore Content card copy + images (Admin → Landing). */
+export async function saveExploreContentAction(exploreContent: ExploreContentConfig) {
+  const session = await getSessionUser();
+  if (!session || !isStaffRole(session.role)) {
+    return { error: "Coach sign-in required. Sign out and sign in again at /login." };
+  }
+  try {
+    const normalized = normalizeExploreContent(exploreContent);
+    const config = await saveLandingMedia({ exploreContent: normalized });
+    await syncProgramCopyFromExplore(config.exploreContent);
+    return {
+      ok: true as const,
+      storedExploreContent: config.exploreContent,
+      updatedAt: config.updatedAt,
+    };
+  } catch (e: unknown) {
+    return { error: e instanceof Error ? e.message : "Save failed" };
+  }
+}
+
+/** Keep Program.name / description / cover on the same words as Explore cards. */
+async function syncProgramCopyFromExplore(exploreContent: ExploreContentConfig) {
+  try {
+    const { prisma } = await import("@/lib/prisma");
+    const { resolveExploreCards } = await import("@/lib/explore-content");
+    for (const card of resolveExploreCards(exploreContent)) {
+      if (card.kind !== "program") continue;
+      await prisma.program.updateMany({
+        where: { slug: card.id },
+        data: {
+          name: card.name,
+          description: card.description,
+          coverUrl: card.imageUrl?.trim() || null,
+        },
+      });
+    }
+  } catch {
+    /* catalog row missing or table not migrated — landing store still saved */
   }
 }
 

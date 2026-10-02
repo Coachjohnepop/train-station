@@ -11,9 +11,19 @@ function freshSeedOpts() {
   return { preferFresh: true as const };
 }
 
+async function exploreCopyBySlug() {
+  try {
+    const { getExploreCatalogCopy } = await import("@/lib/landing-media-store");
+    return await getExploreCatalogCopy();
+  } catch {
+    return {} as Record<string, { name?: string; description?: string }>;
+  }
+}
+
 async function listProgramsFromDemo() {
   await hydrateScheduleOverrides();
   const data = await getDemoSeed(freshSeedOpts());
+  const copy = await exploreCopyBySlug();
   const programDayOptionsByDayId = (data.programDayOptions || []).reduce((acc: any, o: any) => {
     if (!acc[o.dayId]) acc[o.dayId] = [];
     acc[o.dayId].push({ workoutId: o.workoutId, label: o.label, notes: o.notes ?? null });
@@ -41,11 +51,14 @@ async function listProgramsFromDemo() {
             }),
           ),
       }));
-    return applyCatalogMetadata({
-      ...p,
-      _count: { weeks: weeks.length, enrollments: 1 },
-      weeks,
-    });
+    return applyCatalogMetadata(
+      {
+        ...p,
+        _count: { weeks: weeks.length, enrollments: 1 },
+        weeks,
+      },
+      copy[String(p.slug ?? "")],
+    );
   });
   return progs.sort((a: any, b: any) => (a.sortOrder || 0) - (b.sortOrder || 0));
 }
@@ -95,12 +108,16 @@ async function getProgramBySlugFromDemo(slug: string) {
           }),
         ),
     }));
-  return applyCatalogMetadata({
-    ...(p as any),
-    startDate: (p as any).startDate ?? null,
-    weeks,
-    _count: { enrollments: 1 },
-  });
+  const copy = await exploreCopyBySlug();
+  return applyCatalogMetadata(
+    {
+      ...(p as any),
+      startDate: (p as any).startDate ?? null,
+      weeks,
+      _count: { enrollments: 1 },
+    },
+    copy[String(p.slug ?? "")],
+  );
 }
 
 export async function listPrograms() {

@@ -1,3 +1,4 @@
+import AdminExploreContentPanel from "@/components/AdminExploreContentPanel";
 import AdminHeroImagesPanel from "@/components/AdminHeroImagesPanel";
 import AdminHowItWorksPanel from "@/components/AdminHowItWorksPanel";
 import AdminLandingMediaPanel from "@/components/AdminLandingMediaPanel";
@@ -42,6 +43,10 @@ export default async function AdminLandingPage() {
             record/upload, trim (below)
           </li>
           <li>
+            <strong className="text-violet-50">Explore Content</strong> — program photos, subtitles,
+            and descriptions. Card titles are the program names (same words).
+          </li>
+          <li>
             <strong className="text-violet-50">Hero images &amp; videos</strong> — full-screen
             landing carousel, play order, crop, slow-mo, Theme Song mix (below)
           </li>
@@ -60,6 +65,7 @@ export default async function AdminLandingPage() {
       </div>
       <div className="mt-8 space-y-12">
         <AdminHowItWorksPanel initial={config.howItWorks} />
+        <AdminExploreContentPanel initial={config.exploreContent} />
         <AdminHeroImagesPanel
           initialSlides={config.heroSlides}
           initialThemeSongEnabled={config.themeSongEnabled}

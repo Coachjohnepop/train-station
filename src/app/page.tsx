@@ -48,6 +48,7 @@ export default async function HomePage() {
       returning={returning}
       variant={landingVariant}
       meetVideoUrl={landingVideos.welcomeVideoUrl}
+      exploreCards={landingVideos.exploreCards}
     />
   );
 }

@@ -101,16 +101,19 @@ export function getCatalogProgramDef(slug: string): CatalogProgramDef | null {
 /** Apply Jeremy catalog names/descriptions over seed rows (slug is the key). */
 export function applyCatalogMetadata<T extends { slug: string; name?: string; description?: string | null; category?: string | null }>(
   program: T,
+  copy?: { name?: string | null; description?: string | null } | null,
 ): T & { catalogStatus: CatalogStatus } {
   const canonicalSlug = normalizeProgramSlug(program.slug);
   const def = getCatalogProgramDef(canonicalSlug);
   const catalogStatus = getCatalogStatus(canonicalSlug);
   if (!def) return { ...program, slug: canonicalSlug, catalogStatus };
+  const name = copy?.name?.trim() || def.name;
+  const description = copy?.description?.trim() || def.description;
   return {
     ...program,
     slug: canonicalSlug,
-    name: def.name,
-    description: def.description,
+    name,
+    description,
     category: def.category,
     catalogStatus,
   };

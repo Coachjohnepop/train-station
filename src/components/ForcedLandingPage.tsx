@@ -18,6 +18,7 @@ export default async function ForcedLandingPage({
       rememberReturn={false}
       variant={variant}
       meetVideoUrl={landingVideos.welcomeVideoUrl}
+      exploreCards={landingVideos.exploreCards}
     />
   );
 }

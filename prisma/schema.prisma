@@ -1425,6 +1425,8 @@ model LandingMediaSettings {
   introTrims                 Json     @default("{}")
   /// How it Works screens: copy + voice-over URL + trim per step.
   howItWorks                 Json     @default("{}")
+  /// Explore Content cards: image + subtitle + description. Title is the program name.
+  exploreContent             Json     @default("{}")
   updatedAt                  DateTime @updatedAt
 }
 

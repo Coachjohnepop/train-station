@@ -155,25 +155,40 @@ const programInclude = {
   _count: { select: { enrollments: true } },
 };
 
+async function exploreCopyBySlug() {
+  try {
+    const { getExploreCatalogCopy } = await import("@/lib/landing-media-store");
+    return await getExploreCatalogCopy();
+  } catch {
+    return {} as Record<string, { name?: string; description?: string }>;
+  }
+}
+
 export async function listProgramsFromDb() {
   const { prisma } = await import("@/lib/prisma");
-  const rows = await prisma.program.findMany({
-    orderBy: { sortOrder: "asc" },
-    include: programInclude,
-  });
+  const [rows, copy] = await Promise.all([
+    prisma.program.findMany({
+      orderBy: { sortOrder: "asc" },
+      include: programInclude,
+    }),
+    exploreCopyBySlug(),
+  ]);
 
   return rows.map((p) =>
-    applyCatalogMetadata({
-      ...p,
-      startDate: p.startDate ?? null,
-      weeks: p.weeks.map((w) => ({
-        id: w.id,
-        weekNumber: w.weekNumber,
-        macroPhaseIndex: w.macroPhaseIndex,
-        phaseWeekNumber: w.phaseWeekNumber,
-        days: w.days.map((d) => mapDay(d)),
-      })),
-    }),
+    applyCatalogMetadata(
+      {
+        ...p,
+        startDate: p.startDate ?? null,
+        weeks: p.weeks.map((w) => ({
+          id: w.id,
+          weekNumber: w.weekNumber,
+          macroPhaseIndex: w.macroPhaseIndex,
+          phaseWeekNumber: w.phaseWeekNumber,
+          days: w.days.map((d) => mapDay(d)),
+        })),
+      },
+      copy[p.slug],
+    ),
   );
 }
 
@@ -194,18 +209,22 @@ export async function getProgramBySlugFromDb(slug: string) {
     if (!program) return null;
   }
 
-  return applyCatalogMetadata({
-    ...program,
-    startDate: program.startDate ?? null,
-    weeks: program.weeks.map((w) => ({
-      id: w.id,
-      weekNumber: w.weekNumber,
-      macroPhaseIndex: w.macroPhaseIndex,
-      phaseWeekNumber: w.phaseWeekNumber,
-      days: w.days.map((d) => mapDay(d)),
-    })),
-    _count: { enrollments: program._count.enrollments },
-  });
+  const copy = await exploreCopyBySlug();
+  return applyCatalogMetadata(
+    {
+      ...program,
+      startDate: program.startDate ?? null,
+      weeks: program.weeks.map((w) => ({
+        id: w.id,
+        weekNumber: w.weekNumber,
+        macroPhaseIndex: w.macroPhaseIndex,
+        phaseWeekNumber: w.phaseWeekNumber,
+        days: w.days.map((d) => mapDay(d)),
+      })),
+      _count: { enrollments: program._count.enrollments },
+    },
+    copy[program.slug],
+  );
 }
 
 export async function getSyncedProgramFromDb(slug: string) {

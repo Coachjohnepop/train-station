@@ -1,6 +1,7 @@
 import "server-only";
 
 import { getLandingMedia } from "@/lib/landing-media-store";
+import { resolveExploreCards } from "@/lib/explore-content";
 import {
   equipmentIntroVideoUrlFromConfig,
   freeChastiseVideoUrlFromConfig,
@@ -42,6 +43,7 @@ export async function getResolvedLandingVideos() {
       config.measurementsIntroVideoUrl,
     ),
     heroSlides: activeHeroSlides(config.heroSlides),
+    exploreCards: resolveExploreCards(config.exploreContent),
     uploadedContentVolumeDb: config.uploadedContentVolumeDb,
     themeSongEnabled: config.themeSongEnabled,
     themeSongVolume: config.themeSongVolume,

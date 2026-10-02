@@ -17,6 +17,7 @@ import {
 } from "@/lib/landing-return-visit";
 import SiteSeenLatch from "@/components/SiteSeenLatch";
 import type { LandingAbVariant } from "@/lib/landing-ab";
+import type { ResolvedExploreCard } from "@/lib/explore-content";
 
 /**
  * Public landing for guests / SMS traffic.
@@ -32,6 +33,7 @@ export default function LandingConversion({
   purchaseAuth,
   variant = "tour",
   meetVideoUrl = null,
+  exploreCards,
 }: {
   freeChastiseVideoUrl?: string | null;
   welcomeVideoUrl?: string | null;
@@ -43,6 +45,7 @@ export default function LandingConversion({
   purchaseAuth?: PurchaseAuth;
   variant?: LandingAbVariant;
   meetVideoUrl?: string | null;
+  exploreCards?: ResolvedExploreCard[];
 }) {
   const [liveReturn, setLiveReturn] = useState(false);
   const [exploreOpen, setExploreOpen] = useState(false);
@@ -149,8 +152,8 @@ export default function LandingConversion({
                 </div>
               </div>
             ) : null}
-            <ComingSoonPrograms feed />
-            <LandingServicesSection />
+            <ComingSoonPrograms feed cards={exploreCards} />
+            <LandingServicesSection cards={exploreCards} />
             <div className="explore-feed-card explore-feed-card--footer">
               <LandingSiteFooter />
             </div>

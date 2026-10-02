@@ -29,6 +29,12 @@ import {
   normalizeHowItWorks,
   type HowItWorksConfig,
 } from "@/lib/how-it-works";
+import {
+  emptyExploreContent,
+  exploreCopyById,
+  normalizeExploreContent,
+  type ExploreContentConfig,
+} from "@/lib/explore-content";
 
 /** Product defaults — same files as Free ticket, served from this app. */
 const DEFAULT_WELCOME_FILE = "/videos/jeremy-welcome.mp4";
@@ -100,6 +106,8 @@ export type LandingMediaConfig = {
   introTrims: IntroTrims;
   /** How it Works screens: copy + voice-over + trim. */
   howItWorks: HowItWorksConfig;
+  /** Explore Content cards: image + subtitle + description. Title is the program name. */
+  exploreContent: ExploreContentConfig;
   updatedAt: string;
 };
 
@@ -148,6 +156,7 @@ function emptyConfig(): LandingMediaConfig {
     themeSongClickStarts: THEME_SONG_CLICK_STARTS_DEFAULT,
     introTrims: emptyIntroTrims(),
     howItWorks: defaultHowItWorks(),
+    exploreContent: emptyExploreContent(),
     updatedAt: new Date().toISOString(),
   };
 }
@@ -219,6 +228,9 @@ function normalize(raw: unknown): LandingMediaConfig {
     ),
     introTrims: normalizeIntroTrims((data as { introTrims?: unknown }).introTrims),
     howItWorks: normalizeHowItWorks((data as { howItWorks?: unknown }).howItWorks),
+    exploreContent: normalizeExploreContent(
+      (data as { exploreContent?: unknown }).exploreContent,
+    ),
     updatedAt:
       typeof data.updatedAt === "string" ? data.updatedAt : new Date().toISOString(),
   };
@@ -237,6 +249,17 @@ function isHttpUrl(url: string): boolean {
     return parsed.protocol === "http:" || parsed.protocol === "https:";
   } catch {
     return false;
+  }
+}
+
+export async function getExploreCatalogCopy(): Promise<
+  Record<string, { name?: string; description?: string }>
+> {
+  try {
+    const config = await getLandingMedia();
+    return exploreCopyById(config.exploreContent);
+  } catch {
+    return {};
   }
 }
 
@@ -299,6 +322,7 @@ export async function saveLandingMedia(
       | "themeSongClickStarts"
       | "introTrims"
       | "howItWorks"
+      | "exploreContent"
     >
   >,
 ): Promise<LandingMediaConfig> {
@@ -469,6 +493,10 @@ export async function saveLandingMedia(
 
   if (patch.howItWorks !== undefined) {
     next.howItWorks = normalizeHowItWorks(patch.howItWorks);
+  }
+
+  if (patch.exploreContent !== undefined) {
+    next.exploreContent = normalizeExploreContent(patch.exploreContent);
   }
 
   const introChanged =
