@@ -44,7 +44,12 @@ export default async function AdminLandingPage() {
           </li>
           <li>
             <strong className="text-violet-50">Explore Content</strong> — program photos, subtitles,
-            and descriptions. Card titles are the program names (same words).
+            and descriptions. Card titles are the program names (same words). Catalog program
+            photos also live under{" "}
+            <a href="/admin/programs" className="text-accent hover:underline">
+              Admin → Programs
+            </a>
+            .
           </li>
           <li>
             <strong className="text-violet-50">Hero images &amp; videos</strong> — full-screen

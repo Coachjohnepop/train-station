@@ -65,6 +65,7 @@ export default async function ProgramAdminDetailPage({ params }: Props) {
           id: program.id,
           slug: program.slug,
           name: program.name,
+          coverUrl: (program as { coverUrl?: string | null }).coverUrl ?? null,
           durationWeeks: program.durationWeeks,
           startDate: (program as { startDate?: string | null }).startDate ?? null,
           macroPhases,

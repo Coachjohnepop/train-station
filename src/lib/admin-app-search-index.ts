@@ -147,7 +147,7 @@ export const ADMIN_APP_SEARCH_INDEX: AdminSearchItem[] = [
   {
     id: "coach-programs",
     title: "Programs",
-    description: "Program calendar builder, multi-part days, paste",
+    description: "Program calendar, images, multi-part days, paste",
     href: "/admin/programs",
     workspace: "coach",
     group: "Content",
@@ -162,6 +162,10 @@ export const ADMIN_APP_SEARCH_INDEX: AdminSearchItem[] = [
       "28-day",
       "cycle",
       "multipart",
+      "program images",
+      "cover",
+      "photo",
+      "program photo",
     ],
   },
   {
@@ -236,11 +240,20 @@ export const ADMIN_APP_SEARCH_INDEX: AdminSearchItem[] = [
   {
     id: "coach-landing",
     title: "Landing",
-    description: "Public landing media, videos",
+    description: "Public landing media, Explore photos, videos",
     href: "/admin/landing",
     workspace: "coach",
     group: "Site",
-    keywords: ["welcome", "free ticket", "videos", "brand", "media"],
+    keywords: [
+      "welcome",
+      "free ticket",
+      "videos",
+      "brand",
+      "media",
+      "explore",
+      "program images",
+      "program photo",
+    ],
   },
   {
     id: "coach-sponsorship",

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import AdminProgramCoverField from "@/components/AdminProgramCoverField";
 import ExportSeedButton from "@/components/ExportSeedButton";
 import ProgramCalendarBuilder from "@/components/ProgramCalendarBuilder";
 import ProgramNameEditor from "@/components/ProgramNameEditor";
@@ -32,6 +33,7 @@ type Program = {
   id: string;
   slug: string;
   name: string;
+  coverUrl?: string | null;
   durationWeeks: number;
   startDate?: string | null;
   macroPhases?: MacroPhase[];
@@ -72,6 +74,12 @@ export default function ProgramAdminClient({
         </div>
         <ExportSeedButton className="shrink-0 self-start text-xs" />
       </div>
+
+      <AdminProgramCoverField
+        slug={initial.slug}
+        name={programName}
+        coverUrl={initial.coverUrl}
+      />
 
       {initial.macroPhases && initial.macroPhases.length > 1 && (
         <div className="mt-2 flex flex-wrap gap-2">

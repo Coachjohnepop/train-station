@@ -19,6 +19,7 @@ export default async function ProgramsAdminPage() {
           <h1 className="text-xl font-semibold tracking-tight">Programs</h1>
           <p className="mt-1 text-xs text-[var(--muted)] max-w-xl">
             Build workouts here: pick Gym/Home per day, add exercises, set reps, copy weeks. Paste a full week via Text Upload.
+            Program images: Replace photo under each program — same photo on landing Explore.
           </p>
         </div>
         <ExportSeedButton />
@@ -37,6 +38,14 @@ export default async function ProgramsAdminPage() {
           </li>
           <li>
             Templates & paste: always clones. Overwrite confirm if the day already has Gym/Home content.
+          </li>
+          <li>
+            <strong className="text-[var(--text)]">Program images</strong> — Replace photo on each
+            card below. Same photo on landing Explore. Waitlist and services photos:{" "}
+            <Link href="/admin/landing" className="text-accent hover:underline">
+              Admin → Landing → Explore Content
+            </Link>
+            .
           </li>
           <li>
             Landing YouTube (welcome / free ticket / weekly / dinner):{" "}

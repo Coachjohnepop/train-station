@@ -164,6 +164,11 @@ export default function AdminExploreContentPanel({
         <p className="mt-1 text-sm leading-relaxed text-[var(--muted)]">
           Photos and words on the landing Explore feed. The title on each card is the program
           name — same words as the catalog. Edit the subtitle and description around it.
+          Catalog program photos also live under{" "}
+          <a href="/admin/programs" className="text-accent hover:underline">
+            Admin → Programs
+          </a>
+          .
         </p>
       </div>
 
