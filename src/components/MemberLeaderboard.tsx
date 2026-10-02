@@ -390,7 +390,7 @@ export default function MemberLeaderboard() {
             <ul className="mt-2 space-y-1">
               <li>
                 Score resets every 28 days. Coach Class, Business Class, and 1st Class earn the
-                same points. 3 workouts a week (set + log) is 2,000 for the cycle.
+                same points. 3 workouts a week (set + log) clears the 2,000-point cycle.
               </li>
               <li>
                 Warm-ups before live — Free {pointValues.warmup_before_live} / paid{" "}

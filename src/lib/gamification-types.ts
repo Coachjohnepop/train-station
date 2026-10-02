@@ -14,8 +14,9 @@ export const PAID_CYCLE_GOAL_POINTS = 2000;
 export const FREE_CYCLE_GOAL_POINTS =
   CYCLE_WORKOUT_COUNT * CYCLE_ACTIONS_PER_WORKOUT * FREE_POINT_STEP;
 /**
- * Paid award / free-scale. 2000 / (12 × 2 × 10) = 8⅓, so a 10-pt action is 83
- * and 12 complete workouts are 1,992 — the 2,000 cycle goal.
+ * Paid award / free-scale. 2000 / (12 × 2 × 10) = 8⅓, then each award rounds
+ * up to the nearest 10: a 10-pt action is 90, and 12 complete workouts are
+ * 2,160 — over the 2,000 cycle goal.
  */
 export const PAID_POINTS_MULTIPLIER =
   PAID_CYCLE_GOAL_POINTS /
@@ -66,17 +67,23 @@ export function snapFreePoints(raw: number): number {
   return Math.max(FREE_POINT_STEP, Math.round(raw / FREE_POINT_STEP) * FREE_POINT_STEP);
 }
 
+/** Round a positive award up to the next 10 (80 stays 80; 83 → 90). */
+export function roundPointsUpToTen(raw: number): number {
+  if (!Number.isFinite(raw) || raw <= 0) return 0;
+  return Math.ceil(raw / FREE_POINT_STEP) * FREE_POINT_STEP;
+}
+
 /** Paid points for a Free Explorer-scale amount. Same for Coach, Business, and 1st Class. */
 export function paidAwardFromFreeScale(freeScalePoints: number): number {
   const free = Math.max(0, Math.round(freeScalePoints));
   if (free <= 0) return 0;
-  return Math.round(free * PAID_POINTS_MULTIPLIER);
+  return roundPointsUpToTen(free * PAID_POINTS_MULTIPLIER);
 }
 
 /**
  * Points actually awarded for a membership plan.
  * Free / explorer → free-scale (normally 10s; late/partial may be smaller).
- * Coach Class, Business Class, and 1st Class share the paid table (~8⅓×).
+ * Coach Class, Business Class, and 1st Class share the paid table (round up to 10s).
  */
 export function awardPointsForPlan(
   freeScalePoints: number,

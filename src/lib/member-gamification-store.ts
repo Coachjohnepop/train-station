@@ -8,7 +8,7 @@ import { getGamificationPointsConfig } from "@/lib/gamification-config";
 import {
   awardPointsForPlan,
   isPaidScoringPlan,
-  PAID_POINTS_MULTIPLIER,
+  paidAwardFromFreeScale,
   snapFreePoints,
   type GamificationEvent,
   type GamificationEventType,
@@ -316,7 +316,7 @@ async function awardDb(input: {
     return { awarded: false, totalPoints: user.totalPoints, pointsEarned: 0 };
   }
 
-  // Daily point cap (season economy). Cap is free-scale; paid tickets get the cycle multiplier.
+  // Daily point cap (season economy). Cap is free-scale; paid tickets use the rounded paid table.
   const levers = await getGamificationLevers();
   let planForCap: string | null = "explorer";
   try {
@@ -328,7 +328,7 @@ async function awardDb(input: {
   const dailyCap =
     levers.dailyPointCap > 0
       ? isPaidScoringPlan(planForCap)
-        ? Math.round(levers.dailyPointCap * PAID_POINTS_MULTIPLIER)
+        ? paidAwardFromFreeScale(levers.dailyPointCap)
         : levers.dailyPointCap
       : 0;
   if (dailyCap > 0) {
@@ -397,7 +397,7 @@ export async function awardGamificationPoints(input: {
   programSlug?: string | null;
 }): Promise<{ awarded: boolean; totalPoints: number; pointsEarned: number }> {
   const pointsConfig = await getGamificationPointsConfig();
-  // Config is Free Explorer scale (10s). Paid tickets share one table (~8⅓× → 2,000 / 28 days).
+  // Config is Free Explorer scale (10s). Paid tickets share one table (round up to 10s → 2,000 / 28 days).
   let plan: string | null = "explorer";
   try {
     const profile = await getMemberProfile(input.userId);
