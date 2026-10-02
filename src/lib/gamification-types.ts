@@ -1,11 +1,25 @@
 /**
  * Free Explorer point table (coach settings edit these).
- * Free awards snap to FREE_POINT_STEP (10). Coach Class+ multiplies by PAID_POINTS_MULTIPLIER (~8×).
- * Totals always roll over — only the per-event award size differs by ticket.
+ * Free awards snap to FREE_POINT_STEP (10). Coach Class, Business, and 1st Class
+ * share one paid table — 3 workouts/week × 4 weeks × (set + log) = 2,000.
  */
 export const FREE_POINT_STEP = 10;
-/** Coach Class, Business, and 1st Class earn this many times Free Explorer for the same action. */
-export const PAID_POINTS_MULTIPLIER = 8;
+/** 3 workouts a week on a 28-day cycle. */
+export const CYCLE_WORKOUT_COUNT = 12;
+/** Habit actions that make one workout toward the cycle: first set + log. */
+export const CYCLE_ACTIONS_PER_WORKOUT = 2;
+/** Paid 28-day cycle goal (Coach = Business = 1st Class). */
+export const PAID_CYCLE_GOAL_POINTS = 2000;
+/** Free Explorer 28-day cycle goal: 12 × (set 10 + log 10). */
+export const FREE_CYCLE_GOAL_POINTS =
+  CYCLE_WORKOUT_COUNT * CYCLE_ACTIONS_PER_WORKOUT * FREE_POINT_STEP;
+/**
+ * Paid award / free-scale. 2000 / (12 × 2 × 10) = 8⅓, so a 10-pt action is 83
+ * and 12 complete workouts are 1,992 — the 2,000 cycle goal.
+ */
+export const PAID_POINTS_MULTIPLIER =
+  PAID_CYCLE_GOAL_POINTS /
+  (CYCLE_WORKOUT_COUNT * CYCLE_ACTIONS_PER_WORKOUT * FREE_POINT_STEP);
 
 export const DEFAULT_GAMIFICATION_POINTS = {
   warmup_before_live: 10,
@@ -52,10 +66,17 @@ export function snapFreePoints(raw: number): number {
   return Math.max(FREE_POINT_STEP, Math.round(raw / FREE_POINT_STEP) * FREE_POINT_STEP);
 }
 
+/** Paid points for a Free Explorer-scale amount. Same for Coach, Business, and 1st Class. */
+export function paidAwardFromFreeScale(freeScalePoints: number): number {
+  const free = Math.max(0, Math.round(freeScalePoints));
+  if (free <= 0) return 0;
+  return Math.round(free * PAID_POINTS_MULTIPLIER);
+}
+
 /**
  * Points actually awarded for a membership plan.
  * Free / explorer → free-scale (normally 10s; late/partial may be smaller).
- * Coach+ → free-scale × 8. Totals always accumulate (roll over).
+ * Coach Class, Business Class, and 1st Class share the paid table (~8⅓×).
  */
 export function awardPointsForPlan(
   freeScalePoints: number,
@@ -64,18 +85,25 @@ export function awardPointsForPlan(
   const free = Math.max(0, Math.round(freeScalePoints));
   if (free <= 0) return 0;
   if (!isPaidScoringPlan(plan)) return free;
-  return free * PAID_POINTS_MULTIPLIER;
+  return paidAwardFromFreeScale(free);
+}
+
+export function cycleGoalForPlan(plan: string | null | undefined): number {
+  return isPaidScoringPlan(plan) ? PAID_CYCLE_GOAL_POINTS : FREE_CYCLE_GOAL_POINTS;
 }
 
 export function isPaidScoringPlan(plan: string | null | undefined): boolean {
-  const p = (plan || "explorer").toLowerCase();
+  const p = (plan || "explorer").toLowerCase().replace(/[\s-]+/g, "_");
   return (
     p === "member" ||
+    p === "coach" ||
     p === "coach_class" ||
     p === "business" ||
     p === "business_class" ||
     p === "pro" ||
-    p === "first_class"
+    p === "first_class" ||
+    p === "1st_class" ||
+    p === "firstclass"
   );
 }
 
@@ -161,6 +189,10 @@ export type MemberScoreProgress = {
   earnedPoints: number;
   availablePoints: number;
   maxRampPoints: number;
+  /** 28-day cycle target (2,000 paid / 240 Free). */
+  cycleGoal: number;
+  seasonDays: number;
+  seasonEndsAt: string | null;
   milestones: ScoreMilestone[];
   workoutLogs: {
     count: number;

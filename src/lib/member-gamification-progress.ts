@@ -3,9 +3,10 @@ import "server-only";
 import { getGamificationPointsConfig } from "@/lib/gamification-config";
 import {
   awardPointsForPlan,
+  cycleGoalForPlan,
   DEFAULT_GAMIFICATION_POINTS,
   GAMIFICATION_EVENT_LABELS,
-  PAID_POINTS_MULTIPLIER,
+  PAID_CYCLE_GOAL_POINTS,
   type GamificationEvent,
   type GamificationEventType,
   type GamificationPointsMap,
@@ -203,11 +204,12 @@ export function buildMemberScoreProgress(
   gamification: UserGamification,
   profile: Awaited<ReturnType<typeof getMemberProfile>>,
   pointsConfig: GamificationPointsMap = DEFAULT_GAMIFICATION_POINTS,
+  cycle?: { seasonDays?: number; seasonEndsAt?: string | null },
 ): MemberScoreProgress {
   const events = gamification.events;
   const earnedPoints = events.reduce((sum, e) => sum + e.points, 0);
   const plan = profile?.plan ?? "explorer";
-  // Config is free-scale; show what this ticket actually earns (Free +10 / Coach+ ×8).
+  // Config is free-scale; show what this ticket actually earns (Free 10s / paid 2,000-cycle table).
   const tierPts = (freeScale: number) => awardPointsForPlan(freeScale, plan);
   const journeyDefs = journeyMilestones(pointsConfig).map((def) => ({
     ...def,
@@ -246,7 +248,7 @@ export function buildMemberScoreProgress(
     repeatable: true,
     earnHint: `Log a workout from Today — +${nextWorkoutPts} pts once per scheduled workout per day.${
       plan === "explorer" || !plan
-        ? ` Free Explorer steps of 10; Coach Class earns ${PAID_POINTS_MULTIPLIER}×.`
+        ? ` Free Explorer steps of 10. Coach, Business, and 1st Class share the ${PAID_CYCLE_GOAL_POINTS.toLocaleString()} pt / 28-day table.`
         : ""
     }`,
     href: "/member/today",
@@ -280,6 +282,9 @@ export function buildMemberScoreProgress(
     earnedPoints,
     availablePoints,
     maxRampPoints,
+    cycleGoal: cycleGoalForPlan(plan),
+    seasonDays: cycle?.seasonDays ?? 28,
+    seasonEndsAt: cycle?.seasonEndsAt ?? null,
     milestones,
     workoutLogs: {
       count: workoutEvents.length,

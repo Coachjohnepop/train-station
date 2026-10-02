@@ -316,7 +316,7 @@ async function awardDb(input: {
     return { awarded: false, totalPoints: user.totalPoints, pointsEarned: 0 };
   }
 
-  // Daily point cap (season economy). Cap is free-scale; Coach+ get ×8 room.
+  // Daily point cap (season economy). Cap is free-scale; paid tickets get the cycle multiplier.
   const levers = await getGamificationLevers();
   let planForCap: string | null = "explorer";
   try {
@@ -328,7 +328,7 @@ async function awardDb(input: {
   const dailyCap =
     levers.dailyPointCap > 0
       ? isPaidScoringPlan(planForCap)
-        ? levers.dailyPointCap * PAID_POINTS_MULTIPLIER
+        ? Math.round(levers.dailyPointCap * PAID_POINTS_MULTIPLIER)
         : levers.dailyPointCap
       : 0;
   if (dailyCap > 0) {
@@ -397,7 +397,7 @@ export async function awardGamificationPoints(input: {
   programSlug?: string | null;
 }): Promise<{ awarded: boolean; totalPoints: number; pointsEarned: number }> {
   const pointsConfig = await getGamificationPointsConfig();
-  // Config is Free Explorer scale (10s). Coach+ awards 8×; totals roll over either way.
+  // Config is Free Explorer scale (10s). Paid tickets share one table (~8⅓× → 2,000 / 28 days).
   let plan: string | null = "explorer";
   try {
     const profile = await getMemberProfile(input.userId);
@@ -406,7 +406,7 @@ export async function awardGamificationPoints(input: {
     /* explorer */
   }
   // Config / explicit points are Free Explorer scale. Snap config defaults to 10s;
-  // explicit (e.g. late workout %) may be smaller and is left as-is before ×8 for paid.
+  // explicit (e.g. late workout %) may be smaller and is left as-is before the paid table.
   const freeScale =
     input.points != null
       ? Math.max(0, Math.round(input.points))

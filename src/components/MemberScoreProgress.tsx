@@ -63,35 +63,58 @@ function MilestoneCard({ milestone }: { milestone: ScoreMilestone }) {
 }
 
 export default function MemberScoreProgressPanel({ progress }: { progress: MemberScoreProgress }) {
+  const goal = Math.max(1, progress.cycleGoal || 2000);
+  const pct = Math.min(100, Math.round((progress.earnedPoints / goal) * 100));
+  const ends = progress.seasonEndsAt
+    ? new Date(progress.seasonEndsAt).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+      })
+    : null;
+
   return (
     <section className="space-y-3">
       <div className="rounded-2xl border border-[var(--accent)]/25 bg-[var(--surface-2)]/80 p-4">
         <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-[var(--accent)]">
-          Score math
+          {progress.seasonDays || 28}-day cycle
         </p>
-        <div className="mt-3 grid grid-cols-3 gap-2 text-center sm:gap-4">
+        <div className="mt-3 flex items-end justify-between gap-3">
           <div>
-            <p className="font-mono text-2xl font-black tabular-nums text-[var(--accent)]">
-              {progress.earnedPoints}
+            <p className="font-mono text-3xl font-black tabular-nums text-[var(--accent)]">
+              {progress.earnedPoints.toLocaleString()}
             </p>
-            <p className="text-[10px] uppercase tracking-widest text-[var(--muted)]">Earned</p>
+            <p className="text-[10px] uppercase tracking-widest text-[var(--muted)]">This cycle</p>
           </div>
-          <div>
-            <p className="font-mono text-2xl font-black tabular-nums text-red-300/90">
-              {progress.availablePoints}
-            </p>
-            <p className="text-[10px] uppercase tracking-widest text-[var(--muted)]">Still available</p>
-          </div>
-          <div>
+          <div className="text-right">
             <p className="font-mono text-2xl font-black tabular-nums text-white/90">
-              {progress.maxRampPoints}
+              {goal.toLocaleString()}
             </p>
-            <p className="text-[10px] uppercase tracking-widest text-[var(--muted)]">Ramp max</p>
+            <p className="text-[10px] uppercase tracking-widest text-[var(--muted)]">Goal</p>
           </div>
         </div>
+        <div
+          className="mt-3 h-2 overflow-hidden rounded-full bg-[var(--surface)]"
+          role="progressbar"
+          aria-valuenow={progress.earnedPoints}
+          aria-valuemin={0}
+          aria-valuemax={goal}
+        >
+          <div
+            className="h-full rounded-full bg-[var(--accent)] transition-[width]"
+            style={{ width: `${pct}%` }}
+          />
+        </div>
         <p className="mt-3 text-center text-xs text-[var(--muted)]">
-          {progress.earnedPoints} earned + {progress.availablePoints} on your ramp
-          {progress.workoutLogs.nextPoints > 0 ? ` · workouts add +${progress.workoutLogs.nextPoints} each` : ""}
+          {pct}% of {goal.toLocaleString()}
+          {ends ? ` · resets ${ends}` : ""}
+          {progress.workoutLogs.nextPoints > 0
+            ? ` · each workout +${progress.workoutLogs.nextPoints}`
+            : ""}
+        </p>
+        <p className="mt-1 text-center text-[10px] text-[var(--muted)]">
+          {goal >= 1000
+            ? "Coach Class, Business Class, and 1st Class earn the same points. 3 workouts a week (set + log) is the 2,000-point cycle."
+            : "3 workouts a week (set + log) fills this 28-day cycle."}
         </p>
       </div>
 

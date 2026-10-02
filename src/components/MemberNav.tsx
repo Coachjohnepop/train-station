@@ -260,7 +260,15 @@ export default function MemberNav({
 
   useEffect(() => {
     function onScoreUpdated(e: Event) {
-      const custom = e as CustomEvent<{ totalPoints?: number }>;
+      const custom = e as CustomEvent<{ totalPoints?: number; pointsEarned?: number }>;
+      const earned = custom.detail?.pointsEarned;
+      if (typeof earned === "number" && earned > 0) {
+        setScorePoints((prev) => (prev ?? 0) + earned);
+        setScorePulse(true);
+        window.setTimeout(() => setScorePulse(false), 1200);
+        void refreshScore();
+        return;
+      }
       const total = custom.detail?.totalPoints;
       if (typeof total === "number") {
         setScorePoints(total);

@@ -88,7 +88,9 @@ export function MemberActivityLogPanel({ open }: { open: boolean }) {
         setNote("Saved. +5 points for today. This is not a workout.");
         if (typeof data.totalPoints === "number") {
           window.dispatchEvent(
-            new CustomEvent("member-score-updated", { detail: { totalPoints: data.totalPoints } }),
+            new CustomEvent("member-score-updated", {
+              detail: { totalPoints: data.totalPoints, pointsEarned: data.pointsEarned },
+            }),
           );
         }
       } else {

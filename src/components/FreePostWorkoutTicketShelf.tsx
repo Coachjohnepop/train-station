@@ -35,8 +35,8 @@ export default function FreePostWorkoutTicketShelf({ visible }: { visible: boole
       </p>
       <h3 className="text-lg font-bold text-[var(--text)]">Climb the ticket ladder</h3>
       <p className="text-sm text-[var(--muted)]">
-        Free Explorer keeps rolling scores in steps of 10. Coach Class earns about 8× for the same
-        actions — and unlocks the rest of the board.
+        Free Explorer scores in steps of 10. Coach Class, Business Class, and 1st Class share one
+        2,000-point / 28-day table — and unlock the rest of the board.
       </p>
       <ul className="space-y-2">
         {TICKETS.map((t) => (

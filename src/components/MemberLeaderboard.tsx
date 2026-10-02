@@ -6,6 +6,7 @@ import MemberScoreProgressPanel from "@/components/MemberScoreProgress";
 import FreeUpgradeTease from "@/components/FreeUpgradeTease";
 import {
   DEFAULT_GAMIFICATION_POINTS,
+  paidAwardFromFreeScale,
   type GamificationPointsMap,
   type LeaderboardPayload,
   type LeaderboardScope,
@@ -294,7 +295,9 @@ export default function MemberLeaderboard() {
         </h1>
         <p className="relative mt-2 text-xs text-[var(--muted)]">
           {scoresTab === "mine"
-            ? "Your points, milestones, and what’s still on your ramp."
+            ? progress
+              ? `This ${progress.seasonDays ?? 28}-day cycle toward ${(progress.cycleGoal ?? 2000).toLocaleString()}. Coach, Business, and 1st Class earn the same.`
+              : "This 28-day cycle toward 2,000. Coach, Business, and 1st Class earn the same."
             : "K1-style standings — see how you stack up against other racers."}
         </p>
       </div>
@@ -386,32 +389,32 @@ export default function MemberLeaderboard() {
             <summary className="cursor-pointer font-semibold text-accent">How to earn points</summary>
             <ul className="mt-2 space-y-1">
               <li>
-                Free Explorer earns in steps of 10 (totals roll over). Coach Class+ earns about 8×
-                the same actions.
+                Score resets every 28 days. Coach Class, Business Class, and 1st Class earn the
+                same points. 3 workouts a week (set + log) is 2,000 for the cycle.
               </li>
               <li>
-                Warm-ups before live — Free {pointValues.warmup_before_live} / Coach+{" "}
-                {pointValues.warmup_before_live * 8} pts (once per day)
+                Warm-ups before live — Free {pointValues.warmup_before_live} / paid{" "}
+                {paidAwardFromFreeScale(pointValues.warmup_before_live)} pts (once per day)
               </li>
               <li>
-                Book intro call — Free {pointValues.intake_scheduled} / Coach+{" "}
-                {pointValues.intake_scheduled * 8} pts
+                Book intro call — Free {pointValues.intake_scheduled} / paid{" "}
+                {paidAwardFromFreeScale(pointValues.intake_scheduled)} pts
               </li>
               <li>
-                Log a workout — Free {pointValues.workout_logged} / Coach+{" "}
-                {pointValues.workout_logged * 8} pts
+                Log a workout — Free {pointValues.workout_logged} / paid{" "}
+                {paidAwardFromFreeScale(pointValues.workout_logged)} pts
               </li>
               <li>
-                Log a set (rest timer) — Free {pointValues.set_logged} / Coach+{" "}
-                {pointValues.set_logged * 8} pts (once per workout per day)
+                Log a set (rest timer) — Free {pointValues.set_logged} / paid{" "}
+                {paidAwardFromFreeScale(pointValues.set_logged)} pts (once per workout per day)
               </li>
               <li>
-                Coach intake complete — Free {pointValues.intake_complete} / Coach+{" "}
-                {pointValues.intake_complete * 8} pts
+                Coach intake complete — Free {pointValues.intake_complete} / paid{" "}
+                {paidAwardFromFreeScale(pointValues.intake_complete)} pts
               </li>
               <li>
-                Finish account setup — Free {pointValues.onboarding_complete} / Coach+{" "}
-                {pointValues.onboarding_complete * 8} pts
+                Finish account setup — Free {pointValues.onboarding_complete} / paid{" "}
+                {paidAwardFromFreeScale(pointValues.onboarding_complete)} pts
               </li>
             </ul>
           </details>

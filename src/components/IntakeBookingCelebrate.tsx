@@ -63,7 +63,10 @@ export default function IntakeBookingCelebrate() {
       if (!target || !flyEl) {
         window.dispatchEvent(
           new CustomEvent("member-score-updated", {
-            detail: { totalPoints: payload.totalPoints },
+            detail: {
+              totalPoints: payload.totalPoints,
+              pointsEarned: payload.pointsEarned,
+            },
           }),
         );
         cleanup();
@@ -95,7 +98,10 @@ export default function IntakeBookingCelebrate() {
         window.setTimeout(() => {
           window.dispatchEvent(
             new CustomEvent("member-score-updated", {
-              detail: { totalPoints: payload.totalPoints },
+              detail: {
+                totalPoints: payload.totalPoints,
+                pointsEarned: payload.pointsEarned,
+              },
             }),
           );
           setPhase("fade");
@@ -134,7 +140,10 @@ export default function IntakeBookingCelebrate() {
       if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
         window.dispatchEvent(
           new CustomEvent("member-score-updated", {
-            detail: { totalPoints: normalized.totalPoints },
+            detail: {
+              totalPoints: normalized.totalPoints,
+              pointsEarned: normalized.pointsEarned,
+            },
           }),
         );
         return;
