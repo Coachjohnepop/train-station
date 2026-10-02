@@ -463,7 +463,7 @@ export default function MemberWorkoutConsole({
   const [editingExerciseId, setEditingExerciseId] = useState<string | null>(null);
   const restHornPlayedRef = useRef(false);
   /** Survives countdown-effect remounts so 0:00 still closes after a live retarget. */
-  const restCloseTimerRef = useRef<ReturnType<typeof setTimeout> | 0>(0);
+  const restCloseTimerRef = useRef<number>(0);
   const hitSeriesRef = useRef<HitSeries | null>(null);
   const restTickAnnouncedRef = useRef<Set<number>>(new Set());
   /** Tracks open timer identity so duration retargets don't re-fire start/tick/complete storms. */

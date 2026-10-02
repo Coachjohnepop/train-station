@@ -40,14 +40,34 @@ export async function loadFoodTrackDashboard(
     dates.length > 0
       ? await prisma.foodEntry.findMany({
           where: { userId, eatenOn: { in: dates } },
-          select: { eatenOn: true, calories: true },
+          orderBy: { createdAt: "asc" },
+          select: {
+            id: true,
+            eatenOn: true,
+            calories: true,
+            protein: true,
+            starch: true,
+            fat: true,
+            extras: true,
+          },
         })
       : [];
-  const byDate = new Map<string, { calories: number; entryCount: number }>();
+  const byDate = new Map<
+    string,
+    { calories: number; entryCount: number; meals: FoodTrackDayRow["meals"] }
+  >();
   for (const entry of entries) {
-    const cur = byDate.get(entry.eatenOn) ?? { calories: 0, entryCount: 0 };
+    const cur = byDate.get(entry.eatenOn) ?? { calories: 0, entryCount: 0, meals: [] };
     cur.calories += entry.calories;
     cur.entryCount += 1;
+    cur.meals.push({
+      id: entry.id,
+      calories: entry.calories,
+      protein: entry.protein,
+      starch: entry.starch,
+      fat: entry.fat,
+      extras: entry.extras,
+    });
     byDate.set(entry.eatenOn, cur);
   }
   const days: FoodTrackDayRow[] = rows.map((row) => ({
@@ -56,6 +76,7 @@ export async function loadFoodTrackDashboard(
     completedAt: row.completedAt?.toISOString() ?? null,
     calories: byDate.get(row.eatenOn)?.calories ?? 0,
     entryCount: byDate.get(row.eatenOn)?.entryCount ?? 0,
+    meals: byDate.get(row.eatenOn)?.meals ?? [],
   }));
   return { seasonKey, seasonDays, ...buildFoodTrackDashboard({ todayIso, days }) };
 }

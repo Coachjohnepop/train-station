@@ -13,6 +13,16 @@ describe("food track cycle", () => {
           completedAt: "2026-09-16T02:00:00.000Z",
           calories: 2100,
           entryCount: 6,
+          meals: [
+            {
+              id: "m1",
+              calories: 2100,
+              protein: "eggs",
+              starch: "toast",
+              fat: "butter",
+              extras: "",
+            },
+          ],
         },
         {
           eatenOn: "2026-10-03",
@@ -20,6 +30,16 @@ describe("food track cycle", () => {
           completedAt: null,
           calories: 800,
           entryCount: 2,
+          meals: [
+            {
+              id: "m2",
+              calories: 800,
+              protein: "yogurt",
+              starch: "",
+              fat: "",
+              extras: "berries",
+            },
+          ],
         },
       ],
     });
@@ -46,6 +66,7 @@ describe("food track cycle", () => {
           completedAt: "2026-09-13T02:00:00.000Z",
           calories: 1800,
           entryCount: 5,
+          meals: [],
         },
         {
           eatenOn: "2026-09-20",
@@ -53,11 +74,72 @@ describe("food track cycle", () => {
           completedAt: "2026-09-21T01:00:00.000Z",
           calories: 2400,
           entryCount: 7,
+          meals: [],
         },
       ],
     });
     assert.equal(dash.remaining, 0);
     assert.equal(dash.todayStarted, false);
+    assert.deepEqual(
+      dash.weekdays.filter((d) => d.logged).map((d) => d.name),
+      ["Sat", "Sun"],
+    );
+  });
+
+  it("keeps empty starts off the weekday strip and prefers days with meals", () => {
+    const dash = buildFoodTrackDashboard({
+      todayIso: "2026-10-03",
+      days: [
+        {
+          eatenOn: "2026-10-03",
+          startedAt: "2026-10-03T14:00:00.000Z",
+          completedAt: null,
+          calories: 0,
+          entryCount: 0,
+          meals: [],
+        },
+        {
+          eatenOn: "2026-09-20",
+          startedAt: "2026-09-20T12:00:00.000Z",
+          completedAt: "2026-09-21T01:00:00.000Z",
+          calories: 2400,
+          entryCount: 7,
+          meals: [
+            {
+              id: "m3",
+              calories: 900,
+              protein: "steak",
+              starch: "",
+              fat: "",
+              extras: "",
+            },
+          ],
+        },
+        {
+          eatenOn: "2026-09-12",
+          startedAt: "2026-09-12T12:00:00.000Z",
+          completedAt: "2026-09-13T02:00:00.000Z",
+          calories: 1800,
+          entryCount: 5,
+          meals: [
+            {
+              id: "m4",
+              calories: 600,
+              protein: "eggs",
+              starch: "",
+              fat: "",
+              extras: "",
+            },
+          ],
+        },
+      ],
+    });
+    assert.deepEqual(
+      dash.lastTwo.map((day) => day.eatenOn),
+      ["2026-09-20", "2026-09-12"],
+    );
+    assert.equal(dash.lastTwo[0].meals[0].protein, "steak");
+    assert.equal(dash.todayStarted, true);
     assert.deepEqual(
       dash.weekdays.filter((d) => d.logged).map((d) => d.name),
       ["Sat", "Sun"],

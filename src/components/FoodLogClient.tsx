@@ -50,12 +50,22 @@ type DayBurn = {
   lines: BurnLine[];
 };
 
+type TrackMeal = {
+  id: string;
+  calories: number;
+  protein: string;
+  starch: string;
+  fat: string;
+  extras: string;
+};
+
 type TrackDay = {
   eatenOn: string;
   startedAt: string;
   completedAt: string | null;
   calories: number;
   entryCount: number;
+  meals: TrackMeal[];
   label: string;
   weekday: string;
 };
@@ -270,7 +280,7 @@ export default function FoodLogClient() {
 
   const todayRows = today?.entries ?? [];
 
-  async function trackAction(action: "start" | "complete") {
+  async function trackAction(action: "start" | "complete", eatenOn?: string) {
     setBusy(true);
     setError("");
     setNote("");
@@ -278,7 +288,7 @@ export default function FoodLogClient() {
       const res = await fetch("/api/member/food/track", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action }),
+        body: JSON.stringify({ action, eatenOn }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -322,7 +332,7 @@ export default function FoodLogClient() {
           entryCount={todayRows.length}
           busy={busy}
           onStart={() => void trackAction("start")}
-          onComplete={() => void trackAction("complete")}
+          onComplete={(eatenOn) => void trackAction("complete", eatenOn)}
         />
       ) : null}
 
@@ -442,16 +452,14 @@ function TrackCycleBoard({
   entryCount: number;
   busy: boolean;
   onStart: () => void;
-  onComplete: () => void;
+  onComplete: (eatenOn?: string) => void;
 }) {
+  const trackingToday = !track.todayCompleted && (track.todayStarted || entryCount > 0);
+  const canCompleteToday = trackingToday;
   const leftToRange =
-    thresholds && track.todayStarted && !track.todayCompleted
-      ? Math.max(0, thresholds.rangeMax - eaten)
-      : null;
+    thresholds && trackingToday ? Math.max(0, thresholds.rangeMax - eaten) : null;
   const leftToHard =
-    thresholds && track.todayStarted && !track.todayCompleted
-      ? Math.max(0, thresholds.hardMax - eaten)
-      : null;
+    thresholds && trackingToday ? Math.max(0, thresholds.hardMax - eaten) : null;
 
   return (
     <section className="card space-y-3 p-4">
@@ -484,16 +492,42 @@ function TrackCycleBoard({
       </div>
 
       {track.lastTwo.length > 0 ? (
-        <ul className="space-y-1.5">
+        <ul className="space-y-3">
           {track.lastTwo.map((day) => (
-            <li key={day.eatenOn} className="flex items-baseline justify-between gap-3 text-sm">
-              <span>
-                {day.label}
-                <span className="text-[var(--muted)]">
-                  {day.completedAt ? " · done" : " · in progress"}
+            <li key={day.eatenOn} className="space-y-1.5">
+              <div className="flex items-baseline justify-between gap-3 text-sm">
+                <span>
+                  {day.label}
+                  <span className="text-[var(--muted)]">
+                    {day.completedAt ? " · done" : " · in progress"}
+                  </span>
                 </span>
-              </span>
-              <span className="tabular-nums font-semibold">{day.calories}</span>
+                <span className="tabular-nums font-semibold">{day.calories}</span>
+              </div>
+              {(day.meals ?? []).length > 0 ? (
+                <ul className="space-y-1 text-sm">
+                  {(day.meals ?? []).map((meal) => (
+                    <li key={meal.id} className="flex items-start gap-3">
+                      <span className="w-14 shrink-0 text-left font-bold tabular-nums">
+                        {meal.calories}
+                      </span>
+                      <span className="min-w-0 flex-1 text-[var(--muted)]">{foodLine(meal)}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-[var(--muted)]">No meals on this day yet.</p>
+              )}
+              {!day.completedAt && day.entryCount > 0 && day.eatenOn !== track.todayIso ? (
+                <button
+                  type="button"
+                  className="rounded-lg border border-[var(--border)] px-3 py-1.5 text-xs font-semibold"
+                  disabled={busy}
+                  onClick={() => onComplete(day.eatenOn)}
+                >
+                  Mark {day.weekday} done
+                </button>
+              ) : null}
             </li>
           ))}
         </ul>
@@ -523,12 +557,12 @@ function TrackCycleBoard({
             Start tracking today
           </button>
         ) : null}
-        {track.todayStarted && !track.todayCompleted ? (
+        {canCompleteToday ? (
           <button
             type="button"
             className="btn-primary px-4 py-2 text-sm font-semibold"
             disabled={busy || entryCount < 1}
-            onClick={onComplete}
+            onClick={() => onComplete(track.todayIso)}
           >
             Mark this day done
           </button>
@@ -750,7 +784,7 @@ function FoodTable({
   );
 }
 
-function foodLine(row: FoodRow): string {
+function foodLine(row: { protein: string; starch: string; fat: string; extras: string }): string {
   return [row.protein, row.starch, row.fat, row.extras].filter(Boolean).join(" · ") || "Meal";
 }
 

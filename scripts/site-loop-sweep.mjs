@@ -282,7 +282,9 @@ async function main() {
     );
     if (!j.stripeEnabled) results.warnings.push("Stripe not enabled on public payments");
     if (mode === "TEST") results.warnings.push("Stripe publishable still TEST on prod");
-    if (!j.venmo?.hasQr) results.warnings.push("Venmo QR missing");
+    if (j.venmo?.hasQr || j.venmo?.handle) {
+      results.errors.push("Venmo rail is back on public payments");
+    }
     const notReady = (j.memberships || []).filter((m) => !m.stripeReady);
     if (notReady.length) {
       results.warnings.push(
@@ -309,7 +311,13 @@ async function main() {
     { path: "/api/programs", method: "GET" },
     { path: "/api/chat/threads", method: "GET" },
     { path: "/api/member/membership", method: "GET" },
+    { path: "/api/member/business-upgrade-request", method: "GET" },
+    { path: "/api/member/business-upgrade-request", method: "POST", body: {} },
+    { path: "/api/admin/members/not-a-member/business-upgrade", method: "POST", body: { action: "approve" } },
+    { path: "/api/cron/business-upgrade-promo", method: "GET" },
     { path: "/api/member/gamification", method: "GET" },
+    { path: "/api/member/food", method: "GET" },
+    { path: "/api/member/food/track", method: "POST", body: { action: "start" } },
     { path: "/api/onboard/complete", method: "POST", body: {} },
     { path: "/api/signup/register", method: "POST", body: {} },
     { path: "/api/admin/members/x/mark-paid", method: "POST", body: {} },
