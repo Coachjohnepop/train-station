@@ -122,7 +122,7 @@ function defaultMilestonePartnerSeed(): CommissionPartner[] {
       sharePercent: 100,
       enabled: true,
       notes:
-        "Dev & partnership fee pool (TS master Stripe Connect). Eco Delight coffee partner draws use Eco Stripe Express (john@thetrainstation.co / JOHNPARTNER) — separate platform.",
+        "Dev & partnership fee pool (TS master Stripe Connect).",
       createdAt: now,
       updatedAt: now,
     },

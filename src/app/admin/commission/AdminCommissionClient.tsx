@@ -399,10 +399,8 @@ export default function AdminCommissionClient() {
           <h1 className="text-2xl font-semibold tracking-tight">Money desk</h1>
           <p className="mt-2 text-sm text-[var(--muted)]">
             Stripe balance, holding minimum, and a payout queue for John (business partner) and
-            Jeremy (company feed on master Stripe). Membership card money stays on this platform;
-            John’s Eco Delight coffee partnership pays via Eco Stripe Connect (
-            <code className="text-[10px]">john@thetrainstation.co</code> · JOHNPARTNER). Process
-            partner pool and platform admin fee here when TS Connect is Ready.
+            Jeremy (company feed on master Stripe). Membership card money stays on this platform.
+            Process partner pool and platform admin fee here when TS Connect is Ready.
           </p>
         </div>
         <button

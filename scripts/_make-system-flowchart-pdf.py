@@ -407,7 +407,7 @@ def page4(c):
     y = y - 1.75 * inch
     box(c, LEFT, y - 1.35 * inch, 2.2 * inch, 1.35 * inch, "MORE", [
         "Measure  (tapes + photos)",
-        "Partners  (Eco Delight)",
+        "Partners  (The Coffee Crew)",
         "Book Call  (Calendly)",
         "Account  (tier, tips, logout)",
         "Nutrition desk in header",

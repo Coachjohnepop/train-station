@@ -264,10 +264,9 @@ export const ADMIN_APP_SEARCH_INDEX: AdminSearchItem[] = [
     group: "Site",
     keywords: [
       "sponsor",
-      "eco delight",
+      "coffee crew",
       "affiliate",
       "coffee",
-      "jeremydisc",
       "commission",
       "trainstation",
     ],
